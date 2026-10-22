@@ -1,0 +1,14 @@
+{
+  // sec-proxy: SEC EDGAR + price API for LedgerLine. Deployed by GitHub Actions on every push to main.
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "sec-proxy",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  // dashboard variables (SITE_URL, Stripe price ids, ...) stay as set in Cloudflare; secrets are never in this repo
+  "keep_vars": true,
+  "observability": { "enabled": true },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "ledgerline", "database_id": "e962f8eb-968d-4668-8642-91744195d5ab" }
+  ]
+}

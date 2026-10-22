@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>LedgerLine Features</title>
+<meta name="description" content="Everything LedgerLine does: scores and a verdict from SEC filings, full statements with interactive charts, earnings reactions with BMO/AMC timing, technicals, prebuilt screens and a plain-English glossary.">
+<link rel="icon" href="/logo.svg" type="image/svg+xml"><link rel="alternate icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%224%22 fill=%22%23262A33%22/%3E%3Cpath d=%22M9 8v16M9 12h-3M9 20h3M20 6v18M20 10h-3M20 19h3%22 stroke=%22%23FFF1E5%22 stroke-width=%222.4%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#FFF1E5;--paper2:#F2DFCE;--ink:#33302E;--ink2:#4D4845;--muted:#66605C;--line:#CCC1B7;--rule:#33302E;--navy:#262A33;--onnavy:#FFF1E5;--claret:#990F3D;--teal:#0D7680;--up:#09804C;
+  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;--sans:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+@media (prefers-color-scheme: dark){:root{--bg:#1C1E23;--paper2:#262A33;--ink:#F2DFCE;--ink2:#E3D2C2;--muted:#B0A497;--line:#3E434E;--rule:#B0A497;--navy:#121418;--onnavy:#F2DFCE;--claret:#F08AA6;--teal:#4DBAC2;--up:#4FCB8A;color-scheme:dark}}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:var(--teal)}
+.wrap{max-width:1160px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{background:var(--navy);color:var(--onnavy)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;padding-block:12px;gap:12px}
+.brand{font-family:var(--serif);font-weight:600;font-size:26px;color:var(--onnavy);text-decoration:none}
+.tn{display:flex;align-items:center;gap:4px}
+.tn a{color:var(--onnavy);font-weight:600;font-size:14px;text-decoration:none;padding:6px 10px;border-radius:2px}
+.tn a[aria-current]{box-shadow:inset 0 -2px 0 #C9A227}
+.tn a.login{border:1px solid rgba(255,241,229,.4);margin-left:6px}
+.kicker{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--claret)}
+.fhero{background:var(--navy);color:var(--onnavy);padding:64px 0 40px;position:relative;overflow:hidden}
+.fhero::after{content:"";position:absolute;right:-80px;top:-40px;width:520px;height:520px;background:
+ repeating-linear-gradient(0deg,transparent 0 47px,rgba(255,241,229,.05) 47px 48px),
+ repeating-linear-gradient(90deg,transparent 0 47px,rgba(255,241,229,.05) 47px 48px);mask:radial-gradient(closest-side,#000,transparent);pointer-events:none}
+.fhero .kicker{color:#E7A0B4}
+.fhero h1{font-family:var(--serif);font-weight:600;font-size:clamp(40px,6.6vw,78px);line-height:1;letter-spacing:-.02em;margin:12px 0 18px;max-width:15ch}
+.fhero h1 em{font-style:italic;color:#9FD6D9;font-weight:500}
+.fhero .stand{font-family:var(--serif);font-size:21px;line-height:1.45;max-width:46ch;opacity:.92;margin:0 0 26px}
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:34px}
+.jump a{color:var(--onnavy);text-decoration:none;font-size:13.5px;font-weight:600;padding:7px 13px;border:1px solid rgba(255,241,229,.28);border-radius:999px;transition:background .15s,border-color .15s}
+.jump a:hover{background:rgba(255,241,229,.1);border-color:rgba(255,241,229,.6)}
+.nums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0;border-top:1px solid rgba(255,241,229,.25)}
+.nums div{padding:16px 16px 0 0}.nums dt{font-size:12px;text-transform:uppercase;letter-spacing:.07em;opacity:.7}
+.nums dd{margin:2px 0 0;font-family:var(--serif);font-size:44px;font-weight:600;line-height:1.05}
+@media (max-width:640px){.nums{grid-template-columns:repeat(2,minmax(0,1fr))}.nums dd{font-size:34px}.fhero{padding:40px 0 28px}}
+.group{padding:56px 0 8px;scroll-margin-top:12px}
+.gh{display:flex;gap:18px;align-items:flex-end;border-bottom:2px solid var(--rule);padding-bottom:14px;margin-bottom:26px}
+.gh .n{font-family:var(--serif);font-size:56px;line-height:.85;font-weight:700;color:var(--line)}
+.gh h2{font-family:var(--serif);font-weight:600;font-size:clamp(26px,3.6vw,38px);line-height:1.08;margin:6px 0 0;letter-spacing:-.01em}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+.fc{display:flex;flex-direction:column;border:1px solid var(--line);background:var(--bg);transition:transform .18s ease,box-shadow .18s ease,border-color .18s}
+.fc:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(38,42,51,.14);border-color:var(--ink2)}
+.fc.wide{grid-column:span 2}
+@media (max-width:980px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:680px){.cards{grid-template-columns:1fr}.fc.wide{grid-column:auto}}
+.pv{position:relative;background:var(--paper2);padding:18px 18px 30px;border-bottom:1px solid var(--line);min-height:210px;display:flex;align-items:center;justify-content:center}
+.cap{position:absolute;left:12px;bottom:8px;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cap.real::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--up);margin-right:6px;vertical-align:1px}
+.tx{padding:16px 18px 20px}.tx h3{margin:0 0 6px;font-size:18px}.tx p{margin:0;color:var(--ink2);font-size:15px}
+.mock{width:100%;background:var(--bg);border:1px solid var(--line);box-shadow:0 8px 22px rgba(38,42,51,.10);padding:12px 14px;font-size:12px}
+.mk{display:block;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}.mk.sm{margin:8px 0 0}.mk.claret{color:var(--claret);font-weight:700}
+.mrow.top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line);padding-bottom:8px}
+.mt{font-family:var(--serif);font-size:22px;font-weight:600}.mpx b{font-family:var(--serif);font-size:20px;display:block;text-align:right}
+.glance{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 14px;padding-top:10px}
+.glance span{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.glance b{font-family:var(--serif);font-size:15.5px;font-weight:600}
+@media (max-width:520px){.glance{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.g5{color:#2E7D4F}.g4{color:#5A8F3C}.g3{color:#8A6D1E}.g2{color:#B3541E}.g1{color:#990F3D}
+.ill{width:100%;height:auto;display:block}.ill .t{font:10px var(--sans);fill:var(--muted)}.ill .t.b{font-weight:700;fill:var(--ink)}.ill .grid{stroke:var(--line);stroke-width:1}
+.ill .tip{fill:var(--bg);stroke:var(--ink2);stroke-width:.8}
+.odds .big{display:block;font-family:var(--serif);font-size:44px;line-height:1;font-weight:700;color:var(--teal)}.odds .sub{font-size:12px;color:var(--ink2)}
+.dist{display:flex;align-items:flex-end;gap:2px;height:60px;margin-top:10px}.dist i{flex:1;display:block;min-height:2px}
+.drow{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px}
+.tests .tr{display:grid;grid-template-columns:1fr auto 16px;gap:8px;align-items:center;padding:3px 0;border-bottom:1px dotted var(--line)}
+.pips{display:flex;gap:3px}.pips i{width:14px;height:8px;background:var(--line);display:block}
+.pips i.on.l5{background:#2E7D4F}.pips i.on.l4{background:#5A8F3C}.pips i.on.l3{background:#C09A2E}.pips i.on.l2{background:#B3541E}.pips i.on.l1{background:#990F3D}
+.tests b{text-align:right;font-family:var(--serif)}
+.tbl .tools{display:flex;gap:8px;justify-content:flex-end;margin-bottom:8px}
+.seg{display:inline-flex;border:1px solid var(--line)}.seg i{font-style:normal;font-size:10.5px;font-weight:600;padding:3px 8px;color:var(--ink2)}.seg i.on{background:var(--ink);color:var(--bg)}
+.mock table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.mock th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;text-align:right;padding:5px 6px;border-bottom:1px solid var(--rule)}
+.mock th:first-child,.mock td:first-child{text-align:left}
+.mock td{text-align:right;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.mock tr.sel td{background:rgba(13,118,128,.07)}
+.sw{display:inline-block;width:9px;height:9px;margin-right:6px;vertical-align:0}
+.mock td.neg,.mock .neg{color:#B0203F}.mock td.lk{color:var(--teal);text-decoration:underline;text-underline-offset:2px}
+.ffacts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.ffacts span{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.ffacts b{font-size:12.5px}
+@media (max-width:560px){.hide{display:none}.ffacts{grid-template-columns:1fr 1fr}}
+.leg{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:6px;font-size:11px;align-items:center}.leg i{display:inline-block;width:9px;height:9px;margin-right:5px}
+.pill{border:1px solid var(--up);color:var(--up);font-weight:700;padding:1px 7px;border-radius:999px;font-size:10.5px}
+.doc .dh{display:block;font-family:var(--serif);font-size:17px;margin-bottom:6px}.doc p{margin:0 0 8px;font-size:12px;color:var(--ink2)}
+.doc mark{background:rgba(201,162,39,.35);color:inherit;padding:0 2px}
+.dl{display:block;height:6px;background:var(--line);margin:6px 0;border-radius:3px}.dl.s{width:70%}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}.chips i{font-style:normal;font-size:10.5px;font-weight:600;border:1px solid var(--line);padding:3px 8px;border-radius:999px}
+.chips.big i{font-size:12px;padding:5px 11px}
+.ratios .rr{display:grid;grid-template-columns:110px 1fr 46px;gap:8px;align-items:center;padding:4px 0;border-bottom:1px dotted var(--line)}
+.ratios .sp{display:flex;align-items:flex-end;gap:2px;height:20px}.ratios .sp i{flex:1;background:var(--teal);opacity:.55;display:block}.ratios .sp i:last-child{opacity:1;background:var(--claret)}
+.ratios b{text-align:right;font-family:var(--serif)}
+.react .nextrep{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;padding:7px 10px;margin-bottom:8px;background:var(--paper2);box-shadow:inset 3px 0 0 var(--teal)}
+.react .nextrep .mk{margin:0}.react .nextrep b{font-size:14px}.muted{color:var(--muted)}
+.tc{font-style:normal;font-size:10px;font-weight:700;letter-spacing:.04em;padding:1px 5px;border:1px solid currentColor;border-radius:2px}
+.tc.AMC{color:var(--claret)}.tc.BMO{color:#0F5499}
+.sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:8px}.sum span{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.sum b{font-family:var(--serif);font-size:15px}
+.vs .vr,.idx .vr{display:grid;grid-template-columns:52px 1fr 52px;gap:8px;align-items:center;padding:4px 0}
+.vr .bar{height:10px;background:var(--line);display:block}.vr .bar i{display:block;height:100%;background:var(--ink2)}
+.vr.me .bar i{background:var(--teal)}.vr.me span:first-child{font-weight:700}.idx .vr .bar i{background:var(--teal)}
+.vr b{text-align:right;font-variant-numeric:tabular-nums}
+.sg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sg span{border:1px solid var(--line);border-left:3px solid var(--teal);padding:8px 10px;font-weight:600;font-size:12.5px;background:var(--bg)}
+.sg span.warn{border-left-color:#B3541E}
+@media (max-width:560px){.sg{grid-template-columns:1fr 1fr}}
+.list .li{display:grid;grid-template-columns:54px 1fr 16px;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);align-items:center}.list .li i{font-style:normal;color:#C9A227}.list .li.dim{opacity:.55}
+.gl .gt{display:block;font-family:var(--serif);font-size:18px;margin-bottom:4px}.gl p{margin:0 0 6px;font-size:12.5px}
+.gl code,.how code{font:11px ui-monospace,Menlo,monospace;color:var(--teal);background:rgba(13,118,128,.07);padding:3px 6px;display:inline-block}
+.good{display:block;margin-top:6px;font-size:11.5px;color:var(--ink2)}
+.smp{display:grid;grid-template-columns:1fr 1fr;gap:6px}.smp div{border:1px solid var(--line);padding:7px 9px}.smp b{display:block;font-size:14px}.smp span{font-size:11px;color:var(--muted)}
+.how .fl{padding:6px 0;border-bottom:1px dotted var(--line)}.how .fl span{display:block;font-weight:700;font-size:12px;margin-bottom:3px}
+.soon{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.soon div{border:1px dashed var(--ink2);padding:16px;position:relative}
+.soon div::before{content:"Soon";position:absolute;top:-9px;left:12px;background:var(--bg);padding:0 6px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--claret)}
+.soon b{display:block;font-size:16px;margin-bottom:4px}.soon span{font-size:14px;color:var(--ink2)}
+.closer{margin:56px 0 0;padding:44px 0 52px;border-top:2px solid var(--rule);text-align:center}
+.closer h2{font-family:var(--serif);font-weight:600;font-size:clamp(28px,4.4vw,44px);margin:10px 0 22px}
+.cta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 20px;border-radius:2px;font-weight:700;font-size:15px;text-decoration:none;border:1px solid var(--ink);color:var(--ink)}
+.btn.primary{background:var(--teal);border-color:var(--teal);color:#fff}.btn.big{height:52px;padding:0 28px;font-size:17px}
+footer{padding-block:24px 40px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}footer p{max-width:110ch;margin:0 0 8px}
+.legal{display:flex;gap:16px;flex-wrap:wrap}.legal a{color:var(--muted)}
+.fine{font-size:13px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.fc{transition:none}.fc:hover{transform:none}}
+@media (max-width:600px){.tn a:not(.login){padding:6px 6px;font-size:13px}.brand{font-size:22px}}
+.fc{min-width:0}.pv{min-width:0}.mock{min-width:0;max-width:100%;overflow-x:auto}
+@media (max-width:560px){.mock td,.mock th{padding:4px 4px;font-size:11px}.mock{padding:10px}.pv{padding:12px 12px 28px}}
+
+.mhead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line);padding-bottom:8px}
+.attrs .at{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dotted var(--line)}
+.attrs i{font-style:normal;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff}
+.attrs .pass{background:#2E7D4F}.attrs .watch{background:#C09A2E}.attrs .fail{background:#990F3D}
+.files .fr{display:grid;grid-template-columns:40px 1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.files b{font-size:11px;color:var(--teal)}.files em{font-style:normal;color:var(--muted);font-size:11px}
+.list .li{grid-template-columns:54px 1fr 110px 60px 16px}.list .li em{font-style:normal;font-weight:600;text-align:right}.list .li em.neg{color:#B0203F}
+.list .li.h{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.list .li.h b,.list .li.h em{font-weight:600}
+@media (max-width:560px){.list .li{grid-template-columns:44px 1fr 90px 16px}.list .li em:nth-of-type(2){display:none}}
+
+.tn a{white-space:nowrap}
+@media (max-width:430px){.tn a[href="/#pricing"]{display:none}.brand{font-size:20px}.brand svg{width:32px;height:32px}}
+
+</style></head><body>
+<header class="top"><div class="wrap"><a class="brand" href="/" style="display:inline-flex;align-items:center;gap:9px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="38" aria-hidden="true" style="flex:none;display:block"><rect width="48" height="48" rx="11" fill="#FBF7F1"/><path d="M10 14h20.5l6-6" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 7.5h7v7" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 24h17" fill="none" stroke="#A39C93" stroke-width="4" stroke-linecap="round"/><path d="M10 34h14.5l6 6" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 40.5h7v-7" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>LedgerLine</a><nav class="tn"><a href="/features.html" aria-current="page">Features</a><a href="/#pricing">Pricing</a><a class="login" href="/app/">Start here</a></nav></div></header>
+<main>
+<section class="fhero"><div class="wrap">
+  <div class="kicker">Features</div>
+  <h1>Everything it reads.<br><em>Everything it shows you.</em></h1>
+  <p class="stand">One ticker in, the whole company out: the filings, the scores, the price, and how it all fits together. Every number traces back to the SEC filing it came from.</p>
+  <nav class="jump" aria-label="Jump to"><a href="#answer">The answer</a><a href="#filings">The filings</a><a href="#earnings">Earnings</a><a href="#timing">Timing</a><a href="#discover">Discover</a><a href="#learn">Learn</a><a href="#next">Coming next</a></nav>
+  <dl class="nums"><div><dt>Years of filings</dt><dd>17+</dd></div><div><dt>Tabs per stock</dt><dd>14</dd></div><div><dt>Prebuilt screens</dt><dd>12</dd></div><div><dt>Glossary terms</dt><dd>71</dd></div></dl>
+</div></section>
+
+<div class="wrap">
+<section class="group" id="answer">
+  <div class="gh"><span class="n">01</span><div><div class="kicker">The answer</div><h2>Is it a good business at a fair price?</h2></div></div>
+  <div class="cards">
+    <article class="fc wide">
+      <div class="pv"><div class="mock">
+        <div class="mhead"><div><span class="mk">Retail-variety stores · NASDAQ</span><b class="mt">Costco Wholesale</b></div><div class="mpx"><span class="mk">Price</span><b>$998.31</b></div></div>
+        <div class="glance">
+          <div><span>Verdict</span><b class="g3">Wait for price</b></div><div><span>Valuation</span><b class="g2">Overvalued</b></div><div><span>Risk</span><b class="g5">Very low</b></div><div><span>Business</span><b class="g4">Strong</b></div>
+          <div><span>Moat</span><b class="g5">Very strong</b></div><div><span>Growth</span><b class="g4">Strong</b></div><div><span>Management</span><b class="g4">Strong</b></div><div><span>Fair value</span><b class="g2">$839.68</b></div></div>
+      </div><span class="cap real">Costco · real LedgerLine figures, Oct 22, 2026</span></div>
+      <div class="tx"><h3>Overview and verdict</h3><p>Eight scores on one screen and a verdict from a fixed rule you can read: Buy, Wait for price, Hold, No new money or Avoid. No black box, no analyst opinions.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><svg viewBox="0 0 320 150" class="ill" role="img" aria-label="Price against fair value">
+        <defs><linearGradient id="band" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--teal)" stop-opacity=".22"/><stop offset="1" stop-color="var(--teal)" stop-opacity=".05"/></linearGradient></defs>
+        <path d="M10 118 L60 104 L110 92 L160 80 L210 66 L250 56 L310 42 L310 72 L250 84 L210 92 L160 104 L110 114 L60 124 L10 132Z" fill="url(#band)"/>
+        <path d="M10 125 L60 114 L110 103 L160 92 L210 79 L250 70" fill="none" stroke="var(--teal)" stroke-width="2"/>
+        <path d="M250 70 L310 57" fill="none" stroke="var(--teal)" stroke-width="2" stroke-dasharray="4 4"/>
+        <path d="M10 120 L35 112 L60 117 L85 100 L110 96 L135 84 L160 88 L185 66 L210 58 L235 50 L250 46" fill="none" stroke="var(--ink)" stroke-width="2.2"/>
+        <line x1="250" y1="14" x2="250" y2="140" stroke="var(--line)" stroke-dasharray="2 3"/><text x="254" y="22" class="t">today</text>
+        <circle cx="250" cy="46" r="4" fill="var(--claret)"/><text x="196" y="38" class="t" fill="var(--claret)">price above value</text>
+      </svg><span class="cap">Illustration</span></div>
+      <div class="tx"><h3>Valuation and forecast</h3><p>Fair value from the stock’s own ten-year normal multiple, a buy-below price, and a chart of price against what earnings justify, ten years back and up to six forward.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock odds"><span class="mk claret">Outlook · 25,000 futures</span><b class="big">49%</b><span class="sub">odds of 10%+ a year over 3 years</span>
+        <div class="dist"><i style="height:5%;background:var(--line)"></i><i style="height:9%;background:var(--line)"></i><i style="height:14%;background:var(--line)"></i><i style="height:21%;background:var(--line)"></i><i style="height:31%;background:var(--line)"></i><i style="height:42%;background:var(--line)"></i><i style="height:55%;background:var(--line)"></i><i style="height:69%;background:var(--line)"></i><i style="height:81%;background:var(--line)"></i><i style="height:91%;background:var(--line)"></i><i style="height:98%;background:var(--line)"></i><i style="height:100%;background:var(--teal)"></i><i style="height:97%;background:var(--teal)"></i><i style="height:90%;background:var(--teal)"></i><i style="height:79%;background:var(--teal)"></i><i style="height:66%;background:var(--teal)"></i><i style="height:53%;background:var(--teal)"></i><i style="height:40%;background:var(--teal)"></i><i style="height:29%;background:var(--teal)"></i><i style="height:20%;background:var(--teal)"></i><i style="height:13%;background:var(--teal)"></i><i style="height:8%;background:var(--teal)"></i><i style="height:5%;background:var(--teal)"></i><i style="height:3%;background:var(--teal)"></i></div><div class="drow"><span>−10%</span><span>+10%</span><span>+30%</span></div></div><span class="cap">Illustration · 49% is Costco’s figure on Oct 22, 2026</span></div>
+      <div class="tx"><h3>The odds of your return</h3><p>25,000 simulated futures built from the company’s own growth, margins and multiples. You get the spread of outcomes and the price that gives you 70% odds.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock tests"><span class="mk">Moat · seven tests</span><div class="tr"><span>Average ROIC</span><span class="pips"><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i></span><b>5</b></div><div class="tr"><span>Years ROIC 15%+</span><span class="pips"><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i></span><b>5</b></div><div class="tr"><span>Gross margin</span><span class="pips"><i class="on l3"></i><i class="on l3"></i><i class="on l3"></i><i class=" l3"></i><i class=" l3"></i></span><b>3</b></div><div class="tr"><span>Margin stability</span><span class="pips"><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i></span><b>5</b></div><div class="tr"><span>FCF margin</span><span class="pips"><i class="on l2"></i><i class="on l2"></i><i class=" l2"></i><i class=" l2"></i><i class=" l2"></i></span><b>2</b></div><div class="tr"><span>Down years</span><span class="pips"><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i></span><b>5</b></div><div class="tr"><span>Balance sheet</span><span class="pips"><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i><i class="on l5"></i></span><b>5</b></div></div><span class="cap">Illustration</span></div>
+      <div class="tx"><h3>Moat, growth, management, risk</h3><p>Seven moat tests, growth quality, capital allocation and balance-sheet risk, each scored 1 to 5 with the numbers that drove the score.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock attrs"><span class="mk">Eight key attributes</span>
+        <div class="at"><span>Revenue growth</span><i class="pass">Pass</i></div><div class="at"><span>EBITDA growth</span><i class="pass">Pass</i></div><div class="at"><span>Strong free cash flow</span><i class="watch">Watch</i></div><div class="at"><span>Debt under 3×</span><i class="pass">Pass</i></div><div class="at"><span>Well priced</span><i class="fail">Fail</i></div><div class="at"><span>Capital efficiency</span><i class="pass">Pass</i></div></div><span class="cap">Illustration</span></div>
+      <div class="tx"><h3>Eight key attributes</h3><p>Growth, cash flow, debt, price, capital efficiency, leading signals and moat, each marked pass, watch or fail with the number behind it.</p></div>
+    </article>
+  </div>
+</section>
+
+<section class="group" id="filings">
+  <div class="gh"><span class="n">02</span><div><div class="kicker">The filings</div><h2>The statements, straight from EDGAR.</h2></div></div>
+  <div class="cards">
+    <article class="fc wide">
+      <div class="pv"><div class="mock tbl">
+        <div class="tools"><span class="seg"><i class="on">Annual</i><i>Quarterly</i><i>TTM</i></span><span class="seg"><i class="on">$M</i><i>$B</i><i>Full</i></span></div>
+        <table><thead><tr><th>Income statement $M</th><th>FY2026</th><th>FY2025</th><th>FY2024</th><th>FY2023</th><th class="hide">FY2022</th></tr></thead>
+        <tbody><tr class="sel"><td><i class="sw" style="background:#0D7680"></i>Revenue</td><td>303,154</td><td>275,235</td><td>254,453</td><td>242,290</td><td class="hide">226,954</td></tr>
+        <tr><td>Gross profit</td><td>38,875</td><td>35,349</td><td>32,095</td><td>29,704</td><td class="hide">27,572</td></tr>
+        <tr><td>Operating income</td><td>11,685</td><td>10,383</td><td>9,285</td><td>8,114</td><td class="hide">7,793</td></tr>
+        <tr class="sel"><td><i class="sw" style="background:#990F3D"></i>Net income to common</td><td>9,226</td><td>8,099</td><td>7,367</td><td>6,292</td><td class="hide">5,844</td></tr>
+        <tr><td>EPS, diluted</td><td>20.76</td><td>18.21</td><td>16.56</td><td>14.16</td><td class="hide">13.14</td></tr></tbody></table>
+        <div class="ffacts"><div><span>Latest filing</span><b>10-K · Oct 7, 2026</b></div><div><span>Next report</span><b>10-Q by ~Jan 9</b></div><div><span>Data</span><b>FY2008–FY2026</b></div></div>
+      </div><span class="cap real">Costco · from its 10-K filings</span></div>
+      <div class="tx"><h3>Financial statements</h3><p>Income statement, balance sheet, cash flow and comprehensive income for up to 19 fiscal years: annual, quarterly or trailing twelve months, newest or oldest first, in billions, millions or full numbers. Split-adjusted, latest restatement wins.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock"><svg viewBox="0 0 320 150" class="ill" role="img" aria-label="Costco revenue and net income"><line x1="34" x2="320" y1="91.9" y2="91.9" class="grid"/><text x="2" y="88.9" class="t">$100B</text><line x1="34" x2="320" y1="53.8" y2="53.8" class="grid"/><text x="2" y="50.8" class="t">$200B</text><line x1="34" x2="320" y1="15.6" y2="15.6" class="grid"/><text x="2" y="12.6" class="t">$300B</text><rect x="37.3" y="85.7" width="8.6" height="44.3" fill="#0D7680"/><rect x="46.4" y="120.9" width="8.6" height="9.1" fill="#990F3D"/><rect x="61.2" y="84.7" width="8.6" height="45.3" fill="#0D7680"/><rect x="70.2" y="121.0" width="8.6" height="9.0" fill="#990F3D"/><text x="69.8" y="144" class="t" text-anchor="middle">FY16</text><rect x="85.0" y="80.8" width="8.6" height="49.2" fill="#0D7680"/><rect x="94.1" y="119.8" width="8.6" height="10.2" fill="#990F3D"/><rect x="108.8" y="76.0" width="8.6" height="54.0" fill="#0D7680"/><rect x="117.9" y="118.1" width="8.6" height="11.9" fill="#990F3D"/><text x="117.4" y="144" class="t" text-anchor="middle">FY18</text><rect x="132.7" y="71.8" width="8.6" height="58.2" fill="#0D7680"/><rect x="141.7" y="116.1" width="8.6" height="13.9" fill="#990F3D"/><rect x="156.5" y="66.4" width="8.6" height="63.6" fill="#0D7680"/><rect x="165.6" y="114.7" width="8.6" height="15.3" fill="#990F3D"/><text x="165.1" y="144" class="t" text-anchor="middle">FY20</text><rect x="180.3" y="55.3" width="8.6" height="74.7" fill="#0D7680"/><rect x="189.4" y="110.9" width="8.6" height="19.1" fill="#990F3D"/><rect x="204.2" y="43.5" width="8.6" height="86.5" fill="#0D7680"/><rect x="213.2" y="107.7" width="8.6" height="22.3" fill="#990F3D"/><text x="212.7" y="144" class="t" text-anchor="middle">FY22</text><rect x="228.0" y="37.6" width="8.6" height="92.4" fill="#0D7680"/><rect x="237.1" y="106.0" width="8.6" height="24.0" fill="#990F3D"/><rect x="251.8" y="33.0" width="8.6" height="97.0" fill="#0D7680"/><rect x="260.9" y="101.9" width="8.6" height="28.1" fill="#990F3D"/><text x="260.4" y="144" class="t" text-anchor="middle">FY24</text><rect x="275.7" y="25.1" width="8.6" height="104.9" fill="#0D7680"/><rect x="284.7" y="99.1" width="8.6" height="30.9" fill="#990F3D"/><rect x="299.5" y="14.4" width="8.6" height="115.6" fill="#0D7680"/><rect x="308.6" y="94.8" width="8.6" height="35.2" fill="#990F3D"/><text x="308.1" y="144" class="t" text-anchor="middle">FY26</text><g><rect x="62" y="6" width="148" height="40" rx="3" class="tip"/><text x="70" y="21" class="t b">FY2026</text><text x="70" y="36" class="t">Revenue $303.2B +10.1%</text></g></svg><div class="leg"><span><i style="background:#0D7680"></i>Revenue ×</span><span><i style="background:#990F3D"></i>Net income ×10 ×</span></div></div><span class="cap real">Costco · revenue and net income, FY2015–FY2026</span></div>
+      <div class="tx"><h3>Interactive charts</h3><p>Click any line in any statement to chart it, up to four at once. Hover for each year’s value and its change from the year before.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock doc"><span class="mk">10-K · Item 7</span><b class="dh">Management’s Discussion and Analysis</b><p>Results of operations · <mark>Net sales</mark> · Gross margin · Liquidity and capital resources · Critical accounting estimates</p><span class="dl"></span><span class="dl s"></span><span class="dl"></span><div class="chips"><i>Notes</i><i>Risk factors</i><i>Legal</i><i>Business</i></div></div><span class="cap">Illustration</span></div>
+      <div class="tx"><h3>Notes, MD&amp;A and risk factors</h3><p>Every note to the statements, management’s discussion, risk factors and legal proceedings from the latest 10-K or 10-Q, one click each, in readable text.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock ratios"><span class="mk">Ratios by fiscal year</span><div class="rr"><span>P/E</span><span class="sp"><i style="height:53%"></i><i style="height:30%"></i><i style="height:67%"></i><i style="height:44%"></i><i style="height:21%"></i><i style="height:58%"></i><i style="height:35%"></i><i style="height:72%"></i><i style="height:49%"></i><i style="height:26%"></i></span><b>48.1×</b></div><div class="rr"><span>ROIC</span><span class="sp"><i style="height:64%"></i><i style="height:41%"></i><i style="height:78%"></i><i style="height:55%"></i><i style="height:32%"></i><i style="height:69%"></i><i style="height:46%"></i><i style="height:23%"></i><i style="height:60%"></i><i style="height:37%"></i></span><b>42.6%</b></div><div class="rr"><span>FCF yield</span><span class="sp"><i style="height:59%"></i><i style="height:36%"></i><i style="height:73%"></i><i style="height:50%"></i><i style="height:27%"></i><i style="height:64%"></i><i style="height:41%"></i><i style="height:78%"></i><i style="height:55%"></i><i style="height:32%"></i></span><b>2.1%</b></div><div class="rr"><span>Net debt ÷ EBITDA</span><span class="sp"><i style="height:27%"></i><i style="height:64%"></i><i style="height:41%"></i><i style="height:78%"></i><i style="height:55%"></i><i style="height:32%"></i><i style="height:69%"></i><i style="height:46%"></i><i style="height:23%"></i><i style="height:60%"></i></span><b>cash</b></div></div><span class="cap">Illustration</span></div>
+      <div class="tx"><h3>All metrics, with statistics</h3><p>60 ratios for every fiscal year, each with its 10-year median, range, standard deviation, z-score and percentile, plus volatility, drawdown, Sharpe, Sortino, beta and up/down capture. CSV download.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock files"><span class="mk">Every filing, linked</span>
+        <div class="fr"><b>10-K</b><span>Annual report</span><em>Oct 7, 2026</em></div><div class="fr"><b>8-K</b><span>Earnings release · 2.02</span><em>Sep 24, 2026</em></div><div class="fr"><b>10-Q</b><span>Quarterly report</span><em>Jun 2026</em></div><div class="fr"><b>8-K</b><span>Earnings release · 2.02</span><em>May 28, 2026</em></div><div class="fr"><b>10-Q</b><span>Quarterly report</span><em>Mar 2026</em></div></div><span class="cap real">Costco · its SEC filings</span></div>
+      <div class="tx"><h3>Traceable to the source</h3><p>Every year and every quarter links to the filing it came from on sec.gov, with the latest filing date and when the next report is due.</p></div>
+    </article>
+  </div>
+</section>
+
+<section class="group" id="earnings">
+  <div class="gh"><span class="n">03</span><div><div class="kicker">Earnings</div><h2>Every quarter, and how the stock took it.</h2></div></div>
+  <div class="cards">
+    <article class="fc wide">
+      <div class="pv"><div class="mock tbl react">
+        <div class="nextrep"><span class="mk">Next report, estimated</span><b>Thu, Dec 10, 2026</b><i class="tc AMC">AMC</i><span class="muted">usually after the close</span></div>
+        <table><thead><tr><th>Quarter</th><th>Reported</th><th>Timing</th><th>EPS y/y</th><th class="hide">Gap</th><th>Report day</th><th>vs S&amp;P</th><th class="hide">5 days</th></tr></thead><tbody>
+        <tr><td><b>Q4 '26</b></td><td class="lk">2026-09-24</td><td><i class="tc AMC">AMC</i></td><td>+15.0%</td><td class="hide neg">−1.1%</td><td><b>+2.9%</b></td><td>+2.4%</td><td class="hide">+2.1%</td></tr>
+        <tr><td><b>Q3 '26</b></td><td class="lk">2026-05-28</td><td><i class="tc AMC">AMC</i></td><td>+15.2%</td><td class="hide neg">−1.0%</td><td class="neg"><b>−3.9%</b></td><td class="neg">−4.2%</td><td class="hide neg">−2.3%</td></tr>
+        <tr><td><b>Q2 '26</b></td><td class="lk">2026-03-05</td><td><i class="tc AMC">AMC</i></td><td>+13.9%</td><td class="hide neg">−1.6%</td><td><b>+1.6%</b></td><td>+2.9%</td><td class="hide">+2.1%</td></tr>
+        <tr><td><b>Q1 '26</b></td><td class="lk">2025-12-11</td><td><i class="tc AMC">AMC</i></td><td>+11.4%</td><td class="hide neg">−0.1%</td><td><b>0.0%</b></td><td>+1.1%</td><td class="hide neg">−3.0%</td></tr></tbody></table>
+        <div class="sum"><div><span>Typical move</span><b>±2.7%</b></div><div><span>Up on report day</span><b>8 of 16</b></div><div><span>Best / worst</span><b>+4.4% / −7.6%</b></div></div>
+      </div><span class="cap real">Costco · real reactions from its earnings 8-Ks</span></div>
+      <div class="tx"><h3>Earnings reaction</h3><p>The last 20 reports, each dated and timed from the company’s own earnings 8-K: <b>BMO</b> before the open, <b>AMC</b> after the close. Then the gap, the report-day move, the move against the S&amp;P 500, and 5 days, 1 month and 3 months later. Plus an estimate of the next report date.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock"><span class="mk">EPS by quarter</span><svg viewBox="0 0 320 150" class="ill" role="img" aria-label="EPS by quarter"><rect x="4.0" y="72.8" width="18" height="57.2" fill="var(--teal)" opacity="0.75"/><rect x="30.6" y="62.1" width="18" height="67.9" fill="var(--teal)" opacity="0.75"/><rect x="57.2" y="69.2" width="18" height="60.8" fill="var(--teal)" opacity="0.75"/><rect x="83.8" y="44.2" width="18" height="85.8" fill="var(--teal)" opacity="0.75"/><rect x="110.4" y="65.6" width="18" height="64.4" fill="var(--teal)" opacity="0.75"/><rect x="137.0" y="51.3" width="18" height="78.7" fill="var(--teal)" opacity="0.75"/><rect x="163.6" y="58.5" width="18" height="71.5" fill="var(--teal)" opacity="0.75"/><rect x="190.2" y="29.9" width="18" height="100.1" fill="var(--teal)" opacity="0.75"/><rect x="216.8" y="54.9" width="18" height="75.1" fill="var(--teal)" opacity="0.75"/><rect x="243.4" y="40.6" width="18" height="89.4" fill="var(--teal)" opacity="0.75"/><rect x="270.0" y="47.8" width="18" height="82.2" fill="var(--teal)" opacity="0.75"/><rect x="296.6" y="19.2" width="18" height="110.8" fill="var(--claret)" opacity="1"/><text x="2" y="146" class="t">12 quarters</text><text x="318" y="146" class="t" text-anchor="end">latest</text></svg></div><span class="cap">Illustration</span></div>
+      <div class="tx"><h3>Quarter by quarter</h3><p>Revenue, margins, net income, EPS and free cash flow for each of the last 12 quarters with year-on-year change. Fiscal Q4 worked out from the 10-K, and every quarter linked to its filing.</p></div>
+    </article>
+  </div>
+</section>
+
+<section class="group" id="timing">
+  <div class="gh"><span class="n">04</span><div><div class="kicker">Timing</div><h2>Price, trend and the market.</h2></div></div>
+  <div class="cards">
+    <article class="fc">
+      <div class="pv"><div class="mock"><svg viewBox="0 0 320 140" class="ill" role="img" aria-label="Price as OHLC bars"><path d="M6.0 120.4V122.8M3.6 121.9H6.0M6.0 122.2H8.4" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M12.8 119.4V123.6M10.4 122.2H12.8M12.8 123.0H15.2" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M19.6 110.0V126.0M17.2 123.0H19.6M19.6 111.3H22.0" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M26.4 105.9V111.9M24.0 111.3H26.4M26.4 107.1H28.8" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M33.2 104.5V121.6M30.8 107.1H33.2M33.2 120.1H35.6" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M40.0 108.8V125.2M37.6 120.1H40.0M40.0 113.8H42.4" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M46.8 112.4V120.6M44.4 113.8H46.8M46.8 119.7H49.2" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M53.6 116.6V121.6M51.2 119.7H53.6M53.6 118.2H56.0" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M60.4 112.3V120.1M58.0 118.2H60.4M60.4 113.5H62.8" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M67.2 94.5V117.0M64.8 113.5H67.2M67.2 96.2H69.6" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M74.0 93.9V100.9M71.6 96.2H74.0M74.0 99.9H76.4" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M80.8 96.9V100.6M78.4 99.9H80.8M80.8 98.8H83.2" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M87.6 95.9V102.5M85.2 98.8H87.6M87.6 100.9H90.0" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M94.4 85.1V101.6M92.0 100.9H94.4M94.4 87.7H96.8" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M101.2 76.9V87.8M98.8 87.7H101.2M101.2 81.6H103.6" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M108.0 60.5V82.6M105.6 81.6H108.0M108.0 67.1H110.4" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M114.8 63.3V68.7M112.4 67.1H114.8M114.8 65.9H117.2" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M121.6 59.6V68.6M119.2 65.9H121.6M121.6 64.4H124.0" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M128.4 52.5V69.1M126.0 64.4H128.4M128.4 55.6H130.8" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M135.2 49.4V60.0M132.8 55.6H135.2M135.2 49.8H137.6" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M142.0 39.3V51.3M139.6 49.8H142.0M142.0 41.4H144.4" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M148.8 38.1V53.8M146.4 41.4H148.8M148.8 52.0H151.2" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M155.6 29.9V56.9M153.2 52.0H155.6M155.6 36.9H158.0" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M162.4 27.2V38.9M160.0 36.9H162.4M162.4 32.1H164.8" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M169.2 23.4V50.8M166.8 32.1H169.2M169.2 49.6H171.6" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M176.0 45.8V58.0M173.6 49.6H176.0M176.0 54.7H178.4" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M182.8 41.0V55.6M180.4 54.7H182.8M182.8 41.5H185.2" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M189.6 29.3V43.6M187.2 41.5H189.6M189.6 34.8H192.0" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M196.4 25.3V40.2M194.0 34.8H196.4M196.4 27.2H198.8" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M203.2 8.0V29.0M200.8 27.2H203.2M203.2 11.4H205.6" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M210.0 9.2V33.2M207.6 11.4H210.0M210.0 30.3H212.4" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M216.8 29.6V50.3M214.4 30.3H216.8M216.8 46.8H219.2" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M223.6 41.4V59.7M221.2 46.8H223.6M223.6 57.8H226.0" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M230.4 56.0V60.0M228.0 57.8H230.4M230.4 57.1H232.8" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M237.2 49.9V59.3M234.8 57.1H237.2M237.2 53.7H239.6" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M244.0 50.2V55.7M241.6 53.7H244.0M244.0 55.6H246.4" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M250.8 52.5V67.0M248.4 55.6H250.8M250.8 62.2H253.2" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M257.6 57.7V64.8M255.2 62.2H257.6M257.6 64.4H260.0" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M264.4 62.7V69.0M262.0 64.4H264.4M264.4 63.7H266.8" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M271.2 59.5V75.7M268.8 63.7H271.2M271.2 71.6H273.6" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M278.0 69.5V80.6M275.6 71.6H278.0M278.0 77.0H280.4" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M284.8 65.6V77.5M282.4 77.0H284.8M284.8 66.7H287.2" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M291.6 61.1V67.2M289.2 66.7H291.6M291.6 63.0H294.0" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M298.4 56.2V63.0M296.0 63.0H298.4M298.4 58.1H300.8" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M305.2 46.4V64.8M302.8 58.1H305.2M305.2 48.3H307.6" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M312.0 41.4V49.6M309.6 48.3H312.0M312.0 42.8H314.4" stroke="var(--ink)" stroke-width="1.2" fill="none"/><path d="M6.0 122.2 L12.8 122.3 L19.6 120.6 L26.4 118.5 L33.2 118.8 L40.0 118.0 L46.8 118.3 L53.6 118.3 L60.4 117.5 L67.2 114.2 L74.0 112.0 L80.8 110.0 L87.6 108.6 L94.4 105.4 L101.2 101.7 L108.0 96.4 L114.8 91.7 L121.6 87.5 L128.4 82.6 L135.2 77.6 L142.0 72.0 L148.8 68.9 L155.6 64.0 L162.4 59.1 L169.2 57.6 L176.0 57.2 L182.8 54.8 L189.6 51.7 L196.4 47.9 L203.2 42.3 L210.0 40.5 L216.8 41.4 L223.6 44.0 L230.4 46.0 L237.2 47.2 L244.0 48.5 L250.8 50.6 L257.6 52.7 L264.4 54.4 L271.2 57.0 L278.0 60.1 L284.8 61.1 L291.6 61.4 L298.4 60.9 L305.2 59.0 L312.0 56.5" stroke="var(--teal)" stroke-width="1.8" fill="none"/><path d="M6.0 132.2 L12.8 131.0 L19.6 129.8 L26.4 128.7 L33.2 127.5 L40.0 126.3 L46.8 125.2 L53.6 124.0 L60.4 122.8 L67.2 121.7 L74.0 120.5 L80.8 119.3 L87.6 118.2 L94.4 117.0 L101.2 115.8 L108.0 114.6 L114.8 113.5 L121.6 112.3 L128.4 111.1 L135.2 110.0 L142.0 108.8 L148.8 107.6 L155.6 106.5 L162.4 105.3 L169.2 104.1 L176.0 103.0 L182.8 101.8 L189.6 100.6 L196.4 99.5 L203.2 98.3 L210.0 97.1 L216.8 96.0 L223.6 94.8 L230.4 93.6 L237.2 92.5 L244.0 91.3 L250.8 90.1 L257.6 89.0 L264.4 87.8 L271.2 86.6 L278.0 85.5 L284.8 84.3 L291.6 83.1 L298.4 82.0 L305.2 80.8 L312.0 79.6" stroke="var(--claret)" stroke-width="1.6" fill="none"/></svg><div class="leg"><span><i style="background:var(--teal)"></i>50-day EMA</span><span><i style="background:var(--claret)"></i>200-day</span><span class="pill on">Risk on</span></div></div><span class="cap">Illustration</span></div>
+      <div class="tx"><h3>Technicals</h3><p>OHLC bars with moving averages, risk on or off read from the averages, how stretched the price is, and real volume: today, yesterday and the 10-, 30- and 90-day averages.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock vs"><span class="mk">5-year return, a year</span><div class="vr me"><span>Stock</span><span class="bar"><i style="width:89%"></i></span><b>+14.2%</b></div><div class="vr"><span>SPY</span><span class="bar"><i style="width:69%"></i></span><b>+11.1%</b></div><div class="vr"><span>QQQ</span><span class="bar"><i style="width:98%"></i></span><b>+15.6%</b></div><div class="vr"><span>DIA</span><span class="bar"><i style="width:52%"></i></span><b>+8.4%</b></div><div class="vr"><span>IWM</span><span class="bar"><i style="width:32%"></i></span><b>+5.2%</b></div><span class="mk sm">Pick the benchmark on any chart</span></div><span class="cap">Illustration</span></div>
+      <div class="tx"><h3>Against the market</h3><p>Every stock measured against SPY, QQQ, DIA or IWM over every period from one day to ten years, plus what $10,000 grew into against each.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock idx"><span class="mk">SPY · top holdings</span><div class="vr"><span>NVDA</span><span class="bar"><i style="width:99%"></i></span><b>7.52%</b></div><div class="vr"><span>AAPL</span><span class="bar"><i style="width:87%"></i></span><b>6.59%</b></div><div class="vr"><span>MSFT</span><span class="bar"><i style="width:57%"></i></span><b>4.30%</b></div><div class="vr"><span>AMZN</span><span class="bar"><i style="width:48%"></i></span><b>3.62%</b></div><div class="vr"><span>GOOGL</span><span class="bar"><i style="width:43%"></i></span><b>3.25%</b></div><div class="vr"><span>AVGO</span><span class="bar"><i style="width:36%"></i></span><b>2.77%</b></div><span class="mk sm">N-PORT filing, Jun 30, 2026</span></div><span class="cap real">Real weights from SEC fund filings</span></div>
+      <div class="tx"><h3>Index weights</h3><p>Top ten holdings and sector mix for SPY, QQQ, DIA and IWM, and on every stock, which index funds hold it and at what weight.</p></div>
+    </article>
+  </div>
+</section>
+
+<section class="group" id="discover">
+  <div class="gh"><span class="n">05</span><div><div class="kicker">Discover</div><h2>Lists the numbers pick.</h2></div></div>
+  <div class="cards">
+    <article class="fc wide">
+      <div class="pv"><div class="mock scr"><div class="sg"><span class="">Cash machines</span><span class="">Shrinking share count</span><span class="">Dividend raisers</span><span class="">Net cash fortresses</span><span class="">Compounders</span><span class="">Fast growers</span><span class="">Quality with low debt</span><span class="">Cash machines buying back</span><span class="">Covered dividend raisers</span><span class="">High-margin businesses</span><span class="">Growing without dilution</span><span class="warn">Watch the debt</span></div></div><span class="cap">The 12 prebuilt screens</span></div>
+      <div class="tx"><h3>Prebuilt screens</h3><p>Twelve fixed rules run on the S&amp;P 500’s SEC data, from cash machines and compounders to dividend raisers with the cash to back them. Sort any column, filter by sector, tap a row to open the company.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock shelves"><span class="mk">Shelves</span><div class="chips big"><i>Mega-caps</i><i>REITs</i><i>Banks</i><i>Grid &amp; power</i><i>Dividend payers</i><i>Superinvestors (13F)</i><i>Semis</i><i>Software</i></div></div><span class="cap">Illustration</span></div>
+      <div class="tx"><h3>Shelves and superinvestors</h3><p>Hand-built lists by size, industry, income and theme, and what the best-known funds own from their quarterly 13F filings.</p></div>
+    </article>
+    <article class="fc wide">
+      <div class="pv"><div class="mock list"><span class="mk">My list</span><div class="li h"><b>Ticker</b><span>Company</span><em>Verdict</em><em>Day</em><i></i></div><div class="li"><b>COST</b><span>Costco Wholesale</span><em class="g3">Wait for price</em><em>+0.4%</em><i>★</i></div><div class="li"><b>AAPL</b><span>Apple</span><em class="g4">Hold</em><em class="neg">−0.8%</em><i>★</i></div><div class="li"><b>O</b><span>Realty Income</span><em class="g5">Buy</em><em>+0.2%</em><i>★</i></div><div class="li dim"><b>NVDA</b><span>Recently viewed</span><em></em><em></em><i></i></div></div><span class="cap">Illustration</span></div>
+      <div class="tx"><h3>Your list</h3><p>Save a stock with one tap and come back to it. The stocks you open stay under Recently viewed.</p></div>
+    </article>
+  </div>
+</section>
+
+<section class="group" id="learn">
+  <div class="gh"><span class="n">06</span><div><div class="kicker">Learn</div><h2>Every term, in plain English.</h2></div></div>
+  <div class="cards">
+    <article class="fc">
+      <div class="pv"><div class="mock gl"><span class="mk">Glossary · F</span><b class="gt">Free cash flow (FCF)</b><p>Cash left after the business pays to keep and grow itself.</p><code>operating cash flow − capex</code><span class="good"><b>Good:</b> positive and growing; 10%+ of revenue is strong</span></div><span class="cap">From the glossary</span></div>
+      <div class="tx"><h3>Glossary A–Z</h3><p>71 terms with what each means, how it’s calculated, what good looks like and which tab shows it. Search it, filter by topic or jump by letter.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock smp"><div><b>COST</b><span>The quality compounder</span></div><div><b>AAPL</b><span>Buybacks at scale</span></div><div><b>O</b><span>A REIT, valued on FFO</span></div><div><b>JPM</b><span>A bank</span></div><div><b>NVDA</b><span>A fast grower</span></div><div><b>KO</b><span>The dividend raiser</span></div></div><span class="cap">Sample companies</span></div>
+      <div class="tx"><h3>Learn on six real companies</h3><p>Each shows a different side of LedgerLine and names the tabs to open: a compounder, buybacks, a REIT, a bank, a fast grower and a dividend raiser.</p></div>
+    </article>
+    <article class="fc">
+      <div class="pv"><div class="mock how"><span class="mk">Formulas &amp; method</span><div class="fl"><span>ROIC</span><code>op. income × 0.79 ÷ (equity + debt − cash)</code></div><div class="fl"><span>Buy</span><code>quality ≥ 3.8 and valuation ≥ 3.4</code></div><div class="fl"><span>FFO</span><code>net income + RE depreciation − gains</code></div></div><span class="cap">From Formulas &amp; method</span></div>
+      <div class="tx"><h3>Every formula, written down</h3><p>Each score, verdict and ratio, with the exact rule behind it. If LedgerLine says it, you can check how.</p></div>
+    </article>
+  </div>
+</section>
+
+<section class="group" id="next">
+  <div class="gh"><span class="n">07</span><div><div class="kicker">Coming next</div><h2>On the bench.</h2></div></div>
+  <div class="soon">
+    <div><b>XBRL tag helper</b><span>Click any number to see the exact SEC tag behind it, what it means, and the filing it came from.</span></div>
+    <div><b>Insider transactions</b><span>Form 4 buys and sells by directors and officers, on a timeline, with open-market buys called out.</span></div>
+    <div><b>Watchlists with targets</b><span>Price targets, thesis notes and alerts on every stock you follow, saved to your account.</span></div>
+    <div><b>Excel export</b><span>Every dataset for a company in one spreadsheet, raw numbers, one click.</span></div>
+    <div><b>Institutional ownership</b><span>Which funds hold the stock, and who added or cut last quarter, from 13F filings.</span></div>
+  </div>
+</section>
+
+<section class="closer"><div class="kicker">Know what you own.</div><h2>Type a ticker. See the whole company.</h2><div class="cta"><a class="btn primary big" href="/app/">Start here →</a><a class="btn" href="/#pricing">See pricing</a></div></section>
+</div>
+</main>
+
+<footer class="wrap">
+  <p><b>Important disclosures.</b> LedgerLine is provided for information and education only. It is not investment, legal, tax or accounting advice, and nothing on it is a recommendation or solicitation to buy, sell or hold any security. LedgerLine is not a registered investment adviser or broker-dealer and does not know your financial situation, objectives or risk tolerance.</p><p><b>Trade at your own risk.</b> Investing involves risk, including the loss of all money invested. Trading on margin, or in options, futures, leveraged or inverse products, can produce losses greater than the amount invested. Past performance, back-tested results and model outputs do not guarantee future results. Consult a licensed financial adviser, CPA or tax professional before making any investment decision.</p><p><b>Data.</b> Financial data is read from XBRL tags in SEC EDGAR 10-K and 10-Q filings. Market cap and per-share figures use the latest filed share count; for companies with more than one share class, shares are converted to the class shown and may differ from other sources. Intraday prices are delayed at least 15 minutes and come from IEX, a single US exchange, through Marketstack, so they can differ from the consolidated market price; outside market hours prices are end-of-day closes. Scores, fair values and verdicts are produced automatically by fixed rules and can be incomplete, delayed or wrong. Verify figures against the original filings before relying on them.</p><p><b>Forecasts and simulations.</b> Forecast values, IRRs and the Outlook’s odds are hypothetical results of a model run on a company’s past filings. They are not predictions or guarantees, they do not reflect actual trading, and they cannot account for everything that will affect a stock. Actual results will differ, possibly by a lot.</p><p><b>Screens and lists.</b> Stock explorer screens use a snapshot of filing data dated on the screen. Superinvestor holdings come from 13F filings, which are reported up to 45 days after each quarter ends and may no longer be held. Inclusion on any screen or list is not a recommendation.</p>
+  <p>Designed and built by Kevin Rodrigue. © 2026 Kevin Rodrigue. All rights reserved.</p>
+  <p class="legal"><a href="/terms.html">Terms of Use</a><a href="/privacy.html">Privacy Policy</a><a href="mailto:kgrodrigue@yahoo.com">Contact</a></p>
+</footer>
+</body></html>

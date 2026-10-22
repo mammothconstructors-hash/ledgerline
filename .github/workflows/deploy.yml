@@ -1,0 +1,61 @@
+name: Test and deploy
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: 51799e9e2cfaf727a3bc287626828255
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Check the worker parses
+        run: node --check worker/src/index.js
+      - name: Build the site from app-src
+        run: npm run build
+      - name: Run the site tests (every tab, phone + desktop, light + dark)
+        run: npm test
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: test-screenshots, path: tests/out, retention-days: 14 }
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - name: Deploy the worker (sec-proxy)
+        run: npx wrangler deploy --config worker/wrangler.jsonc --message "${{ github.sha }}"
+        env: { CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" }
+      - name: Deploy the site (Pages project ledgerline)
+        run: npx wrangler pages deploy site --project-name=ledgerline --branch=main --commit-hash=${{ github.sha }} --commit-message="${{ github.event.head_commit.message || 'manual deploy' }}"
+        env: { CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" }
+      - name: Smoke test the live worker
+        run: |
+          v=$(grep -o "WORKER_VERSION = '[0-9.]*'" worker/src/index.js | grep -o "[0-9.]*")
+          for i in 1 2 3 4 5 6; do
+            got=$(curl -fsS https://sec-proxy.mammothconstructors.workers.dev/mcp | grep -o "server [0-9.]*" | grep -o "[0-9.]*" || true)
+            [ "$got" = "$v" ] && echo "worker $got live" && exit 0; sleep 10
+          done
+          echo "expected worker $v, live says $got"; exit 1

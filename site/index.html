@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>LedgerLine · Know what you own</title>
+<meta name="description" content="Every US stock scored from its own SEC filings: business quality, moat, risk, fair value and the odds of your return. Know what you own.">
+<meta name="description" content="Every US stock scored from its SEC filings: business, moat, growth, management, risk and valuation, with full statements and notes.">
+<link rel="icon" href="/logo.svg" type="image/svg+xml"><link rel="alternate icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%224%22 fill=%22%23262A33%22/%3E%3Cpath d=%22M9 8v16M9 12h-3M9 20h3M20 6v18M20 10h-3M20 19h3%22 stroke=%22%23FFF1E5%22 stroke-width=%222.4%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#FFF1E5;--paper2:#F2DFCE;--ink:#33302E;--ink2:#4D4845;--muted:#66605C;--line:#CCC1B7;--rule:#33302E;--navy:#262A33;--onnavy:#FFF1E5;--claret:#990F3D;--teal:#0D7680;--up:#09804C;
+  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;--sans:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+@media (prefers-color-scheme: dark){:root{--bg:#1C1E23;--paper2:#262A33;--ink:#F2DFCE;--ink2:#E3D2C2;--muted:#B0A497;--line:#3E434E;--rule:#B0A497;--navy:#121418;--onnavy:#F2DFCE;--claret:#F08AA6;--teal:#4DBAC2;--up:#4FCB8A;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55}
+a{color:var(--teal)}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{background:var(--navy);color:var(--onnavy)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;padding-block:12px;gap:12px}
+.brand{font-family:var(--serif);font-weight:600;font-size:26px;color:var(--onnavy);text-decoration:none}
+.top a.login{color:var(--onnavy);font-weight:600;font-size:14px;text-decoration:none;border:1px solid rgba(255,241,229,.4);padding:6px 12px;border-radius:2px}
+.kicker{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--claret)}
+.hero{padding-block:56px 40px;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:40px;align-items:end}
+@media (max-width:820px){.hero{grid-template-columns:1fr;padding-block:36px 28px}}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(40px,6.5vw,72px);line-height:1;letter-spacing:-.02em;margin:10px 0 18px;text-wrap:balance}
+.stand{font-family:var(--serif);font-size:21px;line-height:1.45;color:var(--ink2);margin:0 0 24px;max-width:34ch}
+.cta{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 20px;border-radius:2px;font-weight:700;font-size:15px;text-decoration:none;border:1px solid var(--ink);color:var(--ink);background:transparent}
+.btn.primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn.big{height:52px;padding:0 28px;font-size:17px}
+.btn.soon{border-style:dashed;color:var(--muted);cursor:default}
+.legal{display:flex;gap:16px;flex-wrap:wrap}
+.legal a{color:var(--muted)}
+.fine{font-size:13px;color:var(--muted)}
+.card{border-top:3px solid var(--ink);padding-top:14px}
+.card .big{font-family:var(--serif);font-size:84px;font-weight:700;line-height:.9;color:var(--up)}
+.card .lbl{font-size:12px;font-weight:600;color:var(--muted)}
+.card dl{display:grid;grid-template-columns:1fr auto;margin:14px 0 0;font-size:15px}
+.card dt,.card dd{margin:0;padding:7px 0;border-bottom:1px solid var(--line)}
+.card dd{font-family:var(--serif);font-weight:600;text-align:right}
+section{padding-block:44px;border-bottom:1px solid var(--line)}
+h2{font-family:var(--serif);font-weight:600;font-size:clamp(28px,4vw,40px);line-height:1.08;margin:8px 0 24px;letter-spacing:-.01em;text-wrap:balance}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.grid h3{font-size:17px;margin:0 0 6px}
+.grid p{margin:0;color:var(--ink2);font-size:15px}
+.plans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;max-width:760px}
+@media (max-width:640px){.plans{grid-template-columns:1fr}}
+.plan{border:1px solid var(--line);border-top:3px solid var(--ink);padding:20px;display:grid;gap:10px;background:var(--bg)}
+.plan.best{border-top-color:var(--claret)}
+.plan .p{font-family:var(--serif);font-size:48px;font-weight:700;line-height:1}
+.plan .p small{font-size:18px;font-weight:400;color:var(--muted)}
+.plan ul{margin:0;padding-left:18px;color:var(--ink2);font-size:15px}
+.tag{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--claret)}
+.faq{display:grid;gap:0;max-width:760px}
+.faq details{border-bottom:1px solid var(--line);padding:12px 0}
+.faq summary{cursor:pointer;font-weight:600}
+.faq p{margin:8px 0 0;color:var(--ink2)}
+footer{padding-block:24px 40px;font-size:12.5px;color:var(--muted)}
+footer p{max-width:110ch;margin:0 0 8px}
+.shot{border:1px solid var(--line);background:var(--bg);box-shadow:0 18px 50px rgba(0,0,0,.12);border-radius:6px;overflow:hidden}
+.shot .bar{display:flex;align-items:center;gap:10px;background:var(--navy,#262A33);color:var(--onnavy,#F2DFCE);padding:9px 14px;font-size:13px;font-weight:600}
+.shot .dots{display:flex;gap:6px}.shot .dots i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.28);display:block}
+.shot .url{flex:1;background:rgba(255,255,255,.1);border-radius:4px;padding:4px 10px;font-weight:500;font-size:12px;opacity:.85}
+.shot .body{padding:20px 22px 22px}
+.shot .co{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}
+.shot .co h3{font-family:var(--serif);font-size:30px;margin:2px 0 0;font-weight:600}
+.shot .co .tk{font-size:12px;color:var(--muted)}
+.shot .px{display:flex;gap:22px;align-items:flex-end}.shot .px b{font-family:var(--serif);font-size:26px;display:block}.shot .px span{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.shot .tabs{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);padding:10px 0;border-bottom:1px solid var(--line)}.shot .tabs .on{border-bottom:2px solid var(--claret);padding-bottom:3px;color:var(--ink);font-weight:600}
+.shot .glance{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 18px;padding:14px 0;border-bottom:1px solid var(--line)}
+.shot .glance div span{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.shot .glance div b{font-family:var(--serif);font-size:17px;font-weight:600}
+.g5{color:#2E7D4F}.g4{color:#5A8F3C}.g3{color:#8A6D1E}.g2{color:#B3541E}.g1{color:#990F3D}
+.shot .two{display:grid;grid-template-columns:1.1fr 1fr;gap:22px;padding-top:14px}
+.shot .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;align-content:start}.shot .stats span{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.shot .stats b{font-size:18px}
+.shot .odds{border-top:3px solid var(--ink);padding-top:10px}.shot .odds .k{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--claret);font-weight:700}
+.shot .odds .o{font-family:var(--serif);font-size:24px;font-weight:600;margin:4px 0}.shot .odds p{margin:4px 0;font-size:13.5px;color:var(--ink2)}
+.shotcap{font-size:12.5px;color:var(--muted);margin-top:10px}
+@media (max-width:760px){.shot .glance{grid-template-columns:repeat(2,minmax(0,1fr))}.shot .two{grid-template-columns:1fr}.shot .co h3{font-size:24px}}
+
+.tn{display:flex;align-items:center;gap:2px}.tn a{color:var(--onnavy);font-weight:600;font-size:14px;text-decoration:none;padding:6px 10px;white-space:nowrap}.tn a.login{margin-left:6px}
+@media (max-width:430px){.tn .np{display:none}.brand{font-size:20px!important}.brand svg{width:32px;height:32px}.tn a{padding:6px 7px}}
+</style></head><body>
+<header class="top"><div class="wrap"><a class="brand" href="/" style="display:inline-flex;align-items:center;gap:9px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="38" aria-hidden="true" style="flex:none;display:block"><rect width="48" height="48" rx="11" fill="#FBF7F1"/><path d="M10 14h20.5l6-6" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 7.5h7v7" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 24h17" fill="none" stroke="#A39C93" stroke-width="4" stroke-linecap="round"/><path d="M10 34h14.5l6 6" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 40.5h7v-7" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>LedgerLine</a><nav class="tn"><a href="/features.html">Features</a><a href="#pricing" class="np">Pricing</a><a class="login" href="/app/">Start here</a></nav></div></header>
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <div class="kicker">Know what you own.</div>
+      <h1>Every stock, scored from what it filed.</h1>
+      <p class="stand">Type a ticker. LedgerLine reads up to 17 years of SEC filings and ten years of prices, then tells you if the business is good, the moat is real, the risk is low and the price is fair.</p>
+      <div class="cta"><a class="btn primary big" href="/app/">Start here →</a><a class="btn" href="/features.html">See every feature</a></div>
+      <p class="fine" style="margin-top:10px">Free during the beta. Sign in with the email you were invited with; we email you a one-time code.</p>
+    </div>
+    <div class="card" aria-label="Example scorecard">
+      <div class="lbl">Example verdict</div>
+      <div class="big">Hold</div>
+      <dl><dt>Business quality</dt><dd>Very strong</dd><dt>Moat and safety</dt><dd>Strong</dd><dt>Growth</dt><dd>Strong</dd><dt>Risk</dt><dd>Low</dd><dt>Valuation</dt><dd>Fair value</dd></dl>
+      <p class="fine" style="margin-top:8px">Illustration of the layout, not a current rating.</p>
+    </div>
+  </div>
+
+
+  <section aria-label="LedgerLine on a real stock">
+    <div class="kicker">See it on a real stock</div>
+    <h2>Costco, the way LedgerLine shows it.</h2>
+    <div class="shot">
+      <div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">ledgerline · COST</span></div>
+      <div class="body">
+        <div class="co"><div><div class="tk">Retail-variety stores · NASDAQ:COST</div><h3>Costco Wholesale</h3></div>
+          <div class="px"><div><span>Market cap</span><b>$442.5B</b></div><div><span>Price</span><b>$998.31</b></div></div></div>
+        <div class="tabs"><span class="on">Overview</span><span>Verdict</span><span>Valuation</span><span>Forecast</span><span>Business</span><span>Moat</span><span>Growth</span><span>Earnings</span><span>Risk</span><span>Technicals</span></div>
+        <div class="glance">
+          <div><span>Verdict</span><b class="g3">Wait for price</b></div><div><span>Valuation</span><b class="g2">Overvalued</b></div><div><span>Risk</span><b class="g5">Very low</b></div><div><span>Business</span><b class="g4">Strong</b></div>
+          <div><span>Moat</span><b class="g5">Very strong</b></div><div><span>Growth</span><b class="g4">Strong</b></div><div><span>Management</span><b class="g4">Strong</b></div><div><span>Model fair value</span><b class="g2">$839.68</b></div>
+        </div>
+        <div class="two">
+          <div class="stats"><div><span>P/E (TTM)</span><b>48.1×</b></div><div><span>ROIC</span><b>42.6%</b></div><div><span>FCF yield</span><b>2.12%</b></div><div><span>Revenue growth</span><b>+10.1%</b></div><div><span>Operating margin</span><b>3.9%</b></div><div><span>1-year return</span><b>+6.6%</b></div></div>
+          <div class="odds"><div class="k">Outlook · 25,000 futures from the filings</div><div class="o">49% odds of 10%+ a year</div>
+            <p>Over 3 years. Middle outcome +9.8% a year; 1 in 10 futures below +2.8%, 1 in 10 above +18.2%.</p>
+            <p><b>Buy at or below $891.63</b> for 70% odds.</p>
+            <p>Today’s price assumes 10.9% growth for ten years; the filings support about 8.6%.</p></div>
+        </div>
+      </div>
+    </div>
+    <p class="shotcap">Real LedgerLine figures for Costco on October 22, 2026 (price: October 21 close). Shown to explain the product, not as a recommendation.</p>
+  </section>
+  <section>
+    <div class="kicker">What you get</div>
+    <h2>Fourteen tabs, one answer.</h2>
+    <div class="grid">
+      <div><h3>Eight key attributes</h3><p>Growth, free cash flow, debt, price, capital efficiency, leading signals and moat: pass, watch or fail, with the numbers behind each.</p></div>
+      <div><h3>Undervalued, fair or overvalued</h3><p>Fair value, buy-below price and the return at today’s price, from the stock’s own ten-year normal multiple.</p></div>
+      <div><h3>A verdict</h3><p>Buy, Wait for price, Hold, No new money or Avoid, from a fixed rule you can read. No black box.</p></div>
+      <div><h3>The full filings</h3><p>Income statement, balance sheet, cash flow and comprehensive income for up to 17 years, split-adjusted, plus trailing twelve months.</p></div>
+      <div><h3>Notes, MD&amp;A and risk factors</h3><p>Every note to the financial statements, management’s discussion, risk factors and legal proceedings from the latest 10-K, one click each.</p></div>
+      <div><h3>Forecast and the odds</h3><p>A chart of price against what earnings justify, ten years back and up to six forward, plus 25,000 simulations from the filings that give the odds of each return.</p></div>
+      <div><h3>Timing</h3><p>Risk on or risk off from the moving averages, stretch from each average and real volume numbers: today, yesterday and the 10-, 30- and 90-day averages.</p></div>
+      <div><h3>Stock explorer</h3><p>S&amp;P 500 screens run on the filings: cash machines, shrinking share counts, dividend raisers, net cash fortresses, compounders and fast growers. Plus lists by industry, income and theme, and what the superinvestors own.</p></div>
+      <div><h3>Against the market</h3><p>Every stock measured against SPY, QQQ, DIA or IWM over every period from one day to ten years.</p></div>
+      <div><h3>40+ ratios, every year</h3><p>Valuation, efficiency, debt and return ratios for every fiscal year on file, marked against their own ten-year median, with CSV download.</p></div>
+      <div><h3>Your list</h3><p>Save a stock with one tap and come back to it; the stocks you open stay under Recently viewed.</p></div>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="kicker">Pricing</div>
+    <h2>Free during the beta. Paid plans open soon.</h2>
+    <p class="fine" style="font-size:15px;max-width:62ch;margin:-8px 0 20px">LedgerLine is in a private beta and costs nothing while we test. When paid plans open, every new account starts with a <b>21-day free trial</b>: a card is required, nothing is charged until day 22, and you can cancel before then and pay nothing.</p>
+    <div class="plans">
+      <div class="plan">
+        <div class="tag">Monthly</div>
+        <div class="p">$19<small> / month</small></div>
+        <ul><li>Every US-listed stock</li><li>All tabs and filings</li><li>21-day free trial, cancel any time</li></ul>
+        <span class="btn soon" aria-disabled="true">Opens after the beta</span>
+      </div>
+      <div class="plan best">
+        <div class="tag">Annual · two months free</div>
+        <div class="p">$190<small> / year</small></div>
+        <ul><li>Everything in monthly</li><li>Works out to $15.83 a month</li><li>21-day free trial, cancel any time</li></ul>
+        <span class="btn soon" aria-disabled="true">Opens after the beta</span>
+      </div>
+    </div>
+    <div class="cta" style="margin-top:18px"><a class="btn primary" href="mailto:kgrodrigue@yahoo.com?subject=LedgerLine%20beta%20access&amp;body=Please%20add%20me%20to%20the%20LedgerLine%20beta.%0A%0AEmail%20to%20sign%20in%20with%3A%20">Request beta access</a><a class="btn" href="/app/">Already invited? Start here</a></div>
+    <p class="fine" style="margin-top:12px">Payments will be handled by Stripe. LedgerLine never sees or stores your card number.</p>
+  </section>
+
+  <section>
+    <div class="kicker">Questions</div>
+    <h2>Before you start</h2>
+    <div class="faq">
+      <details><summary>Where does the data come from?</summary><p>Financial statements are read from the XBRL tags in each company’s SEC EDGAR filings; notes and MD&amp;A come from the same filings. Prices are 15-minute delayed during market hours and end-of-day otherwise, from a licensed market-data provider.</p></details>
+      <details><summary>Which stocks are covered?</summary><p>US-listed companies that file 10-Ks and 10-Qs with the SEC. Most foreign listings and OTC names aren’t covered.</p></details>
+      <details><summary>How do I log in?</summary><p>Use the email address you were invited with. We send a one-time code to that address; there is no password to remember. Each login lasts 30 days.</p></details>
+      <details><summary>How does the free trial work?</summary><p>During the beta there is nothing to pay. When paid plans open, new accounts get 21 days free with a card on file; you are charged on day 22 unless you cancel first. Cancel any time from Account inside the app and you keep access to the end of the period you paid for.</p></details>
+      <details><summary>Is this investment advice?</summary><p>No. LedgerLine is for information only. It rates stocks by fixed rules applied to public data, doesn’t know your situation and isn’t a recommendation to buy or sell anything. Trade at your own risk, and talk to a licensed financial adviser or CPA before investing.</p></details>
+    </div>
+  </section>
+</main>
+<footer class="wrap">
+  <p><b>Important disclosures.</b> LedgerLine is provided for information and education only. It is not investment, legal, tax or accounting advice, and nothing on it is a recommendation or solicitation to buy, sell or hold any security. LedgerLine is not a registered investment adviser or broker-dealer and does not know your financial situation, objectives or risk tolerance.</p><p><b>Trade at your own risk.</b> Investing involves risk, including the loss of all money invested. Trading on margin, or in options, futures, leveraged or inverse products, can produce losses greater than the amount invested. Past performance, back-tested results and model outputs do not guarantee future results. Consult a licensed financial adviser, CPA or tax professional before making any investment decision.</p><p><b>Data.</b> Financial data is read from XBRL tags in SEC EDGAR 10-K and 10-Q filings. Market cap and per-share figures use the latest filed share count; for companies with more than one share class, shares are converted to the class shown and may differ from other sources. Intraday prices are delayed at least 15 minutes and come from IEX, a single US exchange, through Marketstack, so they can differ from the consolidated market price; outside market hours prices are end-of-day closes. Scores, fair values and verdicts are produced automatically by fixed rules and can be incomplete, delayed or wrong. Verify figures against the original filings before relying on them.</p><p><b>Forecasts and simulations.</b> Forecast values, IRRs and the Outlook’s odds are hypothetical results of a model run on a company’s past filings. They are not predictions or guarantees, they do not reflect actual trading, and they cannot account for everything that will affect a stock. Actual results will differ, possibly by a lot.</p><p><b>Screens and lists.</b> Stock explorer screens use a snapshot of filing data dated on the screen. Superinvestor holdings come from 13F filings, which are reported up to 45 days after each quarter ends and may no longer be held. Inclusion on any screen or list is not a recommendation.</p>
+  <p>Designed and built by Kevin Rodrigue. © 2026 Kevin Rodrigue. All rights reserved.</p>
+  <p class="legal"><a href="/terms.html">Terms of Use</a><a href="/privacy.html">Privacy Policy</a><a href="mailto:kgrodrigue@yahoo.com">Contact</a></p>
+</footer>
+</body></html>
