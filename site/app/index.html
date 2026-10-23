@@ -466,6 +466,9 @@ input.helpq,.helpq,.exsel,select{border-radius:999px!important;border:1px solid 
 #main .sec + .sec, #main .sec + div, #main div + .sec{margin-top:14px}
 @media (max-width:640px){.sec{padding:14px 14px 16px;border-radius:10px}.rail{border-radius:14px;margin-bottom:14px}.hero h2{font-size:22px}}
 /* skin pass 2 */
+.qsum p{margin:0 0 9px;line-height:1.62;color:var(--ink2);max-width:110ch}.qsum p:last-child{margin-bottom:0}.qsum b{color:var(--ink)}
+.faq dl{margin:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 28px}.faq dt{font-weight:650;margin-top:10px;color:var(--ink)}.faq dd{margin:2px 0 0;color:var(--muted);line-height:1.5}
+@media (max-width:760px){.faq dl{grid-template-columns:1fr}}
 .cbwrap{display:grid;grid-template-columns:270px minmax(0,1fr);gap:16px;align-items:start}
 @media (max-width:820px){.cbwrap{grid-template-columns:1fr}.cblist{max-height:240px!important}}
 .cbside{background:var(--bg);border:1px solid var(--cardline);border-radius:var(--r2);padding:10px;position:sticky;top:70px}
@@ -920,7 +923,7 @@ function derive(){
   F.phaseHist = F.labels.map((y,i)=>({y,p:phaseSheet(i,{rev,ni,fcf:series('fcf'),dv,bb:series('buybacks')})})).filter(o=>o.p);
   F.revCagr3 = n>3?cagr(rev[L-3],rev[L],3):null;
   F.phase = F.phaseHist.length ? F.phaseHist[F.phaseHist.length-1].p : null;
-  S.F=F; S.V=valuation(); S._tech=undefined; S._techW=undefined; S._out=undefined; S._react=undefined; S.inp=S.inp||{}; S.M=model();
+  S.F=F; S.V=valuation(); S._tech=undefined; S._techW=undefined; S._out=undefined; S._react=undefined; S._qs=undefined; S.inp=S.inp||{}; S.M=model();
 }
 function phaseSheet(i,d){
   const r=d.rev[i]; if(!isNum(r)) return null;
@@ -1904,6 +1907,70 @@ function cbHover(ev){
   const px=(CB.pl+CB.bw*i+CB.bw/2)/1000*box.width; tip.style.left=Math.min(Math.max(8,px-tip.offsetWidth/2),box.width-tip.offsetWidth-8)+'px';
 }
 document.addEventListener('mousemove',e=>{ if(e.target.closest&&e.target.closest('.cbsvg')) cbHover(e); });
+
+/* ---- Quick summary and FAQ, written from the numbers (fixed sentences, no AI) ---- */
+function qsFacts(){
+  if(S._qs!==undefined) return S._qs; S._qs=null; if(!S.sec) return null;
+  let RA=null; try{ RA=ratiosHtml(true); }catch(e){ return null; }
+  const by=new Map(RA.defs.filter(d=>d[1]).map(d=>[d[0],d])), F={};
+  const tt=name=>{ const d=by.get(name); if(!d) return null; let v=null; try{ v=d[1](RA.n-1,true); }catch(e){} return isNum(v)&&isFinite(v)?v:null; };
+  const hist=name=>{ const d=by.get(name); if(!d) return []; const a=[]; for(let i=Math.max(RA.off,RA.n-10);i<RA.n;i++){ try{ const v=d[1](i,false); if(isNum(v)&&isFinite(v)) a.push(v); }catch(e){} } return a; };
+  ['P/E','P/S','P/B','EV/EBITDA','Enterprise value','Gross margin','Operating margin','Net margin','FCF margin','ROE','ROA','ROIC','EPS','FCF per share','Dividends per share','Dividend yield','Current ratio','Debt ÷ equity','Net debt ÷ EBITDA','Revenue growth','EPS growth','FCF yield'].forEach(k=>F[k]=tt(k));
+  F.peMed=median(hist('P/E')); F.price=S.sd.close; F.mcap=S.sd.market_cap_basic;
+  const K=S.sec.key||{}, T=S.sec.ttm||{}; F.fcf=isNum(T.fcf)?T.fcf:lastNum(K.fcf||[]); F.netDebt=isNum(T.netDebt)?T.netDebt:lastNum(K.netDebt||[]);
+  F.file=lastFiling(); F.o=overall(); F.M=S.M||{}; F.pf=S.pf||{}; try{ F.X=reactState(); }catch(e){ F.X=null; } try{ F.T=techData(); }catch(e){ F.T=null; }
+  S._qs=F; return F;
+}
+const qsX=v=>isNum(v)?v.toFixed(v>=100?0:1)+'×':null, qsP=v=>isNum(v)?pct(v,1):null, qsPS=v=>isNum(v)?pct(v,1,true):null, qsD=v=>isNum(v)?'$'+v.toFixed(2):null;
+const qsDate=iso=>iso?new Date(iso+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}):'';
+function quickSumHtml(){
+  const F=qsFacts(); if(!F) return '';
+  const nm=esc(S.name), tk=esc(S.ticker), o=F.o||{sc:{}}, M=F.M, pf=F.pf, lab=(k)=>o.sc[k]?SHORT[k][lvl(o.sc[k])-1].toLowerCase():null;
+  const join=a=>{ a=a.filter(Boolean); return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]; };
+  const P=[];
+  { const ex=(pf.exchanges||[])[0]||S.exch||'', st=pf.state?`, incorporated in ${esc(pf.state)}`:'', ind=(S.sd.industry||pf.sector||'').toLowerCase();
+    const f=F.file; P.push(`<b>${nm} (${tk})</b> is ${ind?`a${/^[aeiou]/.test(ind)?'n':''} ${esc(ind)} company`:'a US-listed company'}${st}${ex?`, trading on ${esc(ex)}`:''}. ${f?`Its latest SEC filing is a ${esc(f.form||'')} for the period ended ${qsDate(f.end)}, filed ${qsDate(f.filed)}. `:''}At ${money(F.price)} it is worth <b>${big(F.mcap)}</b>${isNum(F['Enterprise value'])?`, with an enterprise value of ${big(F['Enterprise value'])}`:''}.`); }
+  { const v=join([qsX(F['P/E'])&&`<b>${qsX(F['P/E'])}</b> trailing earnings`, qsX(F['P/S'])&&`${qsX(F['P/S'])} sales`, qsX(F['P/B'])&&`${qsX(F['P/B'])} book`, qsX(F['EV/EBITDA'])&&`${qsX(F['EV/EBITDA'])} EBITDA`]);
+    const rel=isNum(F['P/E'])&&isNum(F.peMed)?` ${F['P/E']<F.peMed*0.9?'cheaper than':F['P/E']>F.peMed*1.1?'richer than':'in line with'} its 10-year median P/E of ${qsX(F.peMed)}`:'';
+    const fv=isNum(M.fair)&&isNum(F.price)?` LedgerLine’s fair value is <b>${money(M.fair)}</b>; today’s price is ${Math.abs(F.price/M.fair*100-100).toFixed(0)}% ${F.price<M.fair?'below':'above'} it: <b>${lab('valuation')||esc(M.call||'')}</b>.`:'';
+    if(v) P.push(`It trades at ${v},${rel||''}.${fv}`); }
+  { const m=join([qsP(F['Gross margin'])&&`gross ${qsP(F['Gross margin'])}`, qsP(F['Operating margin'])&&`operating ${qsP(F['Operating margin'])}`, qsP(F['Net margin'])&&`net ${qsP(F['Net margin'])}`]);
+    const r=join([qsP(F.ROE)&&`ROE ${qsP(F.ROE)}`, qsP(F.ROA)&&`ROA ${qsP(F.ROA)}`, qsP(F.ROIC)&&`ROIC <b>${qsP(F.ROIC)}</b>`]);
+    if(m||r) P.push(`${m?`Margins: ${m}. `:''}${r?`Returns: ${r}. `:''}${lab('moat')?`Moat <b>${lab('moat')}</b>, business ${lab('business')||'—'}.`:''}`); }
+  { const mv=(w,v)=>isNum(v)?`${w} ${v>=0?'rose':'fell'} ${pct(Math.abs(v),1)}`:null, g=join([mv('revenue',F['Revenue growth']), mv('EPS',F['EPS growth'])]);
+    const ps=join([qsD(F.EPS)&&`EPS ${qsD(F.EPS)}`, qsD(F['FCF per share'])&&`free cash flow ${qsD(F['FCF per share'])}`, F['Dividends per share']>0&&`dividends ${qsD(F['Dividends per share'])}${isNum(F['Dividend yield'])?` (${qsP(F['Dividend yield'])} yield)`:''}`]);
+    if(g||ps) P.push(`${g?`Over the latest year ${g}. `:''}${ps?`Per share: ${ps}.`:''}${lab('growth')?` Growth <b>${lab('growth')}</b>.`:''}`); }
+  { const b=join([qsX(F['Current ratio'])&&`current ratio ${F['Current ratio'].toFixed(2)}`, isNum(F['Debt ÷ equity'])&&`debt-to-equity ${F['Debt ÷ equity'].toFixed(2)}`, isNum(F.netDebt)&&(F.netDebt<0?`net cash of ${big(-F.netDebt)}`:`net debt of ${big(F.netDebt)}${isNum(F['Net debt ÷ EBITDA'])?` (${F['Net debt ÷ EBITDA'].toFixed(1)}× EBITDA)`:''}`), isNum(F.fcf)&&`free cash flow of ${big(F.fcf)} over the last twelve months`]);
+    if(b) P.push(`Balance sheet: ${b}.${lab('risk')?` Risk <b>${lab('risk')}</b>.`:''}`); }
+  { const X=F.X, T=F.T, a=[];
+    if(o.v) a.push(`Verdict: <b>${VERDICT[o.v]}</b>.`);
+    if(T&&T.trend) a.push(`Trend: ${esc(T.trend.toLowerCase())}${T.risk?`, ${esc(T.risk.toLowerCase())}`:''}.`);
+    if(X&&X.next) a.push(`Next earnings ${X.next.days<0?'overdue (expected around '+qsDate(X.next.d)+')':'expected around <b>'+qsDate(X.next.d)+'</b>'+(X.next.code?' '+X.next.code:'')}; the stock typically moves ±${(X.absAvg||0).toFixed(1)}% on report day.`);
+    if(a.length) P.push(a.join(' ')); }
+  return `<div class="sec qsum"><h3>Quick summary <small>written automatically from the filings and today’s price</small></h3>${P.map(x=>`<p>${x}</p>`).join('')}</div>`;
+}
+function faqHtml(){
+  const F=qsFacts(); if(!F) return '';
+  const nm=esc(S.name), tk=esc(S.ticker), pf=F.pf, f=F.file, asOf=f?qsDate(f.end):'the latest filing', Q=[];
+  const add=(q,a)=>{ if(a) Q.push([q,a]); };
+  add(`What industry is ${nm} in?`, (S.sd.industry||pf.sector)?`${nm} (${tk}) is in ${esc(S.sd.industry||pf.sector)}${S.sd.sector?`, in the ${esc(S.sd.sector)} sector`:''}.`:null);
+  add(`What exchange does ${tk} trade on?`, ((pf.exchanges||[])[0]||S.exch)?`${tk} trades on ${esc((pf.exchanges||[])[0]||S.exch)}.`:null);
+  add(`Where is ${nm} incorporated?`, pf.state?`${nm} is incorporated in ${esc(pf.state)}.`:null);
+  add(`When was ${tk}’s most recent SEC filing?`, f?`A ${esc(f.form||'')} for the period ended ${qsDate(f.end)}, filed with the SEC on ${qsDate(f.filed)}.`:null);
+  add(`What is ${tk}’s market cap?`, isNum(F.mcap)?`${big(F.mcap)} at ${money(F.price)} a share.`:null);
+  add(`What is ${tk}’s P/E ratio?`, qsX(F['P/E'])?`${qsX(F['P/E'])} trailing twelve months${isNum(F.peMed)?`, against a 10-year median of ${qsX(F.peMed)}`:''}.`:null);
+  add(`What is ${tk}’s EPS?`, qsD(F.EPS)?`${qsD(F.EPS)} over the trailing twelve months (diluted).`:null);
+  add(`What is ${tk}’s fair value?`, isNum(F.M.fair)?`LedgerLine’s model puts it at ${money(F.M.fair)}, against a price of ${money(F.price)}.`:null);
+  add(`What is ${tk}’s ROE?`, qsP(F.ROE)?`${qsP(F.ROE)} trailing twelve months, as of ${asOf}.`:null);
+  add(`What is ${tk}’s ROA?`, qsP(F.ROA)?`${qsP(F.ROA)} trailing twelve months, as of ${asOf}.`:null);
+  add(`What is ${tk}’s ROIC?`, qsP(F.ROIC)?`${qsP(F.ROIC)} trailing twelve months, as of ${asOf}.`:null);
+  add(`What is ${tk}’s EV/EBITDA?`, qsX(F['EV/EBITDA'])?`${qsX(F['EV/EBITDA'])} trailing twelve months.`:null);
+  add(`Does ${tk} pay a dividend?`, F['Dividends per share']>0?`Yes: ${qsD(F['Dividends per share'])} a share over the last year${isNum(F['Dividend yield'])?`, a ${qsP(F['Dividend yield'])} yield`:''}.`:isNum(F['Dividends per share'])?'No dividend in the last year.':null);
+  add(`When does ${tk} report earnings next?`, F.X&&F.X.next?`Around ${qsDate(F.X.next.d)}${F.X.next.code?` (${F.X.next.code==='AMC'?'usually after the close':F.X.next.code==='BMO'?'usually before the open':'usually during market hours'})`:''}, estimated from the same quarter last year.`:null);
+  add(`Is ${tk} a buy?`, F.o&&F.o.v?`LedgerLine’s rule-based verdict is ${VERDICT[F.o.v]}. It is not a recommendation; see the Verdict tab for every input.`:null);
+  if(!Q.length) return '';
+  return `<div class="sec faq"><h3>Frequently asked questions <small>about ${nm}</small></h3><dl>${Q.map(([q,a])=>`<div class="fq"><dt>${q}</dt><dd>${a}</dd></div>`).join('')}</dl></div>`;
+}
 function nextRepHtml(X){
   const N=X.next, P0=X.pending, out=[];
   const tc=c=>c?` <span class="tcode t${c}">${c}</span>`:'';
@@ -2217,7 +2284,7 @@ function checkHtml(){
 /* ---- Versions and what's new ---- */
 const APP_VERSION='7.0', WORKER_NEEDED='3.5', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
-  ['App 7.0','Oct 22, 2026',['All metrics: Annual or Quarterly, newest or oldest first, and click any metric to chart it (up to four) as bars or a line; quarterly view adds 26 metrics per quarter, with valuation and returns on the trailing four quarters','New look, same colors: every section on its own card, pill tabs and controls, one clean sans-serif for numbers, a compact company header with price beside the name, quieter table headers','Statement charts: pick bars or a line with points','Chart builder (Financials → Charts): chart any line item from any statement or any metric, up to six at once, each as bars or a line, hide or remove each, annual or quarterly, actual values on two axes or indexed to 100','Overview chart: Auto, Daily or Weekly bars; weekly 10- and 40-week averages and daily 8, 17, 34, 50 and 150 EMAs, each switched on or off; Risk on / off arrows on or off','Price charts: pick OHLC bars or a line (with a soft fill) on the Overview and Technicals charts; your choice carries to every price chart']],
+  ['App 7.0','Oct 22, 2026',['All metrics: Annual or Quarterly, newest or oldest first, and click any metric to chart it (up to four) as bars or a line; quarterly view adds 26 metrics per quarter, with valuation and returns on the trailing four quarters','New look, same colors: every section on its own card, pill tabs and controls, one clean sans-serif for numbers, a compact company header with price beside the name, quieter table headers','Statement charts: pick bars or a line with points','Overview: Quick summary in plain English (valuation, margins, returns, growth, balance sheet, verdict, next earnings) and a Frequently asked questions section, both written from the filings and today’s price','Chart builder (Financials → Charts): chart any line item from any statement or any metric, up to six at once, each as bars or a line, hide or remove each, annual or quarterly, actual values on two axes or indexed to 100','Overview chart: Auto, Daily or Weekly bars; weekly 10- and 40-week averages and daily 8, 17, 34, 50 and 150 EMAs, each switched on or off; Risk on / off arrows on or off','Price charts: pick OHLC bars or a line (with a soft fill) on the Overview and Technicals charts; your choice carries to every price chart']],
   ['App 6.26','Oct 22, 2026',['Financials: Ratios & KPIs is now All metrics, 60+ in one place, with new Growth (revenue, EPS, EBITDA, FCF, dividend) and Quality of earnings (cash conversion, stock comp, capex, share change) groups','New Statistics view for every metric: now vs its 10-year median, average, low, high, standard deviation, z-score, percentile and 5-year trend','Find any metric with the search box','Earnings reaction adds report-day swing (standard deviation) and how many times bigger than a normal day, with the share of yearly variance from report days']],
   ['App 6.26','Oct 22, 2026',['New All metrics tab: every ratio LedgerLine computes with its 10-year median, average, range, standard deviation, z-score, percentile and trend, plus return and risk statistics — 1/3/5/10-year returns, best and worst years, volatility, downside volatility, max drawdown, time under water, skew, kurtosis, Sharpe, Sortino, beta, correlation and up/down capture vs the S&P 500','Earnings variance: report-day standard deviation vs a normal day, and the share of the stock’s yearly variance that comes from its four report days','Days to the next earnings report next to the ticker on every tab']],
   ['App 6.25','Oct 22, 2026',['Next earnings report: countdown (in 12 days, tomorrow, today), highlighted inside a week; an overdue warning when last year’s timing has passed with no release','Days to the next earnings report on every company page, next to the ticker (tap it to open the Earnings tab)','Results that are out before the 10-Q is filed now show at the top of the reaction table, marked 10-Q pending, with the report-day move']],
@@ -2765,7 +2832,7 @@ function subHero(h){ return h?`<div class="subpart">${h.replace('<div class="her
 function stepHtml(){
   if(STEP_ALIAS[step]) step=STEP_ALIAS[step];
   const i=STEPS.findIndex(s=>s[0]===step);
-  let body = step==='overview'?overviewHtml() : step==='summary'?summaryHtml() : step==='financials'?financialsHtml() : step==='business'?tabHtml('business')+subHero(phaseHtml()) : step==='earnings'?earningsHtml() : step==='mgmt'?tabHtml('mgmt')+subHero(capitalHtml()) : step==='technicals'?techHtml() : step==='future'?futureHtml() : step==='stats'?statsHtml() : step==='metrics'?metricsHtml() : tabHtml(step);
+  let body = step==='overview'?overviewHtml()+faqHtml() : step==='summary'?summaryHtml() : step==='financials'?financialsHtml() : step==='business'?tabHtml('business')+subHero(phaseHtml()) : step==='earnings'?earningsHtml() : step==='mgmt'?tabHtml('mgmt')+subHero(capitalHtml()) : step==='technicals'?techHtml() : step==='future'?futureHtml() : step==='stats'?statsHtml() : step==='metrics'?metricsHtml() : tabHtml(step);
   const prev=STEPS[i-1], next=STEPS[i+1];
   if(step==='overview'&&!LS.get('hintSeen')) body=`<div class="firsthint"><span><b>New here?</b> Start with <b>At a glance</b> below: the verdict and every score in one line. Then tap <b>Verdict</b> for the why, and <b>Valuation</b> for the price to pay. <button type="button" class="linkbtn" data-go="guide">Full guide</button></span><button type="button" class="btn" data-hint="1">Got it</button></div>`+body;
   return `<div class="sheet">${body}<div class="nav">${prev?`<button class="btn" type="button" data-step="${prev[0]}">← ${prev[1]}</button>`:'<span></span>'}${next?`<button class="btn primary" type="button" data-step="${next[0]}">${next[1]} →</button>`:''}</div></div>`;
@@ -2844,6 +2911,7 @@ function overviewHtml(){
       ${(()=>{ const T=techData(); return T?`<button type="button" class="gl" data-step="technicals" style="--c:var(--l${T.lv})"><span class="gk">Trend</span><span class="gv">${T.trend}</span></button>`:''; })()}
       ${S.M&&S.M.moat&&isNum(S.M.moat.avg)?`<button type="button" class="gl" data-step="moat" style="--c:var(--l${Math.max(1,Math.min(5,Math.round(S.M.moat.avg)))})"><span class="gk">Moat tests</span><span class="gv">${S.M.moat.grade}</span></button>`:''}
     </div></div>
+  ${quickSumHtml()}
   ${profileHtml()}${S.src==='SEC'?bizHtml():''}
   <div class="sec">
     ${perfStrip()}<div class="chartbar"><div class="seg" role="group" aria-label="Chart view"><button type="button" data-mode="ohlc" class="${chartMode==='ohlc'?'on':''}">Price</button><button type="button" data-mode="vs" class="${chartMode==='vs'?'on':''}">vs ${bench}</button></div>${pxStyleSeg()}${benchSeg()}
