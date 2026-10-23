@@ -17,7 +17,7 @@ import UNIVERSE from './universe.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.7.1';
+const WORKER_VERSION = '3.7.2';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -43,12 +43,16 @@ export default {
   // every 2 minutes: if tonight's sector ranks are not built yet, do the next few Marketstack calls (see rankStep)
   async scheduled(event, env, ctx) {
     USAGE_DB = env && env.DB || null;
-    if (env && env.DB && env.MARKETSTACK_KEY) ctx.waitUntil(rankStep(env, 3).catch(() => {}));
+    if (env && env.DB) ctx.waitUntil(rankLog(env, 'cron', event && event.cron || '').then(() => env.MARKETSTACK_KEY ? rankStep(env, 3) : rankLog(env, 'error', 'no MARKETSTACK_KEY')).catch(e => rankLog(env, 'error', String(e && e.message || e))));
   }
 };
 
 /* ================= sector ranks: S&P 500 total returns over a week, month, quarter and year, ranked within each GICS sector ================= */
 const RANK_WINS = [['d0', 0], ['w', 7], ['m', 30], ['q', 91], ['y', 365]], RANK_BATCH = 80;
+async function rankLog(env, kind, msg) { try { await env.DB.prepare('CREATE TABLE IF NOT EXISTS worker_log (ts INTEGER, kind TEXT, msg TEXT)').run(); await env.DB.batch([env.DB.prepare('INSERT INTO worker_log (ts, kind, msg) VALUES (?, ?, ?)').bind(Date.now(), kind, String(msg).slice(0, 300)), env.DB.prepare('DELETE FROM worker_log WHERE ts < ?').bind(Date.now() - 3 * 864e5)]); } catch (e) { } }
+// a page view also nudges the build along (at most once a minute per instance), so ranks fill in even before the schedule fires
+let RANK_NUDGE = 0;
+function rankNudge(env, ctx) { if (!env.DB || !env.MARKETSTACK_KEY || !ctx || !ctx.waitUntil || Date.now() - RANK_NUDGE < 60e3) return; RANK_NUDGE = Date.now(); ctx.waitUntil(rankStep(env, 2).then(r => r && r.error ? rankLog(env, 'error', r.error) : null).catch(e => rankLog(env, 'error', String(e && e.message || e)))); }
 async function rankSchema(DB) {
   await DB.batch([
     DB.prepare('CREATE TABLE IF NOT EXISTS universe (ticker TEXT PRIMARY KEY, sector TEXT, sub TEXT)'),
@@ -724,8 +728,8 @@ async function api(req, url, env, ctx) {
     if (path === '/api/profile') return out(await profile(q.get('ticker') || ''), 200, 3600);
     if (path === '/api/statements') return out(await secStatements({ ticker: q.get('ticker'), years: q.get('years') }), 200, 3600);
     if (path === '/api/section') return out(await secSection({ ticker: q.get('ticker'), section: q.get('section'), form: q.get('form'), maxChars: q.get('maxChars') }), 200, 3600);
-    if (path === '/api/market') return out(await market(q.get('symbol') || '', env, ctx), 200, 900);
-    if (path === '/api/ranks') return out(await sectorRank(q.get('ticker') || '', env), 200, 1800);
+    if (path === '/api/market') { rankNudge(env, ctx); return out(await market(q.get('symbol') || '', env, ctx), 200, 900); }
+    if (path === '/api/ranks') { rankNudge(env, ctx); return out(await sectorRank(q.get('ticker') || '', env), 200, 600); }
     if (path === '/api/usage') return out(await usageData(), 200, 0);
     if (path === '/api/hit' && req.method === 'POST') return out(await recordVisit(req, env), 200, 0);
     if (path === '/api/activity') return (await keyOk(q.get('key'), env)) ? out(await activityData(), 200, 0) : out({ error: 'Private: add ?key= with your USAGE_KEY' }, 403, 0);
