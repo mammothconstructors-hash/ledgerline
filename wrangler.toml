@@ -1,0 +1,10 @@
+# Cloudflare Pages project "ledgerline": the site in ./site plus the functions in ./functions.
+# The sec-proxy worker has its own config in worker/wrangler.jsonc.
+name = "ledgerline"
+pages_build_output_dir = "site"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ledgerline"
+database_id = "e962f8eb-968d-4668-8642-91744195d5ab"

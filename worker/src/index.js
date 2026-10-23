@@ -279,14 +279,17 @@ async function testersApi(req, url, env) {
 async function testerQueue(env) {
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS tester_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, name TEXT, sites TEXT DEFAULT 'LedgerLine', action TEXT DEFAULT 'add', done INTEGER DEFAULT 0, result TEXT)").run();
   const rows = (await env.DB.prepare('SELECT * FROM tester_queue WHERE done = 0 LIMIT 10').all()).results || [];
-  if (!rows.length) return;
-  const sites = await accessSites(env);
+  const cacheRow = await env.DB.prepare("SELECT v FROM settings WHERE k = 'tester_cache'").first().catch(() => null), cacheAge = cacheRow ? Date.now() - (JSON.parse(cacheRow.v).t || 0) : Infinity;
+  if (!rows.length && cacheAge < 10 * 60e3) return;   // nothing to do: refresh the copy of the tester lists every 10 minutes
+  let sites = await accessSites(env);
   for (const r of rows) {
     const want = String(r.sites || 'LedgerLine').toLowerCase(), ids = sites.filter(s => want === 'all' || want.split(',').some(w => s.name.toLowerCase().includes(w.trim()))).map(s => s.id);
     const req = new Request('https://x/usage/testers', { method: 'POST', body: JSON.stringify({ email: r.email, name: r.name, sites: ids, action: r.action || 'add' }) });
     const res = await (await testersApi(req, new URL('https://x/usage/testers?key=__queue__'), { ...env, __queue: true })).json().catch(e => ({ error: String(e) }));
     await env.DB.prepare('UPDATE tester_queue SET done = 1, result = ? WHERE id = ?').bind(JSON.stringify(res).slice(0, 500), r.id).run();
   }
+  if (rows.length) sites = await accessSites(env);
+  await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('tester_cache', ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v").bind(JSON.stringify({ t: Date.now(), sites: sites.map(s => ({ id: s.id, name: s.name, domain: s.domain, emails: s.emails })) })).run();
 }
 function testersHtml(url, env) {
   const key = url.searchParams.get('key') || url.pathname.split('/')[2] || '';
