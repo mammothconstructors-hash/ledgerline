@@ -16,7 +16,7 @@
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.6.0';
+const WORKER_VERSION = '3.6.1';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -578,13 +578,23 @@ const SECTIONS_10Q = {
 const SECTION_NAMES = { mdna: "Management's Discussion and Analysis", notes: 'Notes to the financial statements', risk: 'Risk factors', business: 'Business', legal: 'Legal proceedings' };
 
 // longest span from a start heading to the first end heading after it (skips the table of contents)
-function sliceSection(text, startSrc, endSrc) {
+function sliceSection(text, startSrc, endSrc, minLen = 500) {
   const startRe = new RegExp(startSrc, 'gi'), endRe = new RegExp(endSrc, 'gi');
   let best = null, m;
   const starts = []; while ((m = startRe.exec(text))) starts.push(m.index);
   const ends = []; while ((m = endRe.exec(text))) ends.push(m.index);
-  starts.forEach((s, i) => { const e = ends.find(x => x > s); if (!e || (starts[i + 1] && starts[i + 1] < e)) return; if (e - s > 500 && (!best || e - s > best[1] - best[0])) best = [s, e]; });
+  starts.forEach((s, i) => { const e = ends.find(x => x > s); if (!e || (starts[i + 1] && starts[i + 1] < e)) return; if (e - s > minLen && (!best || e - s > best[1] - best[0])) best = [s, e]; });
   return best ? text.slice(best[0], best[1]) : '';
+}
+// the legal-proceedings part of the notes (usually under Commitments and Contingencies)
+function legalFromNotes(text) {
+  const notes = trimToNotes(sliceSection(text, ...SECTIONS_10K.notes) || text);
+  const re = /(legal\s+proceedings|litigation|legal\s+matters)/gi; let m, best = null;
+  while ((m = re.exec(notes))) { const before = notes.slice(Math.max(0, m.index - 3), m.index); if (/\n\s*$/.test(before) || /^\s*$/.test(before)) { best = m.index; break; } if (best == null) best = m.index; }
+  if (best == null) return '';
+  let out = notes.slice(best, best + 20000);
+  const stop = out.slice(200).search(/\n\s*(note\s+\d+|\d{1,2}\s*[\.—–-]\s*[A-Z][A-Za-z ,&]{3,60}\n)/i); if (stop > 0) out = out.slice(0, stop + 200);
+  return out.trim();
 }
 // inside Item 8, skip the statements themselves and start at the first note
 function trimToNotes(body) {
@@ -613,7 +623,9 @@ async function secSection(args) {
   const hr = await secGet(url, 86400);
   if (!hr) throw new Error('Filing document not found');
   const text = htmlToText(await hr.text());
-  let body = sliceSection(text, ...table[section]);
+  let body = sliceSection(text, ...table[section], section === 'legal' ? 30 : 500);
+  // a short legal item usually just points to a note ("see Note 11"): add that note's legal-proceedings text
+  if (section === 'legal' && body.length < 2500 && /note|commitments|contingenc/i.test(body)) { const extra = legalFromNotes(text); if (extra) body = body.trim() + '\n\n— From the notes to the financial statements —\n\n' + extra; }
   if (body && section === 'notes') body = trimToNotes(body);
   if (!body && section === 'notes') { const t = trimToNotes(text); if (t !== text) body = t; }
   if (!body) throw new Error("Couldn't locate the " + SECTION_NAMES[section] + ' section in ' + url);

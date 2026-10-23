@@ -76,6 +76,8 @@ const GL_MARKET=[
  ['Net borrowing','Concepts','Debt issued − debt repaid','New debt raised minus debt paid down in the period. Positive means the company borrowed more.',''],
  ['Years of dividend growth','Concepts','Consecutive raises','How many years in a row the dividend per share went up.','25+ years is a Dividend Aristocrat (S&P 500).'],
  ['EV / earnings','Concepts','Enterprise value ÷ net income','Like P/E but uses enterprise value, so a cash pile or heavy debt load is counted.',''],
+ ['KPI','Concepts','Key performance indicator','A metric chosen because it measures progress toward a company’s long-term goals: growth, profitability, return on capital, cash generation, balance-sheet safety, value per share. Every KPI is a metric; most metrics are diagnostic and explain how the business is running, not how close it is to its goals.','LedgerLine tags 17 of its 109 metrics as KPIs. Company-specific KPIs (same-store sales, subscribers, backlog) live in each 10-K’s MD&A.'],
+ ['Metric','Concepts','Any measured number','A quantity computed from the filings or the price, such as a ratio, margin, turnover or yield. Metrics diagnose; KPIs are the few metrics tied to the company’s goals.',''],
  ['TTM','Concepts','Trailing twelve months','The last four reported quarters added together: the most current full-year view between annual reports.'],
  ['Fair value','Concepts','LedgerLine fair value','LedgerLine’s estimate: normalized earnings power × the stock’s own normal multiple, blended with the buy-below price. A model, not a promise.'],
  ['Margin of safety','Concepts','','How far below fair value the price sits: the cushion if the estimate is wrong.','20%+ for most companies.'],
