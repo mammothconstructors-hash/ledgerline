@@ -534,6 +534,11 @@ body.tips-on [data-gl] .sf{display:none}
 .tipsbtn[aria-pressed="false"]{opacity:.55}
 #glTip{position:fixed;z-index:80;max-width:340px;background:var(--card,#fff);color:var(--ink);border:1px solid var(--cardline,#ccc);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:10px 12px;font-size:13px;line-height:1.45;pointer-events:none}
 #glTip b{display:block;font-size:14px;margin-bottom:2px}#glTip .gk{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}#glTip .gfm{font-family:ui-monospace,Menlo,monospace;font-size:12px;margin:4px 0;color:var(--teal,#0D7680)}#glTip .gg{color:var(--muted);margin-top:4px;font-size:12px}
+
+/* chart builder, crisper */
+.cbfilt{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}.cbfilt button{font:600 12px var(--sans);border:1px solid var(--cardline,var(--line));background:transparent;color:var(--ink2);border-radius:999px;padding:4px 10px;cursor:pointer}.cbfilt button.on{background:var(--ink);color:var(--paper,#fff);border-color:var(--ink)}
+.cbts{display:inline-flex;border:1px solid var(--cardline,var(--line));border-radius:999px;overflow:hidden;margin:0 2px}.cbts .cbt{border:0;background:transparent;padding:2px 7px;font-size:11px;color:var(--muted);cursor:pointer}.cbts .cbt.on{background:var(--ink);color:var(--paper,#fff)}
+.cbsvg text{font:500 11.5px var(--sans);fill:var(--muted);font-variant-numeric:tabular-nums}.cbsvg .gl{stroke:var(--line);stroke-opacity:.6;shape-rendering:crispEdges}.cbsvg .z{shape-rendering:crispEdges}
 </style>
 
 <header class="top">
@@ -1747,6 +1752,7 @@ function metricsHtml(){
 /* ---- Chart builder: any line item or metric, mixed bars and lines, two axes ---- */
 let cbSel=LS.get('cbsel')||['income|revenue','income|netIncome','r|operating margin'], cbOpt=LS.get('cbopt')||{'r|operating margin':{t:'line'}}, cbPer=LS.get('cbper')||'a', cbTr=LS.get('cbtr')||'actual', CB=null;
 const CB_COLORS=['#0D7680','#990F3D','#C07A12','#5A3E8C','#2E7D4F','#0F5499'];
+let cbF=LS.get('cbf')||'all';
 const cbSave=()=>{ LS.set('cbsel',cbSel); LS.set('cbopt',cbOpt); };
 function cbCatalog(per){
   const sec=S.sec, q=Q(), items=[], cls=u=>u==='USD'||u==='big'?'usd':u==='USD/shares'||u==='$'?'ps':u==='shares'?'sh':u==='%'?'pct':'mult';
@@ -1758,49 +1764,53 @@ function cbCatalog(per){
     groups.forEach(([id,g])=>{ const st=sec.statements[id]; if(!st) return; st.rows.forEach(r=>{ const a=q.rows[r.key]; if(!Array.isArray(a)) return;
       const an=r.values.filter(isNum), qs=a.filter(isNum); let flip=false; if(an.length&&qs.length){ const sa=Math.sign(an[an.length-1]), sq=Math.sign(qs.reduce((x,y)=>x+y,0)); flip=!!(sa&&sq&&sa!==sq); }
       const vals=a.slice(off,n).map(v=>isNum(v)?(flip?-v:v):null); if(vals.some(isNum)) items.push({id:id+'|'+r.key, group:g, label:r.label, unit:r.unit, cls:cls(r.unit), vals}); }); });
-    const RQ=ratiosQHtml(true); RQ.defs.forEach(d=>{ if(!d[1]) return; const vals=RQ.idx.map(i=>{ const v=d[1](i); return isNum(v)&&isFinite(v)?v:null; }); if(vals.some(isNum)) items.push({id:'r|'+d[0].toLowerCase(), group:'Metrics', label:d[0], unit:d[2], cls:cls(d[2]), vals, f:RQ.f}); });
+    const RQ=ratiosQHtml(true); let gq='KPIs'; RQ.defs.forEach(d=>{ if(!d[1]){ gq='KPIs · '+d[0]; return; } const vals=RQ.idx.map(i=>{ const v=d[1](i); return isNum(v)&&isFinite(v)?v:null; }); if(vals.some(isNum)) items.push({id:'r|'+d[0].toLowerCase(), group:gq, kpi:1, label:d[0], unit:d[2], cls:cls(d[2]), vals, f:RQ.f}); });
   } else {
     const yrs=sec.years, lp=sec.lastPeriod; cols=yrs.map(y=>({head:'FY'+y.fy, sub:y.end})); if(lp) cols.push({head:'TTM', sub:lp.end});
     groups.forEach(([id,g])=>{ const st=sec.statements[id]; if(!st) return; st.rows.forEach(r=>{ const vals=[...r.values]; if(lp) vals.push(isNum(r.last)?r.last:null); if(vals.some(isNum)) items.push({id:id+'|'+r.key, group:g, label:r.label, unit:r.unit, cls:cls(r.unit), vals}); }); });
-    const RA=ratiosHtml(true); RA.defs.forEach(d=>{ if(!d[1]) return; const vals=[]; for(let i=RA.off;i<RA.n;i++){ const v=d[1](i,false); vals.push(isNum(v)&&isFinite(v)?v:null); } if(lp){ const v=d[1](RA.n-1,true); vals.push(isNum(v)&&isFinite(v)?v:null); } if(vals.some(isNum)) items.push({id:'r|'+d[0].toLowerCase(), group:'Metrics', label:d[0], unit:d[2], cls:cls(d[2]), vals, f:RA.f}); });
+    const RA=ratiosHtml(true); let ga='KPIs'; RA.defs.forEach(d=>{ if(!d[1]){ ga='KPIs · '+d[0]; return; } const vals=[]; for(let i=RA.off;i<RA.n;i++){ const v=d[1](i,false); vals.push(isNum(v)&&isFinite(v)?v:null); } if(lp){ const v=d[1](RA.n-1,true); vals.push(isNum(v)&&isFinite(v)?v:null); } if(vals.some(isNum)) items.push({id:'r|'+d[0].toLowerCase(), group:ga, kpi:1, label:d[0], unit:d[2], cls:cls(d[2]), vals, f:RA.f}); });
   }
+  { const pd=S.d&&S.d.t&&S.d.t.length?S.d:null, pw=S.px; const at=end=>{ if(!end) return null; const e=dayOf(Date.parse(end+'T00:00:00Z')/1000); const v=closeOn(pd&&dayOf(pd.t[0])<=e?pd:pw,e); return isNum(v)?v:null; };
+    const vals=cols.map((c,i)=>i===cols.length-1&&c.head==='TTM'&&pw?pw.c[pw.c.length-1]:at(c.sub)); if(vals.some(isNum)) items.unshift({id:'px|close', group:'Price', label:'Share price (period end)', unit:'USD/shares', cls:'ps', vals}); }
   return {cols, items};
 }
+function cbType(it){ const o=cbOpt[it.id]||{}; return o.t||(['pct','mult','ps'].includes(it.cls)?'dot':'bar'); }
 function cbFmt(it,v){ if(!isNum(v)) return '—'; if(it.f&&it.unit!=='USD') return it.f(v,it.unit); if(it.unit==='USD/shares') return fx(v,2); if(it.unit==='shares') return vfmt(v); return big(v); }
 function chartBuilderHtml(){
   if(!S.sec) return '';
   const hasQ=!!(Q()&&Q().periods&&Q().periods.length), per=hasQ?cbPer:'a', C=cbCatalog(per); if(stOrder==='new'){ C.cols=C.cols.slice().reverse(); C.items=C.items.map(it=>({...it, vals:it.vals.slice().reverse()})); } const byId=new Map(C.items.map(it=>[it.id,it]));
   const sel=cbSel.map(id=>byId.get(id)).filter(Boolean), vis=sel.filter(it=>!(cbOpt[it.id]||{}).h);
-  const clsSet=[...new Set(vis.map(it=>it.cls))], indexed=cbTr==='index'||clsSet.length>2;
+  const clsSet=[...new Set(vis.map(it=>it.cls))], pctMode=cbTr==='pct', indexed=!pctMode&&(cbTr==='index'||clsSet.length>2);
   // list
-  const groups=[...new Set(C.items.map(it=>it.group))];
-  const list=groups.map(g=>`<div class="cbg"><div class="cbgh">${esc(g)}</div>${C.items.filter(it=>it.group===g).map(it=>{ const k=cbSel.indexOf(it.id); return `<button type="button" class="cbi${k>=0?' on':''}" data-cbadd="${esc(it.id)}" data-k="${esc((it.label+' '+g).toLowerCase())}">${k>=0?`<i style="background:${CB_COLORS[k%6]}"></i>`:''}${esc(it.label)}</button>`; }).join('')}</div>`).join('');
+  const shown=C.items.filter(it=>cbF==='all'||(cbF==='kpi'?it.kpi:cbF==='px'?it.group==='Price':!it.kpi&&it.group!=='Price'));
+  const groups=[...new Set(shown.map(it=>it.group))];
+  const list=groups.map(g=>`<div class="cbg"><div class="cbgh">${esc(g)}</div>${shown.filter(it=>it.group===g).map(it=>{ const k=cbSel.indexOf(it.id); return `<button type="button" class="cbi${k>=0?' on':''}" data-cbadd="${esc(it.id)}" data-k="${esc((it.label+' '+g).toLowerCase())}">${k>=0?`<i style="background:${CB_COLORS[k%6]}"></i>`:''}${esc(it.label)}</button>`; }).join('')}</div>`).join('');
   // chart
   const n=C.cols.length, W=chartPx()-(innerWidth>900?300:0), H=W<600?300:380, pl=W<600?56:74, pr=W<600?56:74, pt=16, pb=36, bw=(W-pl-pr)/n;
   let svg='';
   if(vis.length){
-    const series=vis.map(it=>{ const base=stOrder==='new'?it.vals.findLast(v=>isNum(v)&&v!==0):it.vals.find(v=>isNum(v)&&v!==0); return {it, v:indexed?it.vals.map(v=>isNum(v)&&base?v/Math.abs(base)*100:null):it.vals, t:(cbOpt[it.id]||{}).t||(it.cls==='pct'||it.cls==='mult'||it.cls==='ps'?'line':'bar'), color:CB_COLORS[cbSel.indexOf(it.id)%6]}; });
-    const axisOf=s0=>indexed?0:(s0.it.cls===vis[0].cls?0:1);
+    const series=vis.map(it=>{ const base=stOrder==='new'?it.vals.findLast(v=>isNum(v)&&v!==0):it.vals.find(v=>isNum(v)&&v!==0); return {it, v:pctMode?it.vals.map(v=>isNum(v)&&base?(v/base-1)*100*Math.sign(base):null):indexed?it.vals.map(v=>isNum(v)&&base?v/Math.abs(base)*100:null):it.vals, t:cbType(it), color:CB_COLORS[cbSel.indexOf(it.id)%6]}; });
+    const axisOf=s0=>indexed||pctMode?0:(s0.it.cls===vis[0].cls?0:1);
     const ax=[0,1].map(a=>{ const vs=series.filter(s0=>axisOf(s0)===a).flatMap(s0=>s0.v).filter(isNum); if(!vs.length) return null; let lo=Math.min(...vs), hi=Math.max(...vs);
-      if(series.some(s0=>axisOf(s0)===a&&s0.t==='bar')||lo>0&&lo<hi*0.35){ lo=Math.min(0,lo); hi=Math.max(0,hi); } if(hi===lo){ hi+=1; lo-=1; }
+      if(series.some(s0=>axisOf(s0)===a&&s0.t==='bar')||pctMode||lo>0&&lo<hi*0.35){ lo=Math.min(0,lo); hi=Math.max(0,hi); } if(hi===lo){ hi+=1; lo-=1; }
       const nice=x0=>{ const e=Math.pow(10,Math.floor(Math.log10(Math.abs(x0)||1))), f0=Math.abs(x0)/e; return (f0<=1?1:f0<=2?2:f0<=5?5:10)*e; }, st=nice((hi-lo)/5);
       return {lo:Math.floor(lo/st)*st, hi:Math.ceil(hi/st)*st, st, it:series.find(s0=>axisOf(s0)===a).it}; });
     const Y=(a,v)=>{ const A=ax[a]; return pt+(A.hi-v)/(A.hi-A.lo)*(H-pt-pb); };
-    const tick=(a,v)=>indexed?v.toFixed(0):cbFmt(ax[a].it,v);
+    const tick=(a,v)=>pctMode?(v>0?'+':'')+(Math.abs(ax[a].st)<1?v.toFixed(1):v.toFixed(0))+'%':indexed?v.toFixed(0):cbFmt(ax[a].it,v);
     for(let v=ax[0].lo; v<=ax[0].hi+ax[0].st/2; v+=ax[0].st) svg+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(0,v)}" y2="${Y(0,v)}" class="${Math.abs(v)<ax[0].st/2?'z':'gl'}"/><text x="${pl-8}" y="${Y(0,v)+4}" text-anchor="end">${tick(0,v)}</text>`;
     if(ax[1]) for(let v=ax[1].lo; v<=ax[1].hi+ax[1].st/2; v+=ax[1].st) svg+=`<text x="${W-pr+8}" y="${Y(1,v)+4}" text-anchor="start">${tick(1,v)}</text>`;
     const every=Math.ceil(n/Math.max(3,Math.floor((W-pl-pr)/64))); C.cols.forEach((c,i)=>{ if(i%every===0||i===n-1) svg+=`<text x="${pl+bw*i+bw/2}" y="${H-12}" text-anchor="middle">${esc(c.head)}</text>`; });
     const bars=series.filter(s0=>s0.t==='bar'), gw=bw*0.74, each=bars.length?gw/bars.length:0;
     bars.forEach((s0,k)=>{ const a=axisOf(s0), z=Y(a,Math.max(ax[a].lo,Math.min(ax[a].hi,0))); s0.v.forEach((v,i)=>{ if(!isNum(v)) return; const x0=pl+bw*i+(bw-gw)/2+each*k, y0=Y(a,v); svg+=`<rect x="${x0}" y="${Math.min(y0,z)}" width="${Math.max(1,each-1.5)}" height="${Math.max(1,Math.abs(z-y0))}" rx="2" fill="${s0.color}" opacity="${v<0?.55:.88}"/>`; }); });
-    series.filter(s0=>s0.t==='line').forEach(s0=>{ const a=axisOf(s0); let d='', pen=false; s0.v.forEach((v,i)=>{ if(!isNum(v)){ pen=false; return; } d+=(pen?'L':'M')+(pl+bw*i+bw/2)+','+Y(a,v); pen=true; });
-      svg+=`<path d="${d}" fill="none" stroke="${s0.color}" stroke-width="2.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`; if(n<=40) s0.v.forEach((v,i)=>{ if(isNum(v)) svg+=`<circle cx="${pl+bw*i+bw/2}" cy="${Y(a,v)}" r="3.4" fill="${s0.color}"/>`; }); });
-    CB={cols:C.cols, series, indexed, pl, bw, n};
+    series.filter(s0=>s0.t!=='bar').forEach(s0=>{ const a=axisOf(s0); let d='', pen=false; s0.v.forEach((v,i)=>{ if(!isNum(v)){ pen=false; return; } d+=(pen?'L':'M')+(pl+bw*i+bw/2).toFixed(1)+','+Y(a,v).toFixed(1); pen=true; });
+      svg+=`<path d="${d}" fill="none" stroke="${s0.color}" stroke-width="2.25" stroke-linejoin="round" stroke-linecap="round"/>`; if(s0.t==='dot') s0.v.forEach((v,i)=>{ if(isNum(v)) svg+=`<circle cx="${(pl+bw*i+bw/2).toFixed(1)}" cy="${Y(a,v).toFixed(1)}" r="${n>40?2.6:3.6}" fill="${s0.color}" stroke="var(--card,#fff)" stroke-width="1.5"/>`; }); });
+    CB={cols:C.cols, series, indexed:indexed||pctMode, pctMode, pl, bw, n, W};
   } else CB=null;
-  const chip=it=>{ const o=cbOpt[it.id]||{}, t=o.t||(['pct','mult','ps'].includes(it.cls)?'line':'bar'), k=cbSel.indexOf(it.id);
-    return `<span class="cbchip${o.h?' off':''}"><i style="background:${CB_COLORS[k%6]}"></i>${esc(it.label)}<button type="button" data-cbvis="${esc(it.id)}" title="${o.h?'Show':'Hide'}">${o.h?'◌':'●'}</button><button type="button" data-cbtype="${esc(it.id)}" title="Switch bars / line" class="cbt">${t==='bar'?'▮▮':'╱'}</button><button type="button" data-cbx="${esc(it.id)}" title="Remove">×</button></span>`; };
-  const axisNote=indexed?(cbTr==='index'?'Indexed: each series starts at 100':'Three kinds of units picked, so each series is indexed to 100 at its first value'):(clsSet.length===2?'Two units: left axis for '+esc(vis[0].label)+', right axis for '+esc((vis.find(it=>it.cls!==vis[0].cls)||{}).label||''):'');
-  return `<div class="cbwrap"><aside class="cbside"><div class="cbsh"><b>Line items &amp; metrics</b><span class="muted">${sel.length}/6</span>${sel.length?'<button type="button" class="linkbtn" data-cbclear="1">Clear</button>':''}</div><input id="cbQ" class="helpq" type="search" placeholder="Search ${C.items.length} items" autocomplete="off"><div class="cblist">${list}</div></aside>
-    <section class="cbmain"><div class="sttools" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"><span class="seg"><button type="button" data-cbper="a" class="${per==='a'?'on':''}">Annual</button><button type="button" data-cbper="q" class="${per==='q'?'on':''}"${hasQ?'':' disabled'}>Quarterly</button></span><span class="seg"><button type="button" data-sord="new" class="${stOrder==='new'?'on':''}">Newest first</button><button type="button" data-sord="old" class="${stOrder==='old'?'on':''}">Oldest first</button></span><span class="seg"><button type="button" data-cbtr="actual" class="${cbTr==='actual'?'on':''}">Actual</button><button type="button" data-cbtr="index" class="${cbTr==='index'?'on':''}">Indexed to 100</button></span></div>
+  const chip=it=>{ const o=cbOpt[it.id]||{}, t=cbType(it), k=cbSel.indexOf(it.id);
+    return `<span class="cbchip${o.h?' off':''}"><i style="background:${CB_COLORS[k%6]}"></i>${esc(it.label)}<button type="button" data-cbvis="${esc(it.id)}" title="${o.h?'Show':'Hide'}">${o.h?'◌':'●'}</button><span class="cbts" role="group" aria-label="Style">${[['bar','▮▮','Bars'],['line','╱','Line'],['dot','•╱•','Line with dots']].map(([v,g,l])=>`<button type="button" data-cbtype="${esc(it.id)}" data-v="${v}" title="${l}" class="cbt${t===v?' on':''}">${g}</button>`).join('')}</span><button type="button" data-cbx="${esc(it.id)}" title="Remove">×</button></span>`; };
+  const axisNote=pctMode?'Percent change: every series measured from its first period, so a KPI, a line item and the share price share one scale':indexed?(cbTr==='index'?'Indexed: each series starts at 100':'Three kinds of units picked, so each series is indexed to 100 at its first value'):(clsSet.length===2?'Two units: left axis for '+esc(vis[0].label)+', right axis for '+esc((vis.find(it=>it.cls!==vis[0].cls)||{}).label||''):'');
+  return `<div class="cbwrap"><aside class="cbside"><div class="cbsh"><b>Line items &amp; metrics</b><span class="muted">${sel.length}/6</span>${sel.length?'<button type="button" class="linkbtn" data-cbclear="1">Clear</button>':''}</div><input id="cbQ" class="helpq" type="search" placeholder="Search ${C.items.length} items" autocomplete="off"><div class="cbfilt" role="group" aria-label="Show">${[['all','All'],['kpi','KPIs ('+C.items.filter(it=>it.kpi).length+')'],['st','Line items'],['px','Price']].map(([v,l])=>`<button type="button" data-cbf="${v}" class="${cbF===v?'on':''}">${l}</button>`).join('')}</div><div class="cblist">${list}</div></aside>
+    <section class="cbmain"><div class="sttools" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"><span class="seg"><button type="button" data-cbper="a" class="${per==='a'?'on':''}">Annual</button><button type="button" data-cbper="q" class="${per==='q'?'on':''}"${hasQ?'':' disabled'}>Quarterly</button></span><span class="seg"><button type="button" data-sord="new" class="${stOrder==='new'?'on':''}">Newest first</button><button type="button" data-sord="old" class="${stOrder==='old'?'on':''}">Oldest first</button></span><span class="seg"><button type="button" data-cbtr="actual" class="${cbTr==='actual'?'on':''}" title="Each series in its own units: $, %, × or per share (two axes)">Actual</button><button type="button" data-cbtr="pct" class="${cbTr==='pct'?'on':''}" title="Percent change from the first period">% change</button><button type="button" data-cbtr="index" class="${cbTr==='index'?'on':''}" title="Each series starts at 100">Index 100</button></span></div>
       <div class="cbchips">${sel.map(chip).join('')||'<span class="muted">Pick line items or metrics on the left. Up to six, mixed bars and lines.</span>'}</div>
       ${vis.length?`<div class="mwrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px" class="cbsvg msvg" data-pl="${pl}" data-bw="${bw}" data-n="${n}">${svg}<rect class="mhl" x="0" y="${pt}" width="${bw}" height="${H-pt-pb}" style="display:none"/></svg><div class="mtip" hidden></div></div>`:''}
       <p class="fine" style="margin-top:6px">${axisNote?axisNote+'. ':''}${per==='a'?'Fiscal years from the 10-Ks; TTM is the trailing twelve months.':'Quarters from the 10-Qs (fiscal Q4 = 10-K year minus nine months).'} Hover for values.</p></section></div>`;
@@ -1809,8 +1819,8 @@ function cbHover(ev){
   const svg=ev.target.closest('.cbsvg'); if(!svg||!CB) return; const wrap=svg.parentElement, tip=wrap.querySelector('.mtip'), hl=svg.querySelector('.mhl');
   const box=svg.getBoundingClientRect(), xv=(ev.clientX-box.left)/box.width*svg.viewBox.baseVal.width, i=Math.floor((xv-CB.pl)/CB.bw);
   if(i<0||i>=CB.n){ tip.hidden=true; hl.style.display='none'; return; } hl.setAttribute('x',CB.pl+CB.bw*i); hl.style.display='';
-  tip.innerHTML=`<div class="th">${esc(CB.cols[i].head)}${CB.cols[i].sub?' · '+esc(CB.cols[i].sub):''}</div>`+CB.series.map(s0=>{ const raw=s0.it.vals[i]; return `<div><i style="background:${s0.color}"></i>${esc(s0.it.label)} <b>${cbFmt(s0.it,raw)}</b>${CB.indexed&&isNum(s0.v[i])?` <span class="muted">(${s0.v[i].toFixed(0)})</span>`:''}</div>`; }).join(''); tip.hidden=false;
-  const px=(CB.pl+CB.bw*i+CB.bw/2)/1000*box.width; tip.style.left=Math.min(Math.max(8,px-tip.offsetWidth/2),box.width-tip.offsetWidth-8)+'px';
+  tip.innerHTML=`<div class="th">${esc(CB.cols[i].head)}${CB.cols[i].sub?' · '+esc(CB.cols[i].sub):''}</div>`+CB.series.map(s0=>{ const raw=s0.it.vals[i]; return `<div><i style="background:${s0.color}"></i>${esc(s0.it.label)} <b>${cbFmt(s0.it,raw)}</b>${CB.indexed&&isNum(s0.v[i])?` <span class="muted">(${CB.pctMode?(s0.v[i]>=0?'+':'')+s0.v[i].toFixed(1)+'%':s0.v[i].toFixed(0)})</span>`:''}</div>`; }).join(''); tip.hidden=false;
+  const px=(CB.pl+CB.bw*i+CB.bw/2)/CB.W*box.width; tip.style.left=Math.min(Math.max(8,px-tip.offsetWidth/2),box.width-tip.offsetWidth-8)+'px';
 }
 document.addEventListener('mousemove',e=>{ if(e.target.closest&&e.target.closest('.cbsvg')) cbHover(e); });
 
@@ -2225,9 +2235,10 @@ function checkHtml(){
 }
 
 /* ---- Versions and what's new ---- */
-const APP_VERSION='7.3', WORKER_NEEDED='3.5', BUG_EMAIL='kgrodrigue@yahoo.com';
+const APP_VERSION='7.4', WORKER_NEEDED='3.5', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
   ['App 7.1','Oct 22, 2026',['Valuation uses core EPS when non-operating gains are more than a quarter of pretax profit (Amazon’s 2025–26 investment mark-ups had pushed its trailing EPS to $12.43 against about $7 from the business, and its fair value to $1,033); the Valuation tab says when this applies','Risk on / off now uses the 50-day vs 200-day EMA (10 vs 40 weeks); 200 EMA added to the Overview chart','Fixed: the return line above the Overview chart now matches the period boxes (both measured from the close before the period starts)']],
+  ['App 7.4','Oct 22, 2026',['Chart builder: chart any KPI against any line item or the share price. Scales: Actual (own units, two axes), % change from the first period, or Index 100','Each series can be bars, a line, or a line with dots','KPIs are easy to find: a KPIs filter and every KPI grouped by type (valuation, margins, returns, growth and the rest), plus Line items and Price filters','Share price at each fiscal year or quarter end is now chartable','Crisper chart drawing: sharper grid, tabular numbers, ringed dots']],
   ['App 7.3','Oct 22, 2026',['Charts follow the table: Newest first puts the newest year or quarter on the left, in statements, All metrics, Quarterly and the Chart builder (which now has the same Newest/Oldest switch)','Charts are drawn at their real on-screen size, so labels and numbers stay sharp on a phone; they redraw when the window is resized','Tips cover the Statistics page too (EV ratios, returns, RSI, short interest, float, Graham number, Piotroski and more), and the cash flow Net income line']],
   ['App 7.2','Oct 22, 2026',['Overview returns squared up end of day: the stock and its benchmark are both measured close to close through the same session, labelled “as of [date] close”; 1D is today’s close against the prior close, and the chart, the period boxes and the stat line all use the same closes','After 6 PM New York time the data service re-pulls end-of-day prices until the day’s close posts, so the chart and returns show today’s close','Tips on/off (ⓘ in the top bar): every line item and metric label shows its definition and formula on hover or tap','Every chart in Financials and All metrics has Open in Chart builder, to mix it with any line item or metric','Glossary: EBT and EBIT cards']],
   ['App 7.0','Oct 22, 2026',['Glossary rebuilt as cards: 284 terms — every statement line with the SEC XBRL tags behind it, all 109 metrics with formulas, 63 SEC forms and filing terms, price and risk terms; search, category chips, tap to expand, and Chart it opens the chart builder','All metrics grows to 109: new liquidity (cash ratio, working capital, NCAV), leverage (debt ratio, debt ÷ capital, Altman Z-score), efficiency (DSO, DIO, DPO, cash conversion cycle, turnover), margins (pretax, EBITDA, cash flow, R&D, SG&A), returns (tangible equity, cash ROIC, tax rate), growth (gross profit, operating income, net income, cash flow, assets, book value, dividends, deferred revenue, 5-year rates), quality (accruals, dilution, payouts vs FCF, goodwill) and calculated values (NOPAT, invested capital, owner earnings, tangible book); search box and a chip for each category','All metrics: Annual or Quarterly, newest or oldest first, and click any metric to chart it (up to four) as bars or a line; quarterly view adds 26 metrics per quarter, with valuation and returns on the trailing four quarters','New look, same colors: every section on its own card, pill tabs and controls, one clean sans-serif for numbers, a compact company header with price beside the name, quieter table headers','Statement charts: pick bars or a line with points','Overview: Quick summary in plain English (valuation, margins, returns, growth, balance sheet, verdict, next earnings) and a Frequently asked questions section, both written from the filings and today’s price','Chart builder (Financials → Charts): chart any line item from any statement or any metric, up to six at once, each as bars or a line, hide or remove each, annual or quarterly, actual values on two axes or indexed to 100','Overview chart: Auto, Daily or Weekly bars; weekly 10- and 40-week averages and daily 8, 17, 34, 50 and 150 EMAs, each switched on or off; Risk on / off arrows on or off','Price charts: pick OHLC bars or a line (with a soft fill) on the Overview and Technicals charts; your choice carries to every price chart']],
@@ -3417,10 +3428,11 @@ document.addEventListener('click',e=>{
   if(d.mode){ chartMode=d.mode; LS.set('mode',chartMode); render(); return; }
   if(d.cbadd){ const i=cbSel.indexOf(d.cbadd); if(i>=0) cbSel.splice(i,1); else { if(cbSel.length>=6) cbSel.shift(); cbSel.push(d.cbadd); } cbSave(); render(); return; }
   if(d.cbvis){ const o=cbOpt[d.cbvis]=cbOpt[d.cbvis]||{}; o.h=!o.h; cbSave(); render(); return; }
-  if(d.cbtype){ const it=d.cbtype, o=cbOpt[it]=cbOpt[it]||{}; const cur=o.t||(/^r\|/.test(it)?'line':'bar'); o.t=cur==='bar'?'line':'bar'; cbSave(); render(); return; }
+  if(d.cbtype){ const o=cbOpt[d.cbtype]=cbOpt[d.cbtype]||{}; o.t=d.v||'bar'; cbSave(); render(); return; }
   if(d.cbx){ cbSel=cbSel.filter(x0=>x0!==d.cbx); cbSave(); render(); return; }
   if(d.cbclear){ cbSel=[]; cbSave(); render(); return; }
   if(d.cbper){ cbPer=d.cbper; LS.set('cbper',cbPer); render(); return; }
+  if(d.cbf){ cbF=d.cbf; LS.set('cbf',cbF); render(); return; }
   if(d.cbtr){ cbTr=d.cbtr; LS.set('cbtr',cbTr); render(); return; }
   if(d.ovint){ ovInt=d.ovint; LS.set('ovint',ovInt); overviewChart(); return; }
   if(d.ovma){ const i=ovMA.indexOf(d.ovma); if(i>=0) ovMA.splice(i,1); else ovMA.push(d.ovma); LS.set('ovma',ovMA); overviewChart(); return; }
