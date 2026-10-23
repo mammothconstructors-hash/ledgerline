@@ -566,6 +566,39 @@ tbody tr:hover td{background:var(--hov)!important}
 .decstep button{border:0;background:transparent;font:600 12px var(--sans);color:var(--ink2);padding:4px 9px;border-radius:999px;cursor:pointer;font-variant-numeric:tabular-nums}
 .decstep button.on{background:var(--ink);color:var(--paper,#fff)}.decstep button:disabled{opacity:.35;cursor:default}
 .decstep .decn{font:600 11.5px var(--sans);color:var(--muted);min-width:34px;text-align:center}
+
+/* ===== color pass (App 8.0): same FT palette, used with more confidence ===== */
+:root{--grad:linear-gradient(90deg,var(--teal),var(--oxford) 45%,var(--claret) 75%,var(--mandarin))}
+/* masthead: a thin four-colour ribbon under the navy bar */
+.top{box-shadow:0 1px 0 rgba(0,0,0,.2)}
+.top::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:3px;background:var(--grad)}
+/* section rail: active tab in a teal-to-blue pill, hover tinted */
+.rail button.on{background:linear-gradient(135deg,var(--teal),var(--oxford))!important;color:#fff!important;box-shadow:0 2px 8px color-mix(in srgb,var(--teal) 35%,transparent)}
+.rail button:not(.on):hover{background:color-mix(in srgb,var(--teal) 10%,transparent)!important;color:var(--teal)!important}
+/* hero: kicker with a coloured bar, headline gets room */
+.hero .kicker{display:inline-flex;align-items:center;gap:8px}
+.hero .kicker::before{content:"";width:18px;height:3px;border-radius:2px;background:var(--grad)}
+/* cards: a coloured cap that rotates through the palette, and a matching dot on the title */
+.sec{position:relative;overflow:hidden}
+.sec::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--cap,var(--teal));opacity:.9}
+.sec:nth-of-type(4n+2){--cap:var(--oxford)} .sec:nth-of-type(4n+3){--cap:var(--claret)} .sec:nth-of-type(4n+4){--cap:var(--mandarin)}
+.sec>h3::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--cap,var(--teal));margin-right:8px;vertical-align:2px}
+/* segmented controls and chips: teal when on, chips tinted in their own line colour */
+.seg button.on,.decstep button.on,.cbfilt button.on,.cbts .cbt.on{background:var(--teal)!important;color:#fff!important;border-color:var(--teal)!important}
+.chip.on{border-color:var(--c,var(--teal))!important;background:color-mix(in srgb,var(--c,var(--teal)) 14%,transparent)!important;color:var(--ink)!important}
+.chip.on::before{height:3px}
+.btn.primary,.cblink .btn{background:linear-gradient(135deg,var(--teal),var(--oxford));border-color:transparent;color:#fff}
+/* tables: blue header labels, teal-tinted hover */
+thead th{color:var(--oxford)!important}
+tbody tr:hover td{background:color-mix(in srgb,var(--teal) 7%,transparent)!important}
+/* score pips and tags a touch bolder */
+.pip{border-radius:999px!important;padding:0 7px!important}
+.kpitag{background:color-mix(in srgb,var(--teal) 12%,transparent)}
+/* the big headline number */
+.meter .sc{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.meter .sc small{-webkit-text-fill-color:var(--muted)}
+/* links and focus */
+a{color:var(--oxford)} a:hover{color:var(--teal)}
 </style>
 </head><body>
 
@@ -584,7 +617,7 @@ tbody tr:hover td{background:var(--hov)!important}
 <div class="wrap" id="coBar"></div>
 <div class="wrap"><nav class="rail" id="rail" hidden></nav></div>
 <main class="wrap" id="main"></main>
-<footer class="wrap foot"><p><b>Important disclosures.</b> LedgerLine is provided for information and education only. It is not investment, legal, tax or accounting advice, and nothing on it is a recommendation or solicitation to buy, sell or hold any security. LedgerLine is not a registered investment adviser or broker-dealer and does not know your financial situation, objectives or risk tolerance.</p><p><b>Trade at your own risk.</b> Investing involves risk, including the loss of all money invested. Trading on margin, or in options, futures, leveraged or inverse products, can produce losses greater than the amount invested. Past performance, back-tested results and model outputs do not guarantee future results. Consult a licensed financial adviser, CPA or tax professional before making any investment decision.</p><p><b>Data.</b> Financial data is read from XBRL tags in SEC EDGAR 10-K and 10-Q filings. Intraday prices are delayed at least 15 minutes and come from IEX, a single US exchange, through Marketstack, so they can differ from the consolidated market price; outside market hours prices are end-of-day closes. Scores, fair values and verdicts are produced automatically by fixed rules and can be incomplete, delayed or wrong. Verify figures against the original filings before relying on them.</p><p>App 7.9. Designed and built by Kevin Rodrigue. © 2026 Kevin Rodrigue. All rights reserved. <a href="/terms.html">Terms of Use</a> · <a href="/privacy.html">Privacy Policy</a></p></footer>
+<footer class="wrap foot"><p><b>Important disclosures.</b> LedgerLine is provided for information and education only. It is not investment, legal, tax or accounting advice, and nothing on it is a recommendation or solicitation to buy, sell or hold any security. LedgerLine is not a registered investment adviser or broker-dealer and does not know your financial situation, objectives or risk tolerance.</p><p><b>Trade at your own risk.</b> Investing involves risk, including the loss of all money invested. Trading on margin, or in options, futures, leveraged or inverse products, can produce losses greater than the amount invested. Past performance, back-tested results and model outputs do not guarantee future results. Consult a licensed financial adviser, CPA or tax professional before making any investment decision.</p><p><b>Data.</b> Financial data is read from XBRL tags in SEC EDGAR 10-K and 10-Q filings. Intraday prices are delayed at least 15 minutes and come from IEX, a single US exchange, through Marketstack, so they can differ from the consolidated market price; outside market hours prices are end-of-day closes. Scores, fair values and verdicts are produced automatically by fixed rules and can be incomplete, delayed or wrong. Verify figures against the original filings before relying on them.</p><p>App 8.0. Designed and built by Kevin Rodrigue. © 2026 Kevin Rodrigue. All rights reserved. <a href="/terms.html">Terms of Use</a> · <a href="/privacy.html">Privacy Policy</a></p></footer>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -2463,9 +2496,10 @@ function checkHtml(){
 }
 
 /* ---- Versions and what's new ---- */
-const APP_VERSION='7.9', WORKER_NEEDED='3.6.1', BUG_EMAIL='kgrodrigue@yahoo.com';
+const APP_VERSION='8.0', WORKER_NEEDED='3.6.1', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
   ['App 7.1','Oct 22, 2026',['Valuation uses core EPS when non-operating gains are more than a quarter of pretax profit (Amazon’s 2025–26 investment mark-ups had pushed its trailing EPS to $12.43 against about $7 from the business, and its fair value to $1,033); the Valuation tab says when this applies','Risk on / off now uses the 50-day vs 200-day EMA (10 vs 40 weeks); 200 EMA added to the Overview chart','Fixed: the return line above the Overview chart now matches the period boxes (both measured from the close before the period starts)']],
+  ['App 8.0','Oct 23, 2026',['Color pass: four-color ribbon under the masthead, teal-to-blue active tabs and buttons, colored caps and title dots on every card (teal, blue, claret, mandarin), chips tinted in their line color, blue table headers, gradient headline numbers. Same FT palette, light and dark']],
   ['App 7.9','Oct 23, 2026',['Technicals: 8-day EMA added (chart switch, Trend table and the headline count)','Trend table: day close and week close, up or down against the previous day and week','ATR 14 and ATR 30 (Wilder smoothing) in dollars and % of price, with whether the daily range is widening or narrowing','Technical analysis headline adds RSI, Bollinger %B, Williams %R and ATR','Stretch from the averages: 50-day EMA, 100-day EMA, 150-day MA and 200-day MA (200-day EMA removed); weekly keeps the 10 and 40-week EMA','Weekly chart: 10-week and 40-week SMA by default (solid); 10 and 40-week EMA available as dashed lines','Glossary: EMA and SMA (with the periods LedgerLine uses), ATR (Wilder), Bollinger %B and Williams %R','Fixed: bar dates showed one day early in US time zones (Oct 22’s close read “Oct 21”) on chart labels, tooltips and the Technicals return line','Technicals headline number is now how many averages price is above (e.g. 6/7); RSI stays in the summary and the table','Trend label now uses the averages on the page: Uptrend when price is above the 50 EMA and 200 MA with the 50 above the 200 (weekly: 10 and 40-week SMA), Downtrend when all reversed, otherwise Mixed','Returns above the Technicals chart and in Performance vs the market now match: both measured from the close before the period starts, through the same close for the stock and every benchmark','Distance from the averages: 21-day EMA added for pullbacks (now the default), plus 50-day EMA, 100-day EMA, 150 and 200-day MA, and the 10 and 40-week MA (simple averages)','Stretch renamed Distance from the averages; Trend table adds spreads (50 EMA vs 200 MA, 17 vs 50 EMA; weekly 10 vs 40-week) with widening or narrowing against a month ago']],
   ['App 7.8','Oct 22, 2026',['Technicals: Risk on/off removed; the headline says how many averages price is above and whether the 50 EMA is above the 200 MA. Daily / Weekly / Auto bars switch on the chart, and the averages follow (17/34/50/100 EMA, 150/200 MA daily; 10/40-week EMA weekly) with thicker lines','Technicals, daily: 17, 34, 50 and 100-day EMAs plus 150 and 200-day MAs, on the chart (toggle each) and in the Trend table; weekly: 10 and 40-week EMAs. The 200-day EMA is gone','Technicals: Bollinger %B (20-day, 2 SD) and Williams %R (14)','Custom charts: on % change, ratio metrics (ROIC, margins) plot as their own %; CAGR only for amounts and per-share figures; lines bridge missing years','What’s new listed newest first, with the live data-service version']],
   ['App 7.7','Oct 22, 2026',['Custom charts is its own section: up to 7 lines (statement lines, 109 metrics with 17 tagged KPI, share price), Annual/Quarterly/TTM, Actual/% change/Index 100, bars/line/line with dots, decimals Auto with fewer/more buttons, and a Clear chart button. Click any row in Financials or All metrics to add it','Hover explains every number: change vs the prior period, change since the first period on the chart, and CAGR; each line’s label shows its CAGR','% change fixed for costs; duplicate TTM column dropped right after a 10-K','Technicals chart: 100-day EMA and 200-day MA on daily; 10-week and 40-week EMA on weekly; shows how far it is beating or trailing your benchmark through the same close','Thicker 52-week range bars']],
