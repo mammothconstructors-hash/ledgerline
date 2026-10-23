@@ -17,7 +17,7 @@ import UNIVERSE from './universe.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.8.0';
+const WORKER_VERSION = '3.9.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -33,6 +33,7 @@ export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     USAGE_DB = env && env.DB || null; MS_LIMIT = Number(env && env.MARKETSTACK_LIMIT) || 10000;
+    if (url.pathname === '/usage/testers') return testersApi(req, url, env || {});
     if (url.pathname === '/usage' || url.pathname.startsWith('/usage/')) return usagePage(url, env || {});
     if (!url.searchParams.get('u') && /^\/[A-Za-z0-9_-]{6,64}\/?$/.test(url.pathname) && await keyOk(url.pathname.replace(/\//g, ''), env || {})) return usagePage(new URL(url.origin + '/usage?key=' + encodeURIComponent(url.pathname.replace(/\//g, ''))), env || {});
     if (url.pathname === '/mcp' || url.pathname === '/mcp/') return mcp(req);
@@ -182,7 +183,8 @@ async function activityHtml(url, env) {
   const ago = t => { const m = Math.round((Date.now() / 1000 - t) / 60); return m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' hr ago' : Math.round(m / 1440) + ' days ago'; };
   const maxU = Math.max(1, ...a.daily.map(d => d.users));
   const days = a.daily.map(d => `\x3ctr>\x3ctd>${d.day.slice(5)}\x3c/td>\x3ctd>${f(d.users)}\x3c/td>\x3ctd>${f(d.visits)}\x3c/td>\x3ctd>\x3cspan style="display:inline-block;height:10px;background:#0D7680;width:${Math.max(2, Math.round(d.users / maxU * 200))}px">\x3c/span>\x3c/td>\x3c/tr>`).join('');
-  const rows = a.users.map(u => `\x3ctr>\x3ctd>${esc(u.email)}\x3c/td>\x3ctd>${when(u.last)}\x3cbr>\x3cspan class="fine">${ago(u.last)}\x3c/span>\x3c/td>\x3ctd>${f(u.week)}\x3c/td>\x3ctd>${f(u.total)}\x3c/td>\x3ctd>${when(u.first)}\x3c/td>\x3c/tr>`).join('');
+  const names = await testerNames(env).catch(() => ({}));
+  const rows = a.users.map(u => `\x3ctr>\x3ctd>${names[String(u.email).toLowerCase()] ? '\x3cb>' + esc(names[String(u.email).toLowerCase()]) + '\x3c/b>\x3cbr>' : ''}${esc(u.email)}\x3c/td>\x3ctd>${when(u.last)}\x3cbr>\x3cspan class="fine">${ago(u.last)}\x3c/span>\x3c/td>\x3ctd>${f(u.week)}\x3c/td>\x3ctd>${f(u.total)}\x3c/td>\x3ctd>${when(u.first)}\x3c/td>\x3c/tr>`).join('');
   return `\x3ch2>Who’s using LedgerLine\x3c/h2>
 \x3cp class="big2">${f(a.activeToday)} \x3csmall>today\x3c/small> · ${f(a.active7)} \x3csmall>this week\x3c/small> · ${f(a.active30)} \x3csmall>in 30 days\x3c/small> · ${f(a.total)} \x3csmall>ever\x3c/small>\x3c/p>
 \x3ctable>\x3cthead>\x3ctr>\x3cth>Email\x3c/th>\x3cth>Last visit\x3c/th>\x3cth>Visits, 7 days\x3c/th>\x3cth>All visits\x3c/th>\x3cth>First seen\x3c/th>\x3c/tr>\x3c/thead>\x3ctbody>${rows || '\x3ctr>\x3ctd colspan="5">No visits recorded yet.\x3c/td>\x3c/tr>'}\x3c/tbody>\x3c/table>
@@ -212,8 +214,80 @@ async function usagePage(url, env) {
 body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif;max-width:760px;margin:0 auto;padding:24px 16px}h1{font:700 28px Georgia,serif;margin:4px 0 12px}.k{font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#990F3D}
 .big{font:700 40px Georgia,serif;margin:8px 0}.big small{font:400 16px system-ui,sans-serif;color:var(--muted)}.bar{height:10px;background:var(--line);margin:4px 0 16px}.bar span{display:block;height:100%}
 table{border-collapse:collapse;width:100%;font-size:14px;margin-top:12px}h2{font:700 22px Georgia,serif;margin:28px 0 6px}h3{font-size:15px;margin:22px 0 4px}.big2{font:700 26px Georgia,serif;margin:6px 0}.big2 small{font:400 14px system-ui,sans-serif;color:var(--muted)}td,th{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line)}.fine{font-size:13px;color:var(--muted)}\x3c/style>\x3c/head>
-\x3cbody>\x3cdiv class="k">LedgerLine\x3c/div>\x3ch1>Usage\x3c/h1>${await activityHtml(url, env).catch(e => '\x3cp>' + String(e.message || e) + '\x3c/p>')}\x3ch2>Marketstack price data this month\x3c/h2>${body}\x3c/body>\x3c/html>`;
+\x3cbody>\x3cdiv class="k">LedgerLine\x3c/div>\x3ch1>Usage\x3c/h1>${(await keyOk(url.searchParams.get('key') || url.pathname.split('/')[2], env)) ? testersHtml(url, env) : ''}${await activityHtml(url, env).catch(e => '\x3cp>' + String(e.message || e) + '\x3c/p>')}\x3ch2>Marketstack price data this month\x3c/h2>${body}\x3c/body>\x3c/html>`;
   return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+}
+
+/* ================= testers: who may sign in to each site behind Cloudflare Access (needs the CF_ACCESS_TOKEN secret) ================= */
+const CF_ACCOUNT = '51799e9e2cfaf727a3bc287626828255';
+async function cfApi(env, path, init = {}) {
+  const r = await fetch('https://api.cloudflare.com/client/v4/accounts/' + (env.CF_ACCOUNT_ID || CF_ACCOUNT) + path, { ...init, headers: { Authorization: 'Bearer ' + env.CF_ACCESS_TOKEN, 'Content-Type': 'application/json', ...(init.headers || {}) } });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.success === false) throw new Error('Cloudflare: ' + ((j.errors && j.errors[0] && j.errors[0].message) || r.status));
+  return j.result;
+}
+// every site behind Access, the Allow policies on it, and the emails each one lets in (directly or through an email list)
+async function accessSites(env) {
+  const [apps, lists, users] = await Promise.all([cfApi(env, '/access/apps'), cfApi(env, '/gateway/lists').catch(() => []), cfApi(env, '/access/users?per_page=200').catch(() => [])]);
+  const listItems = {};
+  for (const l of (lists || []).filter(l => l.type === 'EMAIL')) listItems[l.id] = { name: l.name, emails: ((await cfApi(env, '/gateway/lists/' + l.id + '/items').catch(() => [])) || []).flat().map(i => i.value).filter(Boolean) };
+  const last = {}; (users || []).forEach(u => { if (u.email) last[u.email.toLowerCase()] = u.last_successful_login || null; });
+  const sites = [];
+  for (const a of (apps || []).filter(a => a.type === 'self_hosted' || a.domain)) {
+    const pols = (a.policies || []).filter(p => (p.decision || 'allow') === 'allow');
+    const emails = new Set(), targets = [];
+    for (const p of pols) for (const inc of p.include || []) {
+      if (inc.email_list && listItems[inc.email_list.id]) { listItems[inc.email_list.id].emails.forEach(e => emails.add(e)); targets.push({ kind: 'list', id: inc.email_list.id, name: listItems[inc.email_list.id].name }); }
+      if (inc.email && inc.email.email) { emails.add(inc.email.email); if (!targets.some(t => t.kind === 'policy' && t.id === p.id)) targets.push({ kind: 'policy', id: p.id, app: a.id, reusable: !!p.reusable, name: p.name }); }
+    }
+    sites.push({ id: a.id, name: a.name, domain: a.domain, emails: [...emails].sort().map(e => ({ email: e, last: last[e.toLowerCase()] || null })), targets });
+  }
+  return sites;
+}
+async function policyEdit(env, t, fn) {   // read a policy, change its include list, write it back
+  const path = t.reusable ? '/access/policies/' + t.id : '/access/apps/' + t.app + '/policies/' + t.id;
+  const p = await cfApi(env, path).catch(() => cfApi(env, '/access/policies/' + t.id));
+  const body = { name: p.name, decision: p.decision, include: fn(p.include || []), exclude: p.exclude || [], require: p.require || [], session_duration: p.session_duration };
+  await cfApi(env, p.reusable || t.reusable ? '/access/policies/' + t.id : path, { method: 'PUT', body: JSON.stringify(body) });
+}
+async function testerNames(env) { if (!env.DB) return {}; await env.DB.prepare('CREATE TABLE IF NOT EXISTS testers (email TEXT PRIMARY KEY, name TEXT, added INTEGER)').run(); const r = (await env.DB.prepare('SELECT email, name FROM testers').all()).results || []; const m = {}; r.forEach(x => { m[x.email] = x.name; }); return m; }
+async function testersApi(req, url, env) {
+  const j = o => new Response(JSON.stringify(o), { status: o.error ? 400 : 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+  if (!(await keyOk(url.searchParams.get('key'), env))) return j({ error: 'Private' });
+  if (!env.CF_ACCESS_TOKEN) return j({ error: 'Add the CF_ACCESS_TOKEN secret first' });
+  try {
+    if (req.method !== 'POST') { const [sites, names] = await Promise.all([accessSites(env), testerNames(env)]); sites.forEach(s => s.emails.forEach(e => { e.name = names[e.email.toLowerCase()] || ''; })); return j({ sites }); }
+    const b = await req.json().catch(() => ({})), email = String(b.email || '').trim().toLowerCase(), add = b.action !== 'remove', nm = String(b.name || '').trim().slice(0, 80);
+    if (b.action === 'rename') { await testerNames(env); await env.DB.prepare('INSERT INTO testers (email, name, added) VALUES (?, ?, ?) ON CONFLICT (email) DO UPDATE SET name = excluded.name').bind(email, nm, Date.now()).run(); return j({ ok: true, email, action: 'renamed', sites: [] }); }
+    if (add && nm && env.DB) { await testerNames(env); await env.DB.prepare('INSERT INTO testers (email, name, added) VALUES (?, ?, ?) ON CONFLICT (email) DO UPDATE SET name = excluded.name').bind(email, nm, Date.now()).run(); }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return j({ error: 'That is not an email address' });
+    const sites = await accessSites(env), pick = sites.filter(s => (b.sites || []).includes(s.id)), done = [];
+    const touched = new Set();
+    for (const s of pick) {
+      const t = s.targets.find(t => t.kind === 'list') || s.targets.find(t => t.kind === 'policy');
+      if (!t) { done.push(s.name + ': no Allow policy to change'); continue; }
+      const k = t.kind + t.id; if (touched.has(k)) { done.push(s.name); continue; } touched.add(k);
+      if (t.kind === 'list') await cfApi(env, '/gateway/lists/' + t.id, { method: 'PATCH', body: JSON.stringify(add ? { append: [{ value: email }] } : { remove: [email] }) });
+      else await policyEdit(env, t, inc => add ? (inc.some(i => i.email && i.email.email.toLowerCase() === email) ? inc : [...inc, { email: { email } }]) : inc.filter(i => !(i.email && i.email.email.toLowerCase() === email)));
+      done.push(s.name);
+    }
+    return j({ ok: true, email, action: add ? 'added' : 'removed', sites: done });
+  } catch (e) { return j({ error: String(e.message || e) }); }
+}
+function testersHtml(url, env) {
+  const key = url.searchParams.get('key') || url.pathname.split('/')[2] || '';
+  if (!env.CF_ACCESS_TOKEN) return `\x3ch2>Testers\x3c/h2>\x3cp>To add and remove testers here, create a Cloudflare API token (My Profile → API Tokens → Create custom token) with \x3cb>Account → Access: Apps and Policies → Edit\x3c/b>, \x3cb>Account → Zero Trust → Edit\x3c/b> and \x3cb>Account → Access: Users → Read\x3c/b>, then save it on this worker as the secret \x3cb>CF_ACCESS_TOKEN\x3c/b>.\x3c/p>`;
+  return `\x3ch2>Testers\x3c/h2>\x3cp class="fine">Who can sign in to each site. Adding someone takes effect at once; they sign in with a code sent to that email.\x3c/p>
+\x3cform id="tf" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0">\x3cinput id="tn" type="text" placeholder="Name" style="flex:0 1 180px;font:inherit;padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:transparent;color:inherit">\x3cinput id="te" type="email" placeholder="tester@email.com" required style="flex:1;min-width:220px;font:inherit;padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:transparent;color:inherit">\x3cspan id="ts">loading sites…\x3c/span>\x3cbutton style="font:600 15px system-ui;padding:10px 20px;border:0;border-radius:999px;background:#0D7680;color:#fff;cursor:pointer">Add tester\x3c/button>\x3c/form>\x3cp id="tm" class="fine">\x3c/p>\x3cdiv id="tl">\x3c/div>
+\x3cscript>(()=>{const K=${JSON.stringify(key)},U='/usage/testers?key='+encodeURIComponent(K),$=s=>document.querySelector(s),E=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));let S=[];
+const when=t=>t?new Date(t).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'never signed in';
+async function load(){ const r=await fetch(U).then(r=>r.json()); if(r.error){ $('#ts').textContent=''; $('#tm').textContent=r.error; return; } S=r.sites;
+ $('#ts').innerHTML=S.map((s,i)=>'\x3clabel style="white-space:nowrap">\x3cinput type="checkbox" value="'+s.id+'" '+(i===0||/ledger/i.test(s.name)?'checked':'')+'> '+E(s.name)+'\x3c/label>').join(' ');
+ $('#tl').innerHTML=S.map(s=>'\x3ch3>'+E(s.name)+' \x3cspan class="fine">'+E(s.domain||'')+'\x3c/span>\x3c/h3>\x3ctable>\x3cthead>\x3ctr>\x3cth style="text-align:left">Name\x3c/th>\x3cth style="text-align:left">Email\x3c/th>\x3cth style="text-align:left">Last sign-in\x3c/th>\x3cth>\x3c/th>\x3c/tr>\x3c/thead>\x3ctbody>'+(s.emails.map(e=>'\x3ctr>\x3ctd>\x3cb>'+E(e.name||'—')+'\x3c/b> \x3cbutton data-nm="'+E(e.email)+'" title="Set name" style="font:inherit;border:0;background:transparent;color:var(--muted);cursor:pointer">✎\x3c/button>\x3c/td>\x3ctd>'+E(e.email)+'\x3c/td>\x3ctd>'+when(e.last)+'\x3c/td>\x3ctd style="text-align:right">\x3cbutton data-rm="'+E(e.email)+'" data-site="'+s.id+'" style="font:inherit;border:1px solid var(--line);background:transparent;color:inherit;border-radius:999px;padding:4px 12px;cursor:pointer">Remove\x3c/button>\x3c/td>\x3c/tr>').join('')||'\x3ctr>\x3ctd colspan=4>No one yet\x3c/td>\x3c/tr>')+'\x3c/tbody>\x3c/table>').join(''); }
+async function send(email,sites,action,name){ $('#tm').textContent='Saving…'; const r=await fetch(U,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email,sites,action,name})}).then(r=>r.json()); $('#tm').textContent=r.error?r.error:(r.email+' '+r.action+' · '+r.sites.join(', ')); await load(); }
+$('#tf').addEventListener('submit',e=>{e.preventDefault(); const sites=[...document.querySelectorAll('#ts input:checked')].map(x=>x.value); if(!sites.length){ $('#tm').textContent='Tick at least one site'; return; } send($('#te').value.trim(),sites,'add',$('#tn').value.trim()); $('#te').value=''; $('#tn').value=''; });
+document.addEventListener('click',e=>{const n=e.target.closest('[data-nm]'); if(n){ const v=prompt('Name for '+n.dataset.nm); if(v!==null) send(n.dataset.nm,[],'rename',v.trim()); return; } const b=e.target.closest('[data-rm]'); if(b&&confirm('Remove '+b.dataset.rm+'?')) send(b.dataset.rm,[b.dataset.site],'remove');});
+load();})();\x3c/script>`;
 }
 
 /* ================= 1. original relay ================= */
