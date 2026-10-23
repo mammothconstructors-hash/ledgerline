@@ -10,6 +10,8 @@ API="https://sec-proxy.mammothconstructors.workers.dev"
 # --- page chrome for a real website
 s=s.replace('<title>LedgerLine</title>','<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n<title>LedgerLine</title>\n<link rel="icon" href="/logo.svg">',1)
 rep('<meta name="claude:viewport-fit-sides" content="cover">\n','')
+# installable app: manifest, home-screen icon, theme colour
+rep('<link rel="icon" href="/logo.svg">','<link rel="icon" href="/logo.svg"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#262A33"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="LedgerLine">')
 rep('</style>\n','</style>\n</head><body>\n')
 s=s.rstrip()+'\n</body></html>\n'
 rep('body{background:var(--bg);color:var(--ink);font-family:var(--sans);','html,body{margin:0}\n:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}\n[hidden]{display:none!important}\nbody{background:var(--bg);color:var(--ink);font-family:var(--sans);')

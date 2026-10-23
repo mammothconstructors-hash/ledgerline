@@ -17,7 +17,7 @@ import UNIVERSE from './universe.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.7.2';
+const WORKER_VERSION = '3.8.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -693,7 +693,7 @@ async function secSection(args) {
   if (!table[section]) throw new Error('section must be one of: ' + Object.keys(table).join(', ') + ' for a ' + form);
   const maxChars = Math.min(Math.max(parseInt(args.maxChars) || (section === 'notes' ? 120000 : 60000), 2000), 200000);
   let co = await cikFor(ticker);
-  const findForm = async c => { const sr = await secGet(`https://data.sec.gov/submissions/CIK${c.cik}.json`, 3600); if (!sr) return { rec: {}, idx: -1 }; const rec = (await sr.json()).filings?.recent || {}; let idx = -1; for (let i = 0; i < (rec.form || []).length; i++) if (rec.form[i] === form) { idx = i; break; } return { rec, idx }; };
+  const findForm = async c => { const sr = await secGet(`https://data.sec.gov/submissions/CIK${c.cik}.json`, 3600); if (!sr) return { rec: {}, idx: -1 }; const rec = (await sr.json()).filings?.recent || {}; let idx = -1, skip = Math.max(0, parseInt(args.nth) || 0); for (let i = 0; i < (rec.form || []).length; i++) if (rec.form[i] === form) { if (skip-- > 0) continue; idx = i; break; } return { rec, idx }; };
   let { rec, idx } = await findForm(co);
   if (idx < 0 && PREDECESSOR[co.cikInt]) { co = { ...co, ...PREDECESSOR[co.cikInt] }; ({ rec, idx } = await findForm(co)); }
   if (idx < 0) throw new Error('No recent ' + form + ' found for ' + ticker);
@@ -718,6 +718,129 @@ async function secSection(args) {
 }
 const secMdna = args => secSection({ ...args, section: 'mdna' });
 
+/* ================= AI: ask the filings, and plain-English screens (Anthropic API, key in the ANTHROPIC_API_KEY secret) ================= */
+const AI_MODEL = 'claude-sonnet-5-5', AI_DAILY_PER_IP = 40, AI_DAILY_ALL = 600;
+async function aiQuota(env, req) {
+  if (!env.DB) return true;
+  const day = etDay(), who = req.headers.get('CF-Connecting-IP') || 'unknown';
+  await env.DB.prepare('CREATE TABLE IF NOT EXISTS ai_usage (day TEXT, who TEXT, n INTEGER, PRIMARY KEY (day, who))').run();
+  const me = await env.DB.prepare('SELECT n FROM ai_usage WHERE day = ? AND who = ?').bind(day, who).first(), all = await env.DB.prepare('SELECT SUM(n) AS n FROM ai_usage WHERE day = ?').bind(day).first();
+  if ((me && me.n >= AI_DAILY_PER_IP) || (all && all.n >= AI_DAILY_ALL)) return false;
+  await env.DB.prepare('INSERT INTO ai_usage (day, who, n) VALUES (?, ?, 1) ON CONFLICT (day, who) DO UPDATE SET n = n + 1').bind(day, who).run();
+  return true;
+}
+async function claude(env, system, user, maxTokens = 900) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: env.AI_MODEL || AI_MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error('AI service: ' + ((j.error && j.error.message) || r.status));
+  return (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+}
+const STOP = new Set('the a an and or of to in on for is are was were be been it its this that what why how did does do with by as at from about their they our we which who whom will would can could has have had not no than then there these those into over under more most less much many any all'.split(' '));
+const terms = t => String(t || '').toLowerCase().replace(/[^a-z0-9% ]+/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOP.has(w));
+async function askFilings(ticker, question, env) {
+  const t = String(ticker || '').trim(), qn = String(question || '').trim().slice(0, 500);
+  if (!t || !qn) throw new Error('ticker and question are required');
+  const want = [['10-K', 'business'], ['10-K', 'risk'], ['10-K', 'mdna'], ['10-K', 'legal'], ['10-Q', 'mdna'], ['10-Q', 'risk'], ['10-Q', 'notes'], ['10-K', 'notes']];
+  const docs = (await Promise.all(want.map(([form, section]) => secSection({ ticker: t, form, section, maxChars: 150000 }).catch(() => null)))).filter(Boolean);
+  if (!docs.length) throw new Error('No filings found for ' + t);
+  const qt = terms(qn), qs = new Set(qt), chunks = [];
+  for (const d of docs) for (const p of paras(d.text)) { const w = terms(p); let sc = 0; const seen = new Set(); for (const x of w) if (qs.has(x) && !seen.has(x)) { seen.add(x); sc += 1; } if (sc) chunks.push({ d, p: p.length > 1600 ? p.slice(0, 1600) : p, sc: sc / Math.sqrt(1 + w.length / 80) + (d.form === '10-Q' ? 0.15 : 0) }); }
+  chunks.sort((a, b) => b.sc - a.sc);
+  const pickd = []; let len = 0; for (const c of chunks) { if (len + c.p.length > 22000 || pickd.length >= 28) break; pickd.push(c); len += c.p.length; }
+  if (!pickd.length) for (const d of docs.slice(0, 2)) for (const p of paras(d.text).slice(0, 8)) pickd.push({ d, p });
+  const src = pickd.map((c, i) => ({ id: 'S' + (i + 1), form: c.d.form, section: c.d.sectionName, filed: c.d.filed, period: c.d.periodOfReport, url: c.d.url, text: c.p }));
+  const system = 'You are a precise equity analyst answering questions about one company using only the SEC filing excerpts provided. Rules: answer in at most 180 words, plain English, no hype; every factual claim cites its excerpt like [S3]; quote short exact phrases where they matter; if the excerpts do not answer the question, say so plainly and say what the filings do cover; never invent numbers; no investment advice.';
+  const user = `Company: ${docs[0].name} (${t.toUpperCase()})\nQuestion: ${qn}\n\nExcerpts:\n` + src.map(x => `[${x.id}] ${x.form} filed ${x.filed}, ${x.section}:\n${x.text}`).join('\n\n');
+  const answer = await claude(env, system, user, 700);
+  const used = new Set((answer.match(/\[S\d+\]/g) || []).map(x => x.slice(1, -1)));
+  return { ticker: t.toUpperCase(), name: docs[0].name, question: qn, answer, model: env.AI_MODEL || AI_MODEL, sources: src.filter(x => used.has(x.id)).map(x => ({ ...x, text: x.text.slice(0, 600) })) };
+}
+// plain-English screen: the model turns a request into filters over the columns the app sends
+async function aiScreen(query, fields, env) {
+  const qn = String(query || '').trim().slice(0, 300); if (!qn) throw new Error('query is required');
+  const f = (Array.isArray(fields) ? fields : []).slice(0, 40).map(x => ({ key: String(x.key).slice(0, 30), label: String(x.label).slice(0, 60), unit: String(x.unit || '').slice(0, 10) }));
+  const system = 'Turn a stock-screen request into JSON filters over the given fields. Reply with JSON only: {"filters":[{"key":..., "op":">"|">="|"<"|"<="|"between", "value":number, "value2":number?}], "sort":{"key":...,"dir":"desc"|"asc"}, "explain":"one short sentence"}. Percent fields are in percent units (20 means 20%). Use only the listed keys. If something cannot be expressed, leave it out and mention it in explain.';
+  const txt = await claude(env, system, 'Fields: ' + JSON.stringify(f) + '\nRequest: ' + qn, 400);
+  const m = txt.match(/\{[\s\S]*\}/); if (!m) throw new Error('Could not read the screen');
+  const j = JSON.parse(m[0]), keys = new Set(f.map(x => x.key));
+  j.filters = (j.filters || []).filter(x => keys.has(x.key) && ['>', '>=', '<', '<=', 'between'].includes(x.op) && isFinite(x.value));
+  if (j.sort && !keys.has(j.sort.key)) delete j.sort;
+  return j;
+}
+
+/* ================= insiders: Form 4 filings for the company, last 12 months ================= */
+const F4_CODES = { P: 'Buy (open market)', S: 'Sale (open market)', A: 'Award', M: 'Option exercise', F: 'Tax withholding', G: 'Gift', C: 'Conversion', D: 'Disposed to company', X: 'Option exercise', J: 'Other' };
+function xmlVal(x, tag) { const m = x.match(new RegExp('<' + tag + '>\\s*(?:<value>)?\\s*([^<]*?)\\s*(?:</value>)?\\s*</' + tag + '>')); return m ? m[1].replace(/&amp;/g, '&').trim() : null; }
+function parseForm4(x, meta) {
+  const owner = xmlVal(x, 'rptOwnerName') || '', title = xmlVal(x, 'officerTitle') || '', dir = /<isDirector>\s*(1|true)/i.test(x), ten = /<isTenPercentOwner>\s*(1|true)/i.test(x), off = /<isOfficer>\s*(1|true)/i.test(x);
+  const role = [off && title ? title : off ? 'Officer' : '', dir ? 'Director' : '', ten ? '10% owner' : ''].filter(Boolean).join(', ') || 'Insider';
+  const out = [];
+  for (const m of x.matchAll(/<nonDerivativeTransaction>([\s\S]*?)<\/nonDerivativeTransaction>/g)) {
+    const t = m[1], code = (t.match(/<transactionCode>\s*([A-Z])\s*</) || [])[1] || '?', sh = Number(xmlVal(t, 'transactionShares')), px = Number(xmlVal(t, 'transactionPricePerShare')), ad = xmlVal(t, 'transactionAcquiredDisposedCode'), after = Number(xmlVal(t, 'sharesOwnedFollowingTransaction'));
+    out.push({ date: xmlVal(t, 'transactionDate') || meta.filed, filed: meta.filed, owner, role, code, type: F4_CODES[code] || code, shares: isFinite(sh) ? sh : null, price: isFinite(px) && px > 0 ? px : null, value: isFinite(sh) && isFinite(px) ? sh * px : null, acquired: ad === 'A', after: isFinite(after) ? after : null, plan: /10b5-1/i.test(x), url: meta.url });
+  }
+  return out;
+}
+async function insiders(ticker) {
+  const co = await cikFor(ticker), sr = await secGet(`https://data.sec.gov/submissions/CIK${co.cik}.json`, 3600); if (!sr) throw new Error('No SEC filings for ' + ticker);
+  const rec = (await sr.json()).filings?.recent || {}, since = new Date(Date.now() - 366 * 864e5).toISOString().slice(0, 10), list = [];
+  for (let i = 0; i < (rec.form || []).length && list.length < 60; i++) if (rec.form[i] === '4' && rec.filingDate[i] >= since) list.push(i);
+  const tx = [];
+  for (let k = 0; k < list.length; k += 6) {   // six at a time keeps well under SEC's 10 requests a second
+    const got = await Promise.all(list.slice(k, k + 6).map(async i => { const acc = rec.accessionNumber[i].replace(/-/g, ''), doc = String(rec.primaryDocument[i]).replace(/^xsl[^/]*\//, ''), url = `https://www.sec.gov/Archives/edgar/data/${co.cikInt}/${acc}/${doc}`;
+      try { const r = await secGet(url, 604800); return r ? parseForm4(await r.text(), { filed: rec.filingDate[i], url: `https://www.sec.gov/Archives/edgar/data/${co.cikInt}/${acc}/` }) : []; } catch (e) { return []; } }));
+    got.forEach(a => tx.push(...a));
+  }
+  tx.sort((a, b) => (a.date < b.date ? 1 : -1));
+  const sum = days => { const c = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10), w = tx.filter(t => t.date >= c);
+    const buys = w.filter(t => t.code === 'P'), sells = w.filter(t => t.code === 'S'), v = a => a.reduce((x, t) => x + (t.value || 0), 0);
+    return { buys: buys.length, buyValue: v(buys), buyers: new Set(buys.map(t => t.owner)).size, sells: sells.length, sellValue: v(sells), sellers: new Set(sells.map(t => t.owner)).size, net: v(buys) - v(sells) }; };
+  return { ticker: String(ticker).toUpperCase(), name: co.name, filings: list.length, summary: { m3: sum(91), m6: sum(182), y1: sum(366) }, transactions: tx.slice(0, 80) };
+}
+
+/* ================= what changed: the latest 10-Q or 10-K against the one before it ================= */
+// paragraphs, normalised so that changed numbers alone don't count as new text
+function paras(text) {
+  return String(text || '').split(/\n\s*\n|\n(?=[A-Z•●·\-–])/).map(p => p.replace(/\s+/g, ' ').trim())
+    .filter(p => p.length >= 120 && !/^(table of contents|item \d)/i.test(p));
+}
+const normP = p => p.toLowerCase().replace(/[\d,.$%()]+/g, '#').replace(/[^a-z# ]+/g, ' ').replace(/\s+/g, ' ').trim();
+function shingles(p) { const w = normP(p).split(' '), out = new Set(); for (let i = 0; i + 4 < w.length; i++) out.add(w.slice(i, i + 5).join(' ')); if (!out.size && w.length) out.add(w.join(' ')); return out; }
+// for each paragraph in A, its best overlap with any paragraph in B (shared 5-word phrases), via an index rather than all pairs
+function bestOverlap(A, B) {
+  const idx = new Map(); B.forEach((p, j) => { for (const sh of p.sh) { let a = idx.get(sh); if (!a) idx.set(sh, a = []); if (a[a.length - 1] !== j) a.push(j); } });
+  return A.map(p => { const hit = new Map(); for (const sh of p.sh) for (const j of idx.get(sh) || []) hit.set(j, (hit.get(j) || 0) + 1);
+    let best = 0, bj = -1; for (const [j, n] of hit) { const sc = n / Math.max(p.sh.size, B[j].sh.size); if (sc > best) { best = sc; bj = j; } } return { best, bj }; });
+}
+function diffSections(newText, oldText) {
+  const A = paras(newText).map(t => ({ t, sh: shingles(t) })), B = paras(oldText).map(t => ({ t, sh: shingles(t) }));
+  if (!A.length || !B.length) return null;
+  const fa = bestOverlap(A, B), fb = bestOverlap(B, A), clip = t => t.length > 700 ? t.slice(0, 700).replace(/\s+\S*$/, '') + ' …' : t;
+  const added = [], changed = [], removed = [];
+  A.forEach((p, i) => { const b = fa[i].best; if (b < 0.25) added.push({ text: clip(p.t), len: p.t.length }); else if (b < 0.8 && normP(p.t) !== normP(B[fa[i].bj].t)) changed.push({ text: clip(p.t), was: clip(B[fa[i].bj].t), sim: Math.round(b * 100), len: p.t.length }); });
+  B.forEach((p, j) => { if (fb[j].best < 0.25) removed.push({ text: clip(p.t), len: p.t.length }); });
+  const top = (a, n) => a.sort((x, y) => y.len - x.len).slice(0, n).map(({ len, ...o }) => o);
+  return { paragraphs: { now: A.length, before: B.length }, added: top(added, 8), changed: top(changed, 6), removed: top(removed, 6), counts: { added: added.length, changed: changed.length, removed: removed.length } };
+}
+async function filingChanges(ticker) {
+  const t = String(ticker || '').trim(); if (!t) throw new Error('ticker is required');
+  const pick = async form => { try { return await secSection({ ticker: t, form, section: 'mdna', maxChars: 200000 }); } catch (e) { return null; } };
+  const [q, k] = await Promise.all([pick('10-Q'), pick('10-K')]);
+  const latest = !q ? k : !k ? q : (q.filed > k.filed ? q : k); if (!latest) throw new Error('No recent 10-Q or 10-K for ' + t);
+  const form = latest.form, out = { ticker: t.toUpperCase(), name: latest.name, form, filed: latest.filed, period: latest.periodOfReport, url: latest.url, sections: {} };
+  for (const sec of ['mdna', 'risk']) {
+    const now = sec === 'mdna' ? latest : await secSection({ ticker: t, form, section: sec, maxChars: 200000 }).catch(() => null);
+    const before = await secSection({ ticker: t, form, section: sec, nth: 1, maxChars: 200000 }).catch(() => null);
+    if (!out.prior && before) out.prior = { filed: before.filed, period: before.periodOfReport, url: before.url };
+    if (!now) { out.sections[sec] = { missing: true }; continue; }
+    if (sec === 'risk' && form === '10-Q' && now.text.length < 2500) { out.sections[sec] = { note: now.text.replace(/\s+/g, ' ').slice(0, 600) }; continue; }   // most 10-Qs just say "no material changes"
+    if (!before) { out.sections[sec] = { missing: true }; continue; }
+    out.sections[sec] = diffSections(now.text, before.text) || { missing: true };
+  }
+  return out;
+}
+
 /* ================= 3. JSON API for the LedgerLine site ================= */
 async function api(req, url, env, ctx) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -727,6 +850,15 @@ async function api(req, url, env, ctx) {
     if (path === '/api/search') return out(await searchTickers(q.get('q') || ''), 200, 86400);
     if (path === '/api/profile') return out(await profile(q.get('ticker') || ''), 200, 3600);
     if (path === '/api/statements') return out(await secStatements({ ticker: q.get('ticker'), years: q.get('years') }), 200, 3600);
+    if (path === '/api/ask' || path === '/api/screen') {
+      if (!env.ANTHROPIC_API_KEY) return out({ error: 'AI is not switched on yet', needsKey: true }, 503, 0);
+      if (!(await aiQuota(env, req))) return out({ error: 'Daily question limit reached; try again tomorrow' }, 429, 0);
+      const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+      if (path === '/api/ask') return out(await askFilings(body.ticker || q.get('ticker'), body.question || q.get('q'), env), 200, 0);
+      return out(await aiScreen(body.query || q.get('q'), body.fields, env), 200, 0);
+    }
+    if (path === '/api/insiders') return out(await insiders(q.get('ticker') || ''), 200, 21600);
+    if (path === '/api/changes') { const ck = new Request('https://ledgerline-cache.internal/changes/v1/' + encodeURIComponent((q.get('ticker') || '').toUpperCase()) + '/' + new Date().toISOString().slice(0, 10)); const cache = typeof caches !== 'undefined' ? caches.default : null; const hit = cache && await cache.match(ck); if (hit) return out(await hit.json(), 200, 3600); const res = await filingChanges(q.get('ticker')); if (cache) ctx.waitUntil(cache.put(ck, new Response(JSON.stringify(res), { headers: { 'Cache-Control': 'public, max-age=86400' } }))); return out(res, 200, 3600); }
     if (path === '/api/section') return out(await secSection({ ticker: q.get('ticker'), section: q.get('section'), form: q.get('form'), maxChars: q.get('maxChars') }), 200, 3600);
     if (path === '/api/market') { rankNudge(env, ctx); return out(await market(q.get('symbol') || '', env, ctx), 200, 900); }
     if (path === '/api/ranks') { rankNudge(env, ctx); return out(await sectorRank(q.get('ticker') || '', env), 200, 600); }

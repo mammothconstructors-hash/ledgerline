@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>LedgerLine</title>
-<link rel="icon" href="/logo.svg">
+<link rel="icon" href="/logo.svg"><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#262A33"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="LedgerLine">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
@@ -599,6 +599,19 @@ tbody tr:hover td{background:color-mix(in srgb,var(--teal) 7%,transparent)!impor
 .meter .sc small{-webkit-text-fill-color:var(--muted)}
 /* links and focus */
 a{color:var(--oxford)} a:hover{color:var(--teal)}
+
+/* App 8.2 features */
+.chgh{font:700 11px var(--sans);letter-spacing:.06em;text-transform:uppercase;margin:14px 0 6px}.chgh.add{color:var(--l5)}.chgh.mod{color:var(--oxford)}.chgh.del{color:var(--l1)}
+.chg{border-left:3px solid var(--line);padding:6px 0 6px 12px;margin:6px 0;font-size:14px;line-height:1.5}.chg.add{border-color:var(--l5)}.chg.mod{border-color:var(--oxford)}.chg.del{border-color:var(--l1);color:var(--muted)}
+.chg details{margin-top:4px}.chg summary{cursor:pointer;color:var(--muted);font-size:12.5px}.chgw{color:var(--muted);font-size:13px;margin-top:4px}
+.insgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:4px 0 8px}.inscard{border:1px solid var(--cardline,var(--line));border-radius:12px;padding:10px 12px}.insv{font:700 22px var(--sans);font-variant-numeric:tabular-nums}
+.askbox{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.askbox .helpq{flex:1;min-width:220px}
+.askans{border-top:1px solid var(--line);margin-top:16px;padding-top:12px}.askq{font:700 16px var(--sans);margin-bottom:6px}
+.cite{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:color-mix(in srgb,var(--teal) 16%,transparent);color:var(--teal);font:700 11px var(--sans);text-decoration:none;vertical-align:2px}
+.asksrc{margin-top:10px;display:grid;gap:8px}.srcrow{font-size:13px;border-left:3px solid color-mix(in srgb,var(--teal) 40%,transparent);padding-left:10px}
+.bellbtn{position:relative;font-size:15px}.belln{position:absolute;top:2px;right:0;min-width:16px;height:16px;border-radius:999px;background:var(--claret);color:#fff;font:700 10px var(--sans);display:grid;place-items:center;padding:0 3px}
+.alertform{border:1px solid color-mix(in srgb,var(--teal) 40%,transparent)}
+.tblwrap.ins td:nth-child(-n+4),.tblwrap.ins th:nth-child(-n+4){text-align:left}
 </style>
 </head><body>
 
@@ -617,7 +630,7 @@ a{color:var(--oxford)} a:hover{color:var(--teal)}
 <div class="wrap" id="coBar"></div>
 <div class="wrap"><nav class="rail" id="rail" hidden></nav></div>
 <main class="wrap" id="main"></main>
-<footer class="wrap foot"><p><b>Important disclosures.</b> LedgerLine is provided for information and education only. It is not investment, legal, tax or accounting advice, and nothing on it is a recommendation or solicitation to buy, sell or hold any security. LedgerLine is not a registered investment adviser or broker-dealer and does not know your financial situation, objectives or risk tolerance.</p><p><b>Trade at your own risk.</b> Investing involves risk, including the loss of all money invested. Trading on margin, or in options, futures, leveraged or inverse products, can produce losses greater than the amount invested. Past performance, back-tested results and model outputs do not guarantee future results. Consult a licensed financial adviser, CPA or tax professional before making any investment decision.</p><p><b>Data.</b> Financial data is read from XBRL tags in SEC EDGAR 10-K and 10-Q filings. Intraday prices are delayed at least 15 minutes and come from IEX, a single US exchange, through Marketstack, so they can differ from the consolidated market price; outside market hours prices are end-of-day closes. Scores, fair values and verdicts are produced automatically by fixed rules and can be incomplete, delayed or wrong. Verify figures against the original filings before relying on them.</p><p>App 8.1. Designed and built by Kevin Rodrigue. © 2026 Kevin Rodrigue. All rights reserved. <a href="/terms.html">Terms of Use</a> · <a href="/privacy.html">Privacy Policy</a></p></footer>
+<footer class="wrap foot"><p><b>Important disclosures.</b> LedgerLine is provided for information and education only. It is not investment, legal, tax or accounting advice, and nothing on it is a recommendation or solicitation to buy, sell or hold any security. LedgerLine is not a registered investment adviser or broker-dealer and does not know your financial situation, objectives or risk tolerance.</p><p><b>Trade at your own risk.</b> Investing involves risk, including the loss of all money invested. Trading on margin, or in options, futures, leveraged or inverse products, can produce losses greater than the amount invested. Past performance, back-tested results and model outputs do not guarantee future results. Consult a licensed financial adviser, CPA or tax professional before making any investment decision.</p><p><b>Data.</b> Financial data is read from XBRL tags in SEC EDGAR 10-K and 10-Q filings. Intraday prices are delayed at least 15 minutes and come from IEX, a single US exchange, through Marketstack, so they can differ from the consolidated market price; outside market hours prices are end-of-day closes. Scores, fair values and verdicts are produced automatically by fixed rules and can be incomplete, delayed or wrong. Verify figures against the original filings before relying on them.</p><p>App 8.2. Designed and built by Kevin Rodrigue. © 2026 Kevin Rodrigue. All rights reserved. <a href="/terms.html">Terms of Use</a> · <a href="/privacy.html">Privacy Policy</a></p></footer>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -667,7 +680,7 @@ const PHASES = [
   ['Decline','Revenue below where it was five years ago.']
 ];
 const MOAT_SRC = {switching:'Switching costs', network:'Network effects', intangible:'Intangible assets', lowcost:'Low-cost production', counter:'Counter-positioning'};
-const STEPS = [['overview','Overview'],['summary','Verdict'],['valuation','Valuation'],['future','Forecast'],['business','Business'],['moat','Moat'],['growth','Growth'],['earnings','Earnings'],['mgmt','Management & capital'],['risk','Risk'],['technicals','Technicals'],['stats','Statistics'],['metrics','All metrics'],['charts','Custom charts'],['financials','Financials']];
+const STEPS = [['overview','Overview'],['ask','Ask AI'],['summary','Verdict'],['valuation','Valuation'],['future','Forecast'],['business','Business'],['moat','Moat'],['growth','Growth'],['earnings','Earnings'],['mgmt','Management & capital'],['risk','Risk'],['technicals','Technicals'],['stats','Statistics'],['metrics','All metrics'],['charts','Custom charts'],['financials','Financials']];
 const STEP_ALIAS = {phase:'business', capital:'mgmt'};   // Phase lives on Business, Capital return on Management & capital
 const VERDICT = {5:'Buy',4:'Wait for price',3:'Hold',2:'No new money',1:'Avoid'};
 
@@ -2512,9 +2525,10 @@ function checkHtml(){
 }
 
 /* ---- Versions and what's new ---- */
-const APP_VERSION='8.1', WORKER_NEEDED='3.7.1', BUG_EMAIL='kgrodrigue@yahoo.com';
+const APP_VERSION='8.2', WORKER_NEEDED='3.8.0', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
   ['App 7.1','Oct 22, 2026',['Valuation uses core EPS when non-operating gains are more than a quarter of pretax profit (Amazon’s 2025–26 investment mark-ups had pushed its trailing EPS to $12.43 against about $7 from the business, and its fair value to $1,033); the Valuation tab says when this applies','Risk on / off now uses the 50-day vs 200-day EMA (10 vs 40 weeks); 200 EMA added to the Overview chart','Fixed: the return line above the Overview chart now matches the period boxes (both measured from the close before the period starts)']],
+  ['App 8.2','Oct 23, 2026',['Ask AI: ask anything about a company and get a short answer from its latest 10-K and 10-Q, every claim numbered to the exact passage (switches on with the Anthropic key)','Financials → What changed: new, rewritten and dropped paragraphs in MD&A and Risk factors versus the previous filing, plus the numbers that moved most','Management & capital: insider buying and selling from Form 4 filings, with 3, 6 and 12-month net totals and cluster-buying flag','Alerts: 🔔 Alert on any stock (price above or below, 200-day MA cross, new earnings release, below fair value); the bell in the top bar lists them; optional phone and desktop notifications','Library screens: describe a screen in plain English and the AI builds the filters','Installable: add LedgerLine to your home screen like an app']],
   ['App 8.1','Oct 23, 2026',['Technicals: Rank in its sector — the stock’s week, month, quarter and year total return ranked against every S&P 500 stock in its GICS sector, with percentile, sector median, rank in its industry (with the industry median) and in the whole S&P 500, and the sector leaders. Built every evening by the data service (worker 3.7)']],
   ['App 8.0','Oct 23, 2026',['Color pass: four-color ribbon under the masthead, teal-to-blue active tabs and buttons, colored caps and title dots on every card (teal, blue, claret, mandarin), chips tinted in their line color, blue table headers, gradient headline numbers. Same FT palette, light and dark']],
   ['App 7.9','Oct 23, 2026',['Technicals: 8-day EMA added (chart switch, Trend table and the headline count)','Trend table: day close and week close, up or down against the previous day and week','ATR 14 and ATR 30 (Wilder smoothing) in dollars and % of price, with whether the daily range is widening or narrowing','Technical analysis headline adds RSI, Bollinger %B, Williams %R and ATR','Stretch from the averages: 50-day EMA, 100-day EMA, 150-day MA and 200-day MA (200-day EMA removed); weekly keeps the 10 and 40-week EMA','Weekly chart: 10-week and 40-week SMA by default (solid); 10 and 40-week EMA available as dashed lines','Glossary: EMA and SMA (with the periods LedgerLine uses), ATR (Wilder), Bollinger %B and Williams %R','Fixed: bar dates showed one day early in US time zones (Oct 22’s close read “Oct 21”) on chart labels, tooltips and the Technicals return line','Technicals headline number is now how many averages price is above (e.g. 6/7); RSI stays in the summary and the table','Trend label now uses the averages on the page: Uptrend when price is above the 50 EMA and 200 MA with the 50 above the 200 (weekly: 10 and 40-week SMA), Downtrend when all reversed, otherwise Mixed','Returns above the Technicals chart and in Performance vs the market now match: both measured from the close before the period starts, through the same close for the stock and every benchmark','Distance from the averages: 21-day EMA added for pullbacks (now the default), plus 50-day EMA, 100-day EMA, 150 and 200-day MA, and the 10 and 40-week MA (simple averages)','Stretch renamed Distance from the averages; Trend table adds spreads (50 EMA vs 200 MA, 17 vs 50 EMA; weekly 10 vs 40-week) with widening or narrowing against a month ago']],
@@ -2619,7 +2633,7 @@ function exRows(){ if(!EXPLORER) return []; const cl=(v,lo,hi)=>isNum(v)?Math.ma
 function explorerHtml(){
   if(!EXPLORER) return `<div class="sheet"><div class="notice"><h4>Stock explorer</h4><p>The explorer runs on the LedgerLine website.</p></div></div>`;
   const all=exRows(), sc=SCREENS.find(x=>x[0]===exScreen)||SCREENS[0], secs=[...new Set(all.map(r=>r.sec).filter(Boolean))].sort();
-  let rows=all.filter(sc[4]).filter(r=>!exSector||r.sec===exSector);
+  let rows=all.filter(sc[4]).filter(r=>!exSector||r.sec===exSector).filter(exAIpass);
   const col=EXCOLS.find(c=>c[0]===exSort)||EXCOLS[5];
   rows.sort((a,b)=>{ const va=a[col[0]], vb=b[col[0]]; if(col[2]==='s') return String(va||'').localeCompare(String(vb||''))*exDir; const na=isNum(va), nb=isNum(vb); if(!na&&!nb) return 0; if(!na) return 1; if(!nb) return -1; return (va-vb)*exDir; });
   const cell=(c,v)=>c[0]==='roic'&&isNum(v)&&v>=200?`<td class="num pos">200%+</td>`:c[2]==='p'?`<td class="num ${isNum(v)?(v>=0?'pos':'neg'):''}">${pct(v,1,c[0]==='g5'||c[0]==='sh5')}</td>`:c[2]==='x'?`<td class="num">${isNum(v)?(v<0?'net cash':x(v)):'—'}</td>`:c[2]==='n'?`<td class="num">${isNum(v)?v:'—'}</td>`:c[0]==='t'?`<td class="tl"><b>${esc(v)}</b></td>`:`<td class="tl ${c[0]==='n'?'exname':''}">${esc(v||'')}</td>`;
@@ -2627,7 +2641,7 @@ function explorerHtml(){
   return `<div class="sheet"><div class="hero" style="grid-template-columns:1fr"><div><div class="kicker">Library · Prebuilt screens</div><h2>Lists the numbers pick</h2>
       <p class="stand">Each screen is a fixed rule run on the S&amp;P 500’s SEC 10-K and 10-Q data, the same XBRL figures behind every LedgerLine page. Nothing hand-picked. Data as of ${esc(EXPLORER.asOf)}.</p></div></div>
     <div class="scrgrid">${SCREENS.map(([k,l,d,rule])=>`<button type="button" class="scr ${k===exScreen?'on':''}" data-exs="${k}"><span class="st">${esc(l)} <span class="sc">${count(k)}</span></span><span class="sdsc">${esc(d)}</span>${rule?`<span class="srule">${esc(rule)}</span>`:''}</button>`).join('')}</div>
-    <div class="sec"><div class="chartbar"><label class="lbl" for="exSec" style="margin-right:8px">Sector</label><select id="exSec" class="exsel"><option value="">All sectors</option>${secs.map(x=>`<option ${x===exSector?'selected':''}>${esc(x)}</option>`).join('')}</select><span class="muted" style="margin-left:auto;font-size:12.5px">${rows.length} companies · tap a row to open it · tap a heading to sort</span></div>
+    ${exAIbar()}<div class="sec"><div class="chartbar"><label class="lbl" for="exSec" style="margin-right:8px">Sector</label><select id="exSec" class="exsel"><option value="">All sectors</option>${secs.map(x=>`<option ${x===exSector?'selected':''}>${esc(x)}</option>`).join('')}</select><span class="muted" style="margin-left:auto;font-size:12.5px">${rows.length} companies · tap a row to open it · tap a heading to sort</span></div>
       <div class="tblwrap"><table class="tbl mkt extbl"><thead><tr>${EXCOLS.map(c=>`<th class="${c[2]==='s'?'tl':''}"><button type="button" class="exsort ${c[0]===exSort?'on':''}" data-exsort="${c[0]}">${esc(c[1])}${c[0]===exSort?(exDir<0?' ▼':' ▲'):''}</button></th>`).join('')}</tr></thead>
       <tbody>${rows.map(r=>`<tr class="mrow" data-open="${esc(r.t)}">${EXCOLS.map(c=>cell(c,r[c[0]])).join('')}</tr>`).join('')||`<tr><td colspan="${EXCOLS.length}" class="muted">No company passes this screen${exSector?' in '+esc(exSector):''}.</td></tr>`}</tbody></table></div>
       <p class="fine" style="margin-top:8px">ROIC = operating income × 0.79 ÷ (equity + debt − cash), by fiscal year. FCF margin is trailing twelve months. Banks and insurers don’t fit ROIC or FCF margin well; read them with care. Screens are rules, not recommendations.</p></div></div>`;
@@ -2850,17 +2864,133 @@ function methodHtml(){
 }
 
 /* ============ RENDER ============ */
+/* ===== App 8.2: what changed, insiders, ask the filings, AI screens, alerts ===== */
+async function postJSON(path, body){
+  let r; try{ r=await fetch(API+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); }catch(e){ throw {message:'Couldn’t reach the LedgerLine data service.'}; }
+  const j=await r.json().catch(()=>({})); if(!r.ok) throw {code:r.status, message:j.error||('Error '+r.status), needsKey:!!j.needsKey}; return j; }
+const onSite=()=>typeof SITE!=='undefined'&&SITE&&typeof getJSON==='function';
+function lazy(key,path){ if(S[key]!==undefined) return S[key]; if(!onSite()){ S[key]={err:'This runs on the LedgerLine website.'}; return S[key]; }
+  S[key]=null; const tk=S.ticker; getJSON(path).then(j=>{ if(S&&S.ticker===tk){ S[key]=j||{err:'No data'}; render(); } }).catch(e=>{ if(S&&S.ticker===tk){ S[key]={err:e&&e.message||'Unavailable right now'}; render(); } }); return null; }
+const skelBox=h=>`<span class="skel" style="width:100%;height:${h||120}px"></span>`;
+
+// ---- what changed
+function moversHtml(){
+  const q=Q(); if(!q||!q.periods||q.periods.length<5) return '';
+  const n=q.periods.length, P=q.periods[n-1], Y=q.periods[n-5], rows=[];
+  ['income','cashflow'].forEach(id=>{ const st=S.sec.statements[id]; if(!st) return; st.rows.forEach(r=>{ const a=q.rows[r.key]; if(!Array.isArray(a)) return; const v=a[n-1], v0=a[n-5]; if(!isNum(v)||!isNum(v0)||v0===0||r.unit==='shares') return; if(Math.sign(v)!==Math.sign(v0)&&Math.abs(v0)<1) return;
+    rows.push({l:r.label, v, v0, ch:Math.sign(v)===Math.sign(v0)?(v/v0-1)*100:(v-v0)/Math.abs(v0)*100, u:r.unit}); }); });
+  const rev=Math.abs((q.rows.revenue||[])[n-1]||0); const mv=rows.filter(r=>r.u==='USD/shares'||!rev||Math.abs(r.v)>=rev*0.01||Math.abs(r.v0)>=rev*0.01).sort((a,b)=>Math.abs(b.ch)-Math.abs(a.ch)).slice(0,8);
+  if(!mv.length) return '';
+  const f=(r,v)=>r.u==='USD/shares'?fx(v,2):big(v);
+  return `<div class="sec"><h3>Numbers that moved most <small>Q${P.q} FY${String(P.fy).slice(2)} vs the same quarter a year earlier</small></h3>${tbl(['Line','This quarter','Year ago','Change'],mv.map(r=>[esc(r.l),f(r,r.v),f(r,r.v0),`<span class="${r.ch>=0?'pos':'neg'}"><b>${pct(r.ch,1,true)}</b></span>`]))}</div>`; }
+function chgList(arr,kind){ if(!arr||!arr.length) return '';
+  return arr.map(x=>`<div class="chg ${kind}"><div class="chgt">${esc(x.text)}</div>${x.was?`<details><summary>Show the earlier wording</summary><div class="chgw">${esc(x.was)}</div></details>`:''}</div>`).join(''); }
+function changesHtml(){
+  const C=lazy('changes','/api/changes?ticker='+encodeURIComponent(S.ticker));
+  const head=`<div class="hero" style="grid-template-columns:1fr"><div><div class="kicker">What changed</div><h2>The latest filing against the one before</h2><p class="stand">New and rewritten paragraphs in Management’s Discussion and the Risk factors, and the numbers that moved most. Paragraphs where only a number changed are left out.</p></div></div>`;
+  if(C===null) return head+`<div class="sec">${skelBox(220)}</div>`;
+  if(C.err) return head+`<div class="notice"><h4>Couldn’t compare the filings</h4><p>${esc(C.err)}</p></div>`+moversHtml();
+  const sec=(k,label)=>{ const d=C.sections[k]; if(!d) return ''; if(d.missing) return `<div class="sec"><h3>${label}</h3><p class="fine">Not found in one of the two filings.</p></div>`;
+    if(d.note) return `<div class="sec"><h3>${label}</h3><p class="fine">This ${esc(C.form)} says: “${esc(d.note)}”</p></div>`;
+    const c=d.counts; return `<div class="sec"><h3>${label} <small>${c.added} new · ${c.changed} rewritten · ${c.removed} dropped paragraphs</small></h3>
+      ${d.added.length?`<h4 class="chgh add">New</h4>${chgList(d.added,'add')}`:''}${d.changed.length?`<h4 class="chgh mod">Rewritten</h4>${chgList(d.changed,'mod')}`:''}${d.removed.length?`<h4 class="chgh del">Dropped</h4>${chgList(d.removed,'del')}`:''}
+      ${!c.added&&!c.changed&&!c.removed?'<p class="fine">No paragraph-level changes.</p>':''}</div>`; };
+  return head+`<div class="sec"><p style="margin:0"><b>${esc(C.form)} filed ${esc(C.filed)}</b> (period ${esc(C.period||'—')}) <a href="${esc(C.url)}" target="_blank" rel="noopener">open ↗</a> compared with ${C.prior?`the ${esc(C.form)} filed ${esc(C.prior.filed)} <a href="${esc(C.prior.url)}" target="_blank" rel="noopener">open ↗</a>`:'the previous one'}.</p></div>`
+    +moversHtml()+sec('mdna','Management’s discussion (MD&amp;A)')+sec('risk','Risk factors');
+}
+
+// ---- insiders
+let insOpen=LS.get('insopen')!==false;
+function insidersHtml(){
+  const I=lazy('insiders','/api/insiders?ticker='+encodeURIComponent(S.ticker));
+  const h='<h3>Insider buying and selling <small>Form 4 filings, last 12 months</small></h3>';
+  if(I===null) return `<div class="sec">${h}${skelBox(160)}</div>`;
+  if(I.err) return `<div class="sec">${h}<p class="fine">${esc(I.err)}</p></div>`;
+  const m=money0, sm=I.summary, card=(l,o)=>`<div class="inscard"><div class="lbl">${l}</div><div class="insv ${o.net>=0?'pos':'neg'}">${o.net>=0?'+':'−'}${m(Math.abs(o.net))}</div><div class="fine">${o.buys} buys by ${o.buyers} · ${o.sells} sales by ${o.sellers}</div></div>`;
+  const tx=I.transactions.filter(t=>!insOpen||t.code==='P'||t.code==='S').slice(0,25);
+  const tone=sm.m6.buyers>=3&&sm.m6.buyValue>0?`<p class="stand" style="margin:6px 0"><span class="tone" style="--c:var(--l5)"><b>Cluster buying:</b></span> ${sm.m6.buyers} insiders bought in the open market in the last six months.</p>`:sm.y1.buys===0?`<p class="fine" style="margin:6px 0">No open-market buys in the last year; sales are often planned (10b5-1) or for taxes.</p>`:'';
+  return `<div class="sec">${h}<div class="insgrid">${card('3 months net',sm.m3)}${card('6 months net',sm.m6)}${card('12 months net',sm.y1)}</div>${tone}
+    <div class="chartbar"><div class="seg" role="group"><button type="button" data-insopen="1" class="${insOpen?'on':''}">Open-market buys and sales</button><button type="button" data-insopen="0" class="${!insOpen?'on':''}">All transactions</button></div></div>
+    ${tx.length?tbl(['Date','Insider','Role','Type','Shares','Price','Value','Owns after'],tx.map(t=>[esc(t.date),esc(t.owner),`<span class="muted">${esc(t.role)}</span>`,`<span class="${t.code==='P'?'pos':t.code==='S'?'neg':''}">${esc(t.type)}</span>${t.plan?' <span class="muted" title="Pre-arranged 10b5-1 trading plan">plan</span>':''}`,isNum(t.shares)?Math.round(t.shares).toLocaleString():'—',isNum(t.price)?fx(t.price,2):'—',isNum(t.value)?money0(t.value):'—',isNum(t.after)?Math.round(t.after).toLocaleString():'—']),'ins')
+      :'<p class="fine">No transactions of this kind in the last 12 months.</p>'}
+    <p class="fine" style="margin-top:6px">From ${I.filings} Form 4 filings. Open-market buys (code P) are the strongest signal; awards, option exercises and tax withholding are routine.</p></div>`; }
+function money0(v){ return isNum(v)?(Math.abs(v)>=1e9?'$'+(v/1e9).toFixed(1)+'B':Math.abs(v)>=1e6?'$'+(v/1e6).toFixed(1)+'M':Math.abs(v)>=1e3?'$'+(v/1e3).toFixed(0)+'K':'$'+v.toFixed(0)):'—'; }
+
+// ---- ask the filings
+const ASK_SAMPLES=['What are the biggest risks?','Why did margins change?','How does the company make money?','What did management say about the outlook?','Any lawsuits or investigations?','How much debt is due soon?'];
+function askAnswerHtml(a){ const txt=esc(a.answer).replace(/\[(S\d+)\]/g,(m0,id)=>`<a class="cite" href="#src-${id}">${id.slice(1)}</a>`).replace(/\n{2,}/g,'</p><p>').replace(/\n/g,'<br>');
+  return `<div class="askans"><div class="askq">${esc(a.question)}</div><div class="prose"><p>${txt}</p></div>${a.sources&&a.sources.length?`<div class="asksrc">${a.sources.map(s0=>`<div class="srcrow" id="src-${s0.id}"><span class="cite">${s0.id.slice(1)}</span> <b>${esc(s0.form)}</b> filed ${esc(s0.filed)} · ${esc(s0.section)} <a href="${esc(s0.url)}" target="_blank" rel="noopener">open filing ↗</a><div class="fine">“${esc(s0.text.slice(0,280))}…”</div></div>`).join('')}</div>`:''}</div>`; }
+function askHtml(){
+  const A=(S.ask=S.ask||{list:[],busy:false,err:null});
+  return `<div class="hero" style="grid-template-columns:1fr"><div><div class="kicker">Ask the filings</div><h2>Ask anything about ${esc(S.name||S.ticker)}</h2><p class="stand">Answers come only from the company’s latest 10-K and 10-Q, with every claim numbered to the exact passage it came from.</p></div></div>
+    <div class="sec"><div class="askbox"><input id="askQ" class="helpq" type="search" placeholder="e.g. Why did gross margin change this year?" autocomplete="off" ${A.busy?'disabled':''}><button type="button" class="btn primary" data-askgo="1" ${A.busy?'disabled':''}>${A.busy?'Reading the filings…':'Ask'}</button></div>
+      <div class="chips" style="margin-top:10px">${ASK_SAMPLES.map(x=>`<button type="button" class="chip" data-askq="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+      ${A.err?`<div class="notice" style="margin-top:12px"><h4>${A.err.needsKey?'Ask is ready but not switched on yet':'Couldn’t answer'}</h4><p>${A.err.needsKey?'It switches on once the Anthropic API key is added to the data service.':esc(A.err.message)}</p></div>`:''}
+      ${A.busy?skelBox(120):''}${A.list.map(askAnswerHtml).join('')}</div>`; }
+async function askGo(question){ const A=S.ask; if(!question||A.busy) return; if(!onSite()){ A.err={message:'Ask runs on the LedgerLine website.'}; render(); return; }
+  A.busy=true; A.err=null; render(); const tk=S.ticker;
+  try{ const a=await postJSON('/api/ask',{ticker:tk,question}); if(S.ticker===tk) A.list.unshift(a); }catch(e){ if(S.ticker===tk) A.err=e; }
+  if(S.ticker===tk){ A.busy=false; render(); } }
+
+// ---- plain-English screen on the explorer (AI picks filters over the explorer's columns)
+let exAI=null, exAIbusy=false, exAIerr=null;
+const EX_AI_FIELDS=()=>EXCOLS.filter(c=>c[2]!=='s').map(c=>({key:c[0],label:c[1],unit:c[2]==='p'?'%':c[2]==='x'?'x':''}));
+function exAIpass(r){ if(!exAI) return true; return (exAI.filters||[]).every(f=>{ const v=r[f.key]; if(!isNum(v)) return false; return f.op==='>'?v>f.value:f.op==='>='?v>=f.value:f.op==='<'?v<f.value:f.op==='<='?v<=f.value:f.op==='between'?v>=f.value&&v<=f.value2:true; }); }
+function exAIbar(){ return `<div class="sec"><div class="askbox"><input id="exAIq" class="helpq" type="search" placeholder="Describe a screen, e.g. “ROIC over 20%, little debt, growing revenue 10% a year”" autocomplete="off" ${exAIbusy?'disabled':''}><button type="button" class="btn primary" data-exai="1" ${exAIbusy?'disabled':''}>${exAIbusy?'Building…':'Screen'}</button></div>
+  ${exAI?`<p class="fine" style="margin:8px 0 0"><b>AI screen:</b> ${esc(exAI.explain||'')} · ${(exAI.filters||[]).map(f=>`${esc((EXCOLS.find(c=>c[0]===f.key)||[0,f.key])[1])} ${f.op} ${f.value}${f.op==='between'?'–'+f.value2:''}`).join(' · ')} <button type="button" class="linkbtn" data-exaiclear="1">Clear</button></p>`:''}
+  ${exAIerr?`<p class="fine" style="margin:8px 0 0">${exAIerr.needsKey?'Plain-English screens switch on once the Anthropic API key is added.':esc(exAIerr.message||'Couldn’t build that screen.')}</p>`:''}</div>`; }
+async function exAIgo(query){ if(!query||exAIbusy) return; if(!onSite()){ exAIerr={message:'Runs on the LedgerLine website.'}; render(); return; }
+  exAIbusy=true; exAIerr=null; render(); try{ exAI=await postJSON('/api/screen',{query,fields:EX_AI_FIELDS()}); exAI.query=query; if(exAI.sort&&exAI.sort.key){ exSort=exAI.sort.key; exDir=exAI.sort.dir==='asc'?1:-1; } exScreen=SCREENS[0][0]; }catch(e){ exAIerr=e; } exAIbusy=false; render(); }
+
+// ---- alerts: saved in this browser, checked when LedgerLine is open (every 15 minutes) and shown in the bell
+let ALERTS=(()=>{ const a=LS.get('alerts'); return Array.isArray(a)?a:[]; })(), alertForm=null;
+const saveAlerts=()=>{ LS.set('alerts',ALERTS); bellPaint(); };
+const ALERT_KINDS={above:'Price rises above',below:'Price falls below',ma200:'Crosses its 200-day MA',earn:'Reports earnings (new 8-K)',fv:'Trades below LedgerLine fair value'};
+function alertDesc(a){ return `${ALERT_KINDS[a.kind]||a.kind}${a.kind==='above'||a.kind==='below'?' '+money(a.level):''}`; }
+function bellPaint(){ const b=document.getElementById('bellBtn'); if(!b) return; const n=ALERTS.filter(a=>a.fired&&!a.seen).length; b.innerHTML=`🔔${n?`<span class="belln">${n}</span>`:''}`; b.title=n?n+' alert'+(n>1?'s':'')+' triggered':'Alerts'; }
+function alertNotify(a,msg){ try{ if(typeof Notification!=='undefined'&&Notification.permission==='granted'){ const opt={body:msg,tag:'ll-'+a.id,icon:'/icon-192.png',data:{url:'/app/?t='+a.t}}; if(navigator.serviceWorker&&navigator.serviceWorker.ready) navigator.serviceWorker.ready.then(r=>r.showNotification('LedgerLine · '+a.t,opt)).catch(()=>new Notification('LedgerLine · '+a.t,opt)); else new Notification('LedgerLine · '+a.t,opt); } }catch(e){} }
+function fire(a,msg){ a.fired=Date.now(); a.seen=false; a.msg=msg; alertNotify(a,msg); }
+async function alertsCheck(){ if(!onSite()||!ALERTS.length) return; const by={}; ALERTS.filter(a=>!a.fired).forEach(a=>(by[a.t]=by[a.t]||[]).push(a)); let changed=false;
+  for(const t of Object.keys(by)){ let m=null, pr=null;
+    try{ m=await getJSON('/api/market?symbol='+encodeURIComponent(t)); }catch(e){}
+    for(const a of by[t]){ const d=m&&m.daily&&m.daily.c&&m.daily.c.length?m.daily:m&&m.weekly, px=m&&isNum(m.price)?m.price:d?d.c[d.c.length-1]:null; if(!isNum(px)) continue;
+      if(a.kind==='above'&&px>=a.level){ fire(a,`${t} at ${money(px)}, above your ${money(a.level)} alert`); changed=true; }
+      if(a.kind==='below'&&px<=a.level){ fire(a,`${t} at ${money(px)}, below your ${money(a.level)} alert`); changed=true; }
+      if(a.kind==='ma200'&&m.daily&&m.daily.c.length>=200){ const c=m.daily.c, ma=c.slice(-200).reduce((x,y)=>x+y,0)/200, side=px>=ma?'above':'below'; if(a.side&&side!==a.side){ fire(a,`${t} crossed ${side} its 200-day MA (${money(ma)})`); changed=true; } }
+      if(a.kind==='earn'){ try{ pr=pr||await getJSON('/api/profile?ticker='+encodeURIComponent(t)); const last=(pr.earnings||[]).map(e=>e.d).sort().pop(); if(last&&a.lastEarn&&last>a.lastEarn){ fire(a,`${t} released earnings (${last})`); changed=true; } }catch(e){} } } }
+  if(changed) saveAlerts(); }
+function alertsCheckOpen(){ if(!S||!S.ticker) return; let changed=false; ALERTS.filter(a=>!a.fired&&a.t===S.ticker&&a.kind==='fv').forEach(a=>{ try{ const M=model(), fv=M&&M.fair; const px=S.sd&&S.sd.close; if(isNum(fv)&&isNum(px)&&px<fv){ fire(a,`${a.t} at ${money(px)} is below its fair value ${money(fv)}`); changed=true; } }catch(e){} }); if(changed) saveAlerts(); }
+function alertsViewHtml(){
+  const fired=ALERTS.filter(a=>a.fired).sort((a,b)=>b.fired-a.fired), live=ALERTS.filter(a=>!a.fired);
+  const perm=typeof Notification==='undefined'?'unsupported':Notification.permission;
+  return `<div class="sheet"><div class="hero" style="grid-template-columns:1fr"><div><div class="kicker">Alerts</div><h2>Your alerts</h2><p class="stand">Set alerts from any stock page with the 🔔 Alert button. They are checked whenever LedgerLine is open (every 15 minutes) and saved in this browser.${perm==='granted'?' Phone and desktop notifications are on.':''}</p>
+    ${perm==='default'?'<button type="button" class="btn primary" data-notifon="1">Turn on notifications</button>':perm==='denied'?'<p class="fine">Notifications are blocked in this browser’s settings.</p>':''}</div></div>
+    <div class="sec"><h3>Triggered <small>${fired.length}</small></h3>${fired.length?tbl(['When','Stock','Alert',''],fired.map(a=>[new Date(a.fired).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}),`<button type="button" class="linkbtn" data-open="${esc(a.t)}">${esc(a.t)}</button>`,esc(a.msg||alertDesc(a)),`<button type="button" class="linkbtn" data-alertrm="${a.id}">Remove</button>`])):'<p class="fine">Nothing triggered yet.</p>'}</div>
+    <div class="sec"><h3>Watching <small>${live.length}</small></h3>${live.length?tbl(['Stock','Alert','Set',''],live.map(a=>[`<button type="button" class="linkbtn" data-open="${esc(a.t)}">${esc(a.t)}</button>`,esc(alertDesc(a)),new Date(a.created).toLocaleDateString('en-US',{month:'short',day:'numeric'}),`<button type="button" class="linkbtn" data-alertrm="${a.id}">Remove</button>`])):'<p class="fine">No alerts set. Open a stock and press 🔔 Alert.</p>'}</div></div>`; }
+function alertFormHtml(){ if(!alertForm||!S||alertForm.t!==S.ticker) return ''; const px=S.sd&&S.sd.close;
+  return `<div class="sec alertform"><h3>New alert for ${esc(S.ticker)}</h3><div class="askbox"><select id="alKind" class="exsel">${Object.entries(ALERT_KINDS).map(([k,l])=>`<option value="${k}" ${alertForm.kind===k?'selected':''}>${l}</option>`).join('')}</select>
+    <input id="alLevel" class="helpq" type="number" step="0.01" placeholder="Price" value="${isNum(px)?(px*1.05).toFixed(2):''}" style="max-width:150px"><button type="button" class="btn primary" data-alertsave="1">Save alert</button><button type="button" class="linkbtn" data-alertcancel="1">Cancel</button></div>
+    <p class="fine" style="margin-top:6px">Price alerts use the price box; the other kinds ignore it.</p></div>`; }
+function alertAdd(kind,level){ const a={id:Math.random().toString(36).slice(2,9),t:S.ticker,kind,created:Date.now(),fired:null};
+  if(kind==='above'||kind==='below'){ if(!isNum(level)) return; a.level=level; }
+  if(kind==='ma200'){ const d=S.d&&S.d.c; if(d&&d.length>=200){ const ma=d.slice(-200).reduce((x,y)=>x+y,0)/200; a.side=(S.sd&&S.sd.close||d[d.length-1])>=ma?'above':'below'; } }
+  if(kind==='earn'){ const e=(S.pf&&S.pf.earnings)||[]; a.lastEarn=e.map(x=>x.d).sort().pop()||new Date().toISOString().slice(0,10); }
+  ALERTS.push(a); saveAlerts(); alertForm=null; if(typeof Notification!=='undefined'&&Notification.permission==='default') Notification.requestPermission().then(()=>render()); render(); }
+
+// ---- installable app
+if(onSite()&&'serviceWorker' in navigator){ addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{})); }
+
 function render(){
   renderCo(); renderRail(); { const b=document.getElementById('bugSlot'); if(b) b.innerHTML=bugLink('Report a problem'); }
   const m=$('#main');
-  m.innerHTML = view==='empty'?emptyHtml() : view==='loading'?loadingHtml() : view==='error'?errorHtml() : view==='list'?listHtml() : view==='method'?helpHtml()+methodHtml() : view==='news'?newsHtml() : view==='guide'?guideHtml() : view==='fund'?fundHtml() : view==='explore'?explorerHtml() : view==='glossary'?glossaryHtml() : view==='samples'?samplesHtml() : stepHtml();
+  m.innerHTML = view==='empty'?emptyHtml() : view==='loading'?loadingHtml() : view==='error'?errorHtml() : view==='list'?listHtml() : view==='method'?helpHtml()+methodHtml() : view==='news'?newsHtml() : view==='guide'?guideHtml() : view==='fund'?fundHtml() : view==='explore'?explorerHtml() : view==='glossary'?glossaryHtml() : view==='samples'?samplesHtml() : view==='alerts'?alertsViewHtml() : stepHtml();
   afterRender(); decorateTips();
 }
 function renderCo(){
   const el=$('#coBar');
-  if(!S||view==='empty'||view==='explore'||view==='list'||view==='method'||view==='news'||view==='guide'||(view==='error'&&!S.sd)){ el.innerHTML=''; return; }
+  if(!S||view==='empty'||view==='explore'||view==='list'||view==='method'||view==='news'||view==='guide'||view==='alerts'||(view==='error'&&!S.sd)){ el.innerHTML=''; return; }
   const sd=S.sd||{}, ch=sd.change, up=isNum(ch)&&ch>=0;
-  el.innerHTML=`<div class="co"><div style="min-width:0"><div class="kicker">${esc(sd.sector||S.exch||'')}${sd.industry?' · '+esc(sd.industry):''}</div><h1>${esc(S.name||S.sym)}</h1><div class="tk">${esc(S.sym)}${view==='company'?erChip():''}${view==='company'&&S.M?` <button type="button" id="saveTop" class="savetop ${S.saved?'on':''}" title="${S.saved?'Saved to My list. Tap to save again with today’s price and scores':'Save this stock, its scores and today’s price to My list'}">${S.saved?'★ Saved':'☆ Save'}</button>`:''}</div>
+  el.innerHTML=`<div class="co"><div style="min-width:0"><div class="kicker">${esc(sd.sector||S.exch||'')}${sd.industry?' · '+esc(sd.industry):''}</div><h1>${esc(S.name||S.sym)}</h1><div class="tk">${esc(S.sym)}${view==='company'?erChip():''}${view==='company'&&S.M?` <button type="button" id="saveTop" class="savetop ${S.saved?'on':''}" title="${S.saved?'Saved to My list. Tap to save again with today’s price and scores':'Save this stock, its scores and today’s price to My list'}">${S.saved?'★ Saved':'☆ Save'}</button><button type="button" class="savetop" data-alertnew="1" title="Get an alert for this stock">🔔 Alert${ALERTS.filter(a=>a.t===S.ticker&&!a.fired).length?' · '+ALERTS.filter(a=>a.t===S.ticker&&!a.fired).length:''}</button>`:''}</div>
     ${view==='company'?`<div class="src">${SITE?`Fundamentals: <b>SEC EDGAR, XBRL-tagged 10-K and 10-Q filings</b> · Prices: <b>${S.quoteTime?(+new Date().toLocaleString('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false})>=16?`last trade ${(()=>{ const d=new Date(Math.min(S.quoteTime+900,Math.floor(Date.now()/1000))*1000), hm=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:false,timeZone:'America/New_York'}).split(':').map(Number); return hm[0]*60+hm[1]>=960?'4:00 PM':d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}); })()} ET</b> (official close posts this evening)<b>`:`15-min delayed as of ${new Date(S.quoteTime*1000).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET`):`closing price${S.asOf?' on '+new Date(S.asOf*1000).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}):''}`}</b>${S.quoteTime?'':' (end of day: updates after each market close)'} · Every score computed from the numbers`:`Fundamentals: <b>${S.src==='SEC'?'SEC EDGAR, XBRL-tagged 10-K and 10-Q filings':'TradingView'}</b> · Prices: <b>TradingView</b> · Judgment calls: <b>${S.ai.state==='done'?'Claude':S.ai.state==='busy'?'Claude (reading…)':'unavailable'}</b>`}</div>`:''}</div>
     ${isNum(sd.close)||isNum(sd.market_cap_basic)?`<div class="pxblock">${isNum(sd.market_cap_basic)?`<div class="mcap"><span class="mk">Market cap</span><b>${big(sd.market_cap_basic)}</b></div>`:''}`:''}${isNum(sd.close)?`<div class="px"><span class="mk">Price</span><b>${money(sd.close)}</b><span class="chg ${up?'up':'dn'} num">${isNum(sd.change_abs)?(up?'+':'−')+Math.abs(sd.change_abs).toFixed(2):''} (${pct(ch,2,true)})</span></div>`:''}${isNum(sd.close)||isNum(sd.market_cap_basic)?'</div>':''}</div>`;
 }
@@ -3002,10 +3132,10 @@ function subHero(h){ return h?`<div class="subpart">${h.replace('<div class="her
 function stepHtml(){
   if(STEP_ALIAS[step]) step=STEP_ALIAS[step];
   const i=STEPS.findIndex(s=>s[0]===step);
-  let body = step==='overview'?overviewHtml()+faqHtml() : step==='summary'?summaryHtml() : step==='financials'?financialsHtml() : step==='business'?tabHtml('business')+subHero(phaseHtml()) : step==='earnings'?earningsHtml() : step==='mgmt'?tabHtml('mgmt')+subHero(capitalHtml()) : step==='technicals'?techHtml() : step==='future'?futureHtml() : step==='charts'?customChartsHtml() : step==='stats'?statsHtml() : step==='metrics'?metricsHtml() : tabHtml(step);
+  let body = step==='ask'?askHtml() : step==='overview'?overviewHtml()+faqHtml() : step==='summary'?summaryHtml() : step==='financials'?financialsHtml() : step==='business'?tabHtml('business')+subHero(phaseHtml()) : step==='earnings'?earningsHtml() : step==='mgmt'?tabHtml('mgmt')+subHero(capitalHtml())+insidersHtml() : step==='technicals'?techHtml() : step==='future'?futureHtml() : step==='charts'?customChartsHtml() : step==='stats'?statsHtml() : step==='metrics'?metricsHtml() : tabHtml(step);
   const prev=STEPS[i-1], next=STEPS[i+1];
   if(step==='overview'&&!LS.get('hintSeen')) body=`<div class="firsthint"><span><b>New here?</b> Start with <b>At a glance</b> below: the verdict and every score in one line. Then tap <b>Verdict</b> for the why, and <b>Valuation</b> for the price to pay. <button type="button" class="linkbtn" data-go="guide">Full guide</button></span><button type="button" class="btn" data-hint="1">Got it</button></div>`+body;
-  return `<div class="sheet">${body}<div class="nav">${prev?`<button class="btn" type="button" data-step="${prev[0]}">← ${prev[1]}</button>`:'<span></span>'}${next?`<button class="btn primary" type="button" data-step="${next[0]}">${next[1]} →</button>`:''}</div></div>`;
+  return `<div class="sheet">${alertFormHtml()}${body}<div class="nav">${prev?`<button class="btn" type="button" data-step="${prev[0]}">← ${prev[1]}</button>`:'<span></span>'}${next?`<button class="btn primary" type="button" data-step="${next[0]}">${next[1]} →</button>`:''}</div></div>`;
 }
 function statCells(list){ return `<div class="stats">${list.map(([k,v])=>`<div class="stat"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('')}</div>`; }
 function meterHtml(score, lo, hi){
@@ -3343,10 +3473,11 @@ function filingLine(){
   return cells.length?`<div class="ffacts">${cells.map(([k,v,sub])=>`<div><span class="k">${k}</span><b>${v}</b><span class="sub">${sub}</span></div>`).join('')}</div>`:'';
 }
 function financialsHtml(){
-  const tabs=[['income','Income statement'],['balance','Balance sheet'],['cashflow','Cash flow'],['oci','Comprehensive income'],['ratios','All metrics'],['quarterly','Quarterly'],['check','Data check'],['mdna','MD&A'],['notes','Notes'],['risk','Risk factors'],['business','Business'],['legal','Legal']];
+  const tabs=[['changes','What changed'],['income','Income statement'],['balance','Balance sheet'],['cashflow','Cash flow'],['oci','Comprehensive income'],['ratios','All metrics'],['quarterly','Quarterly'],['check','Data check'],['mdna','MD&A'],['notes','Notes'],['risk','Risk factors'],['business','Business'],['legal','Legal']];
   let body='';
   if(S.src!=='SEC' && finTab!=='charts') body = secSetupHtml();
   else if(finTab==='charts'){ finTab='income'; body=''; }
+  else if(finTab==='changes') body=changesHtml();
   else if(finTab==='ratios') body=ratiosHtml();
   else if(finTab==='quarterly') body=quarterlyHtml();
   else if(finTab==='check') body=checkHtml();
@@ -3687,7 +3818,9 @@ $('#tipsBtn').addEventListener('click',()=>{ tipsOn=!tipsOn; LS.set('tips',tipsO
 const resDrop=$('#resDrop'), resBtn=$('#resBtn');
 function resClose(){ resDrop.hidden=true; resBtn.setAttribute('aria-expanded','false'); }
 resBtn.addEventListener('click',e=>{ e.stopPropagation(); if(!resDrop.hidden) return resClose(); const r=resBtn.getBoundingClientRect(), hb=resBtn.closest('header')||resBtn.parentElement; resDrop.style.top=Math.round((hb.getBoundingClientRect().bottom||r.bottom))+'px'; resDrop.style.right=Math.max(8,Math.round(innerWidth-r.right))+'px'; resDrop.hidden=false; resBtn.setAttribute('aria-expanded','true'); });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') resClose(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') resClose(); if(e.key==='Enter'&&e.target&&e.target.id==='askQ'){ askGo(e.target.value.trim()); } if(e.key==='Enter'&&e.target&&e.target.id==='exAIq'){ exAIgo(e.target.value.trim()); } });
+// alerts bell in the top bar, checked now and every 15 minutes
+(()=>{ const tl=document.querySelector('.toplinks'); if(tl&&!document.getElementById('bellBtn')){ const b=document.createElement('button'); b.id='bellBtn'; b.type='button'; b.className='bellbtn'; b.addEventListener('click',()=>{ ALERTS.forEach(a=>{ if(a.fired) a.seen=true; }); saveAlerts(); view='alerts'; render(); window.scrollTo({top:0}); }); tl.insertBefore(b,tl.firstChild); } bellPaint(); setTimeout(alertsCheck,5000); setInterval(alertsCheck,15*60e3); if(window.__ov){ window.__ov.alertsCheck=alertsCheck; window.__ov.go=v=>{ view=v; render(); }; } })();
 addEventListener('scroll',()=>{ if(!resDrop.hidden) resClose(); },{passive:true});
 $('#startBtn').addEventListener('click',()=>{ view='guide'; render(); window.scrollTo({top:0}); });
 $('#homeBtn').addEventListener('click',()=>{ view='empty'; S=null; render(); window.scrollTo({top:0}); });
@@ -3729,6 +3862,16 @@ document.addEventListener('click',e=>{
   if(d.cbclear){ cbSel=[]; cbSave(); render(); return; }
   if(d.cbper){ cbPer=d.cbper; LS.set('cbper',cbPer); render(); return; }
   if(d.chsign){ chSign=d.chsign; LS.set('chsign',chSign); render(); return; }
+  if(d.askgo){ const v=($('#askQ')||{}).value; askGo((v||'').trim()); return; }
+  if(d.askq){ askGo(d.askq); return; }
+  if(d.insopen){ insOpen=d.insopen==='1'; LS.set('insopen',insOpen); render(); return; }
+  if(d.exai){ exAIgo((($('#exAIq')||{}).value||'').trim()); return; }
+  if(d.exaiclear){ exAI=null; exAIerr=null; render(); return; }
+  if(d.alertnew){ alertForm={t:S.ticker,kind:'above'}; render(); window.scrollTo({top:0,behavior:'smooth'}); return; }
+  if(d.alertcancel){ alertForm=null; render(); return; }
+  if(d.alertsave){ const k=($('#alKind')||{}).value||'above', lv=parseFloat(($('#alLevel')||{}).value); alertAdd(k,lv); return; }
+  if(d.alertrm){ ALERTS=ALERTS.filter(a=>a.id!==d.alertrm); saveAlerts(); render(); return; }
+  if(d.notifon){ if(typeof Notification!=='undefined') Notification.requestPermission().then(()=>render()); return; }
   if(d.cbdec){ const b=cbDec??1; cbDec=d.cbdec==='auto'?null:d.cbdec==='up'?Math.min(4,b+1):Math.max(0,b-1); LS.set('cbdec',cbDec); render(); return; }
   if(d.cbf){ cbF=d.cbf; LS.set('cbf',cbF); render(); return; }
   if(d.cbtr){ cbTr=d.cbtr; LS.set('cbtr',cbTr); render(); return; }
