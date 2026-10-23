@@ -466,6 +466,11 @@ input.helpq,.helpq,.exsel,select{border-radius:999px!important;border:1px solid 
 #main .sec + .sec, #main .sec + div, #main div + .sec{margin-top:14px}
 @media (max-width:640px){.sec{padding:14px 14px 16px;border-radius:10px}.rail{border-radius:14px;margin-bottom:14px}.hero h2{font-size:22px}}
 /* skin pass 2 */
+.machip{border:1px solid var(--cardline);background:var(--card);color:var(--muted);border-radius:999px;padding:4px 10px;font:600 12px var(--sans);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.machip::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--c);opacity:.35}
+.machip.on{color:var(--ink);border-color:var(--ink2)}.machip.on::before{opacity:1}
+#ovLegend{align-items:center;gap:6px 8px}#ovLegend span::before{display:none}#ovLegend .seg{margin-right:4px}
+.mdot{vector-effect:non-scaling-stroke}.mlegend{flex-wrap:wrap;gap:6px 12px;align-items:center}
 .seg{max-width:100%;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}.seg::-webkit-scrollbar{display:none}.seg button{white-space:nowrap;flex:none}
 .tblwrap{border-top:0!important}
 @media (max-width:640px){.glance{grid-template-columns:1fr 1fr;gap:0 14px}.glance b,.glance .v{font-size:16px}}
@@ -1970,7 +1975,50 @@ function techCharts(){
 }
 
 /* ---- Financials: ratios, quarterly, data check ---- */
+function rToolbar(annual){
+  const rp=LS.get('rper')||'a', hasQ=!!Q();
+  const sg=(k,cur,opts)=>`<span class="seg">${opts.map(([v,l,dis])=>`<button type="button" data-${k}="${v}" class="${cur===v?'on':''}"${dis?' disabled title="'+esc(dis)+'"':''}>${l}</button>`).join('')}</span>`;
+  return `<div class="sttools" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">${sg('rper',rp,[['a','Annual'],['q','Quarterly',hasQ?'':'No quarterly data']])}${sg('sord',stOrder,[['new','Newest first'],['old','Oldest first']])}<span class="muted" style="font-size:12.5px;align-self:center">Click any metric to chart it, up to four</span></div>`;
+}
+function ratiosQHtml(){
+  const q=Q(), P=q.periods, R=new Proxy(q.rows,{get:(o,kk)=>o[kk]||[]}), n=P.length, k=Math.min(20,n), off=n-k, tax=inputs().tax/100;
+  const sum4=(a,i)=>{ if(i<3) return null; let t=0; for(let j=i-3;j<=i;j++){ if(!isNum(a[j])) return null; t+=a[j]; } return t; };
+  const debt=i=>(R.ltDebt[i]||0)+(R.curDebt[i]||0), cash=i=>isNum(R.cash[i])?R.cash[i]+(R.stInv[i]||0):null;
+  const px=i=>pxAt(Date.parse(P[i].end)/1000), sh=i=>R.dilShares[i]||R.sharesOut[i], mc=i=>isNum(px(i))&&sh(i)>0?px(i)*sh(i):null;
+  const pos=(a,b)=>isNum(a)&&isNum(b)&&b>0?a/b:null, yo=(a,i)=>i>=4&&isNum(a[i])&&isNum(a[i-4])&&a[i-4]!==0?(a[i]/a[i-4]-1)*100*Math.sign(a[i-4]):null;
+  const H=v=>isNum(v)?v*100:null;
+  const defs=[
+    ['Margins'],
+    ['Gross margin',i=>H(pos(R.grossProfit[i],R.revenue[i])),'%'],['Operating margin',i=>H(pos(R.opIncome[i],R.revenue[i])),'%'],['Net margin',i=>H(pos(R.netIncome[i],R.revenue[i])),'%'],['FCF margin',i=>H(pos(R.fcf[i],R.revenue[i])),'%'],
+    ['Growth, year on year'],
+    ['Revenue growth',i=>yo(R.revenue,i),'%'],['EPS growth',i=>yo(R.eps,i),'%'],['Operating income growth',i=>yo(R.opIncome,i),'%'],['FCF growth',i=>yo(R.fcf,i),'%'],['Diluted share change',i=>yo(R.dilShares,i),'%'],
+    ['Per share'],
+    ['EPS, quarter',i=>R.eps[i],'$'],['EPS, trailing 12 months',i=>sum4(R.eps,i),'$'],['FCF per share, trailing',i=>pos(sum4(R.fcf,i),sh(i)),'$'],
+    ['Valuation, trailing 12 months at quarter-end price'],
+    ['P/E',i=>{ const e=sum4(R.eps,i); return e>0&&isNum(px(i))?px(i)/e:null; },'x'],['P/S',i=>pos(mc(i),sum4(R.revenue,i)),'x'],['P/FCF',i=>pos(mc(i),sum4(R.fcf,i)),'x'],
+    ['EV/EBITDA',i=>{ const m=mc(i); return isNum(m)?pos(m+debt(i)-(cash(i)||0),sum4(R.ebitda,i)):null; },'x'],['FCF yield',i=>{ const m=mc(i), f2=sum4(R.fcf,i); return m&&isNum(f2)?f2/m*100:null; },'%'],
+    ['Shareholder yield',i=>{ const m=mc(i), d=sum4(R.dividends,i), b=sum4(R.buybacks,i); return m&&(isNum(d)||isNum(b))?(Math.abs(d||0)+Math.abs(b||0))/m*100:null; },'%'],
+    ['Returns, trailing 12 months'],
+    ['ROE',i=>H(pos(sum4(R.netIncome,i),R.equity[i])),'%'],['ROIC',i=>{ const inv=debt(i)+(R.equity[i]||0)-(cash(i)||0), o=sum4(R.opIncome,i); return isNum(o)&&inv>0?o*(1-tax)/inv*100:null; },'%'],
+    ['Health and quality'],
+    ['Net debt ÷ EBITDA',i=>{ const e=sum4(R.ebitda,i), c=cash(i); return e>0&&isNum(c)?(debt(i)-c)/e:null; },'x2'],['Cash conversion (FCF ÷ net income)',i=>H(pos(sum4(R.fcf,i),sum4(R.netIncome,i))),'%'],
+    ['Stock comp ÷ revenue',i=>H(pos(R.sbc[i],R.revenue[i])),'%'],['Capex ÷ revenue',i=>isNum(R.capex[i])?H(pos(Math.abs(R.capex[i]),R.revenue[i])):null,'%']];
+  const f=(v,u)=>!isNum(v)||!isFinite(v)?'—':u==='%'?pct(v):u==='$'?fx(v,2):u==='x2'?x(v,2):x(v);
+  const idx=[...Array(k).keys()].map(j=>off+j), lab=i=>`Q${P[i].q} '${String(P[i].fy).slice(2)}`;
+  const ord=stOrder==='new'?idx.slice().reverse():idx, picks=(stSel.ratiosq||[]).slice(0,4), pickRows=[];
+  const body=defs.map(d=>{ if(!d[1]) return `<tr class="b grp mgrp"><td colspan="${k+2}">${d[0]}</td></tr>`;
+    const key=d[0].toLowerCase(), vals=idx.map(i=>d[1](i)), pk=picks.indexOf(key);
+    if(pk>=0) pickRows.push({label:d[0], key, unit:d[2], vals, tickFmt:v=>f(v,d[2])});
+    const cells=ord.map(i=>{ const v=vals[i-off]; return `<td class="${isNum(v)&&v<0?'neg':''}">${f(v,d[2])}</td>`; }).join('');
+    return `<tr class="mrow2 pickrow${pk>=0?' sel':''}" data-mk="${esc(key)}" data-strow="ratiosq|${esc(key)}"><td>${pk>=0?`<i class="pk" style="background:${MC_COLORS[pk]}"></i>`:''}${d[0]}</td>${cells}<td class="sp">${spark(vals)}</td></tr>`; }).join('');
+  pickRows.sort((a,b)=>picks.indexOf(a.key)-picks.indexOf(b.key));
+  const chart=metricChart('ratiosq', idx.map((i,j)=>({head:lab(i), sub:P[i].end, get:r=>r.vals[j]})), pickRows, ' ', (r,v)=>f(v,r.unit)).replace(/US\$\s*·\s*/,'');
+  return `${rToolbar(false)}${chart}<div class="mtools"><input id="mQ" class="helpq mq" type="search" placeholder="Find a metric" autocomplete="off"><span class="muted" style="font-size:12.5px">${defs.filter(d=>d[1]).length} quarterly metrics · last ${k} quarters</span></div>
+    <div class="tblwrap"><table class="mtbl"><thead><tr><th>Quarterly metrics</th>${ord.map(i=>`<th>${lab(i)}<span class="yy">${esc(P[i].end)}</span></th>`).join('')}<th></th></tr></thead><tbody>${body}</tbody></table></div>
+    <p class="fine" style="margin-top:8px">Each quarter from its 10-Q (fiscal Q4 = the 10-K year minus nine months). Valuation and return ratios use the trailing four quarters and the price on the quarter’s last day. Growth compares with the same quarter a year earlier.</p>`;
+}
 function ratiosHtml(){
+  if((LS.get('rper')||'a')==='q'&&Q()) return ratiosQHtml();
   const yrs=S.sec.years, n=yrs.length, k=n, off=0, K=S.sec.key, T=S.sec.ttm||{}, F=S.F, I=inputs(), tax=I.tax/100;
   const pE=yrs.map(y=>pxAt(Date.parse(y.end)/1000));
   const g=(key,i,t)=>{ if(t&&isNum(T[key])) return T[key]; const a=K[key]; return a&&isNum(a[i])?a[i]:null; };
@@ -2039,13 +2087,22 @@ function ratiosHtml(){
       if(f5.length>=4){ const xs=f5.map((_,j)=>j), mx=(f5.length-1)/2, my=f5.reduce((x,y)=>x+y,0)/f5.length, sl=xs.reduce((s0,xx,j)=>s0+(xx-mx)*(f5[j]-my),0)/xs.reduce((s0,xx)=>s0+(xx-mx)**2,0), rel=Math.abs(my)>0?sl/Math.abs(my):0;
         tr=Math.abs(rel)<0.02?'<span class="muted">→ flat</span>':sl>0?(d[3]==='low'?'<span class="cue-bad">↑ rising</span>':d[3]==='high'?'<span class="cue-good">↑ rising</span>':'↑ rising'):(d[3]==='low'?'<span class="cue-good">↓ falling</span>':d[3]==='high'?'<span class="cue-bad">↓ falling</span>':'↓ falling'); }
       const bar=isNum(pctl)?`<span class="pbar"><i style="left:${pctl}%"></i></span> ${pctl}th`:'—';
-      return `<tr class="mrow2" data-mk="${key}"><td>${d[0]}</td><td class="ttmc${cue}"><b>${f(cur,d[2])}</b></td><td>${f(md,d[2])}</td><td>${f(avg,d[2])}</td><td>${f(lo,d[2])}</td><td>${f(hi,d[2])}</td><td>${isNum(sd)?f(sd,d[2]==='big'?'big':d[2]==='$'?'$':d[2]==='%'?'%':'x2'):'—'}</td><td class="${isNum(zz)&&Math.abs(zz)>=2?'b':''}">${isNum(zz)?(zz>=0?'+':'−')+Math.abs(zz).toFixed(1):'—'}</td><td class="tl">${bar}</td><td class="tl">${tr||'—'}</td><td class="muted">${L.length}</td><td class="sp">${spark(vals)}</td></tr>`;
+      const pk=(stSel.ratios||[]).indexOf(key);
+      return `<tr class="mrow2 pickrow${pk>=0?' sel':''}" data-mk="${key}" data-strow="ratios|${key}"><td>${pk>=0?`<i class="pk" style="background:${MC_COLORS[pk]}"></i>`:''}${d[0]}</td><td class="ttmc${cue}"><b>${f(cur,d[2])}</b></td><td>${f(md,d[2])}</td><td>${f(avg,d[2])}</td><td>${f(lo,d[2])}</td><td>${f(hi,d[2])}</td><td>${isNum(sd)?f(sd,d[2]==='big'?'big':d[2]==='$'?'$':d[2]==='%'?'%':'x2'):'—'}</td><td class="${isNum(zz)&&Math.abs(zz)>=2?'b':''}">${isNum(zz)?(zz>=0?'+':'−')+Math.abs(zz).toFixed(1):'—'}</td><td class="tl">${bar}</td><td class="tl">${tr||'—'}</td><td class="muted">${L.length}</td><td class="sp">${spark(vals)}</td></tr>`;
     }
-    return `<tr class="mrow2" data-mk="${key}"><td>${d[0]}</td>${vals.map(v=>`<td class="${isNum(v)&&v<0?'neg':''}">${f(v,d[2])}</td>`).join('')}<td class="ttmc${cue}"><b>${f(tt,d[2])}</b></td><td class="muted">${f(md,d[2])}</td><td class="sp">${spark(vals)}</td></tr>`; }).join('');
+    const pk=(stSel.ratios||[]).indexOf(key), sw=pk>=0?`<i class="pk" style="background:${MC_COLORS[pk]}"></i>`:'';
+    const cells=vals.map(v=>`<td class="${isNum(v)&&v<0?'neg':''}">${f(v,d[2])}</td>`), ttc=`<td class="ttmc${cue}"><b>${f(tt,d[2])}</b></td>`;
+    return `<tr class="mrow2 pickrow${pk>=0?' sel':''}" data-mk="${key}" data-strow="ratios|${key}"><td>${sw}${d[0]}</td>${stOrder==='new'?ttc+cells.reverse().join(''):cells.join('')+ttc}<td class="muted">${f(md,d[2])}</td><td class="sp">${spark(vals)}</td></tr>`; }).join('');
   window.__ratiosCsv=csv.join('\n');
-  return `<div class="chartbar" style="margin-bottom:8px"><span class="fine">${n} fiscal years from the 10-Ks, plus TTM. <span class="cue-good">Green</span> = better than its own 10-year median by 10%+, <span class="cue-bad">red</span> = worse.</span>${SITE?`<button type="button" class="btn" data-csv="ratios" style="margin-left:auto">Download CSV</button>`:''}</div>
+  // chart of picked metrics (chronological), shared Bars/Line switch
+  const picks=(stSel.ratios||[]).slice(0,4), pickRows=[];
+  defs.forEach(d=>{ if(!d[1]) return; const kk=d[0].toLowerCase(); if(!picks.includes(kk)) return; const vals=[]; for(let i=off;i<n;i++) vals.push(d[1](i,false)); vals.push(d[1](n-1,true)); pickRows.push({label:d[0], key:kk, unit:d[2], vals, tickFmt:v=>f(v,d[2])}); });
+  pickRows.sort((a,b)=>picks.indexOf(a.key)-picks.indexOf(b.key));
+  const chartCols=[...yrs.slice(off).map((y,i)=>({head:'FY'+y.fy, get:r=>r.vals[i]})),{head:'TTM', get:r=>r.vals[r.vals.length-1]}];
+  const chart=metricChart('ratios', chartCols, pickRows, ' ', (r,v)=>f(v,r.unit)).replace(/US\$\s*·\s*/,'');
+  return `${rToolbar(true)}${chart}<div class="chartbar" style="margin-bottom:8px"><span class="fine">${n} fiscal years from the 10-Ks, plus TTM. <span class="cue-good">Green</span> = better than its own 10-year median by 10%+, <span class="cue-bad">red</span> = worse.</span>${SITE?`<button type="button" class="btn" data-csv="ratios" style="margin-left:auto">Download CSV</button>`:''}</div>
     <div class="mtools"><span class="seg2"><button type="button" class="${mv==='years'?'on':''}" data-mview="years">By year</button><button type="button" class="${mv==='stats'?'on':''}" data-mview="stats">Statistics</button></span><input id="mQ" class="helpq mq" type="search" placeholder="Find a metric: e.g. ROIC, yield, growth" autocomplete="off"><span class="muted" style="font-size:12.5px">${nM} metrics</span></div>
-    <div class="tblwrap"><table class="mtbl">${mv==='stats'?`<thead><tr><th>Metric</th><th>Now</th><th>10-yr median</th><th>Average</th><th>Low</th><th>High</th><th>Std dev</th><th title="how many standard deviations from the 10-year average">z-score</th><th class="tl">Where now sits in 10 yrs</th><th class="tl">5-yr trend</th><th title="fiscal years used">Yrs</th><th></th></tr></thead>`:`<thead><tr><th>Metrics</th>${yrs.slice(off).map(y=>`<th>FY${y.fy}</th>`).join('')}<th>TTM</th><th>10-yr median</th><th></th></tr></thead>`}<tbody>${body}</tbody></table></div>
+    <div class="tblwrap"><table class="mtbl">${mv==='stats'?`<thead><tr><th>Metric</th><th>Now</th><th>10-yr median</th><th>Average</th><th>Low</th><th>High</th><th>Std dev</th><th title="how many standard deviations from the 10-year average">z-score</th><th class="tl">Where now sits in 10 yrs</th><th class="tl">5-yr trend</th><th title="fiscal years used">Yrs</th><th></th></tr></thead>`:`<thead><tr><th>Metrics</th>${(()=>{ const h=yrs.slice(off).map(y=>`<th>FY${y.fy}</th>`); return stOrder==='new'?'<th>TTM</th>'+h.reverse().join(''):h.join('')+'<th>TTM</th>'; })()}<th>10-yr median</th><th></th></tr></thead>`}<tbody>${body}</tbody></table></div>
     ${mv==='stats'?`<p class="fine" style="margin-top:6px"><b>Now</b> is trailing twelve months at today’s price (latest fiscal year when TTM isn’t available). Statistics use the last ten fiscal years. <b>z-score</b>: how many standard deviations now sits from the 10-year average; beyond ±2 is unusual (bold). <b>Where now sits</b>: percentile of now among those ten years (100th = the highest it has been). <b>5-yr trend</b>: direction of a straight-line fit through the last six fiscal years; green when the move is the good direction for that metric.</p>`:''}
     <p class="fine" style="margin-top:8px">Fiscal-year columns use the price at each year end (price-based ratios start where the ten-year price history does); TTM uses today’s price. ROIC uses a ${I.tax}% tax rate. Every input is an XBRL figure from the company’s SEC filings.</p>`;
 }
@@ -2073,7 +2130,7 @@ function checkHtml(){
 /* ---- Versions and what's new ---- */
 const APP_VERSION='7.0', WORKER_NEEDED='3.5', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
-  ['App 7.0','Oct 22, 2026',['New look, same colors: every section on its own card, pill tabs and controls, one clean sans-serif for numbers, a compact company header with price beside the name, quieter table headers','Price charts: pick OHLC bars or a line (with a soft fill) on the Overview and Technicals charts; your choice carries to every price chart']],
+  ['App 7.0','Oct 22, 2026',['All metrics: Annual or Quarterly, newest or oldest first, and click any metric to chart it (up to four) as bars or a line; quarterly view adds 26 metrics per quarter, with valuation and returns on the trailing four quarters','New look, same colors: every section on its own card, pill tabs and controls, one clean sans-serif for numbers, a compact company header with price beside the name, quieter table headers','Statement charts: pick bars or a line with points','Overview chart: Auto, Daily or Weekly bars; weekly 10- and 40-week averages and daily 8, 17, 34, 50 and 150 EMAs, each switched on or off; Risk on / off arrows on or off','Price charts: pick OHLC bars or a line (with a soft fill) on the Overview and Technicals charts; your choice carries to every price chart']],
   ['App 6.26','Oct 22, 2026',['Financials: Ratios & KPIs is now All metrics, 60+ in one place, with new Growth (revenue, EPS, EBITDA, FCF, dividend) and Quality of earnings (cash conversion, stock comp, capex, share change) groups','New Statistics view for every metric: now vs its 10-year median, average, low, high, standard deviation, z-score, percentile and 5-year trend','Find any metric with the search box','Earnings reaction adds report-day swing (standard deviation) and how many times bigger than a normal day, with the share of yearly variance from report days']],
   ['App 6.26','Oct 22, 2026',['New All metrics tab: every ratio LedgerLine computes with its 10-year median, average, range, standard deviation, z-score, percentile and trend, plus return and risk statistics — 1/3/5/10-year returns, best and worst years, volatility, downside volatility, max drawdown, time under water, skew, kurtosis, Sharpe, Sortino, beta, correlation and up/down capture vs the S&P 500','Earnings variance: report-day standard deviation vs a normal day, and the share of the stock’s yearly variance that comes from its four report days','Days to the next earnings report next to the ticker on every tab']],
   ['App 6.25','Oct 22, 2026',['Next earnings report: countdown (in 12 days, tomorrow, today), highlighted inside a week; an overdue warning when last year’s timing has passed with no release','Days to the next earnings report on every company page, next to the ticker (tap it to open the Earnings tab)','Results that are out before the 10-Q is filed now show at the top of the reaction table, marked 10-Q pending, with the report-day move']],
@@ -2975,6 +3032,7 @@ function financialsHtml(){
 }
 const MC_COLORS=['#0D7680','#990F3D','#C07A12','#5A3E8C'];
 let MC=null;   // data behind the chart on screen, for the hover readout
+let mcType=LS.get('mctype')||'bars';
 function metricChart(id, cols, rows, unitLbl, fmt){
   if(!rows.length) return `<p class="fine mchint">Click any line in the table to chart it. Pick up to four to compare.</p>`;
   const L=cols.map(c=>c.head), ser=rows.map((r,i)=>({name:r.label, color:MC_COLORS[i], r, v:cols.map(c=>{ const x=c.get(r); return isNum(x)?x:null; })}));
@@ -2983,16 +3041,16 @@ function metricChart(id, cols, rows, unitLbl, fmt){
   const nice=x=>{ const e=Math.pow(10,Math.floor(Math.log10(Math.abs(x)||1))), f=Math.abs(x)/e; return Math.sign(x)*(f<=1?1:f<=2?2:f<=5?5:10)*e; };
   const step=nice((hi-lo)/5); lo=Math.floor(lo/step)*step; hi=Math.ceil(hi/step)*step;
   const W=1000,H=300,pl=70,pr=12,pt=14,pb=34, n=L.length, bw=(W-pl-pr)/n, y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb);
-  const gw=Math.max(2,bw*0.78), each=gw/ser.length, useLine=n>24&&ser.length>1;
-  const tickF=v=>{ const r0=ser[0].r; return r0.unit==='USD/shares'?fx(v,2):fmt({unit:'USD'},v).replace(/[()]/g,m=>m==='('?'−':''); };
+  const gw=Math.max(2,bw*0.78), each=gw/ser.length, useLine=mcType==='line';
+  const tickF=v=>{ const r0=ser[0].r; if(r0.tickFmt) return r0.tickFmt(v); return r0.unit==='USD/shares'?fx(v,2):fmt({unit:'USD'},v).replace(/[()]/g,m=>m==='('?'−':''); };
   let g='';
   for(let v=lo; v<=hi+step/2; v+=step){ g+=`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" class="${Math.abs(v)<step/2?'z':'gl'}"/><text x="${pl-8}" y="${y(v)+4}" text-anchor="end">${tickF(v)}</text>`; }
   const every=Math.ceil(n/12); L.forEach((l,i)=>{ if(i%every===0||i===n-1) g+=`<text x="${pl+bw*i+bw/2}" y="${H-12}" text-anchor="middle">${esc(l)}</text>`; });
-  ser.forEach((s,k)=>{ if(useLine){ const pts=s.v.map((v,i)=>isNum(v)?`${pl+bw*i+bw/2},${y(v)}`:null); let d='',pen=false; pts.forEach(p=>{ if(!p){pen=false;return;} d+=(pen?'L':'M')+p; pen=true; }); g+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.5"/>`; }
+  ser.forEach((s,k)=>{ if(useLine){ const pts=s.v.map((v,i)=>isNum(v)?`${pl+bw*i+bw/2},${y(v)}`:null); let d='',pen=false; pts.forEach(p=>{ if(!p){pen=false;return;} d+=(pen?'L':'M')+p; pen=true; }); g+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`; if(n<=40) s.v.forEach((v,i)=>{ if(isNum(v)) g+=`<circle cx="${pl+bw*i+bw/2}" cy="${y(v)}" r="3.2" fill="${s.color}" class="mdot"/>`; }); }
     else s.v.forEach((v,i)=>{ if(!isNum(v)) return; const x=pl+bw*i+(bw-gw)/2+each*k, y0=y(Math.max(0,v)), h=Math.abs(y(v)-y(0)); g+=`<rect x="${x}" y="${y0}" width="${Math.max(1,each-1)}" height="${Math.max(1,h)}" fill="${s.color}" opacity="${v<0?.55:.9}"/>`; }); });
   MC={L, ser, fmt, cols};
   const legend=ser.map((s,i)=>`<span class="lg"><i style="background:${s.color}"></i>${esc(s.name)}<button type="button" class="x" data-strow="${esc(id)}|${esc(s.r.key)}" title="Remove">×</button></span>`).join('');
-  return `<div class="mchart"><div class="mlegend">${legend}<span class="muted" style="margin-left:auto;font-size:12px">${unitLbl.replace('$','US$ ').trim()} · hover for values · click lines to add or remove</span></div>
+  return `<div class="mchart"><div class="mlegend">${legend}<span class="seg mcseg" role="group" aria-label="Chart type" style="margin-left:auto"><button type="button" data-mct="bars" class="${mcType==='bars'?'on':''}">Bars</button><button type="button" data-mct="line" class="${mcType==='line'?'on':''}">Line</button></span><span class="muted" style="font-size:12px">${unitLbl.replace('$','US$ ').trim()} · hover for values · click lines to add or remove</span></div>
     <div class="mwrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="msvg" data-pl="${pl}" data-bw="${bw}" data-n="${n}">${g}<rect class="mhl" x="0" y="${pt}" width="${bw}" height="${H-pt-pb}" style="display:none"/><rect class="mhit" x="${pl}" y="0" width="${W-pl-pr}" height="${H}" fill="transparent"/></svg><div class="mtip" hidden></div></div></div>`;
 }
 function mcHover(ev){
@@ -3008,7 +3066,7 @@ function mcHover(ev){
 document.addEventListener('mousemove',e=>{ if(e.target.closest&&e.target.closest('.msvg')) mcHover(e); });
 document.addEventListener('mouseleave',e=>{},true);
 document.addEventListener('mouseout',e=>{ const s=e.target.closest&&e.target.closest('.msvg'); if(s&&!s.contains(e.relatedTarget)){ const w=s.parentElement; w.querySelector('.mtip').hidden=true; s.querySelector('.mhl').style.display='none'; } });
-let stSel=LS.get('stSel')||{income:['revenue','netIncome'],balance:[],cashflow:['ocf','fcf'],oci:[]};
+let stSel=LS.get('stSel')||{income:['revenue','netIncome'],balance:[],cashflow:['ocf','fcf'],oci:[]}; stSel.ratios=stSel.ratios||['roic','operating margin']; stSel.ratiosq=stSel.ratiosq||['gross margin','operating margin'];
 let stOrder=LS.get('stOrder')||'new', stPeriod=LS.get('stPeriod')||'a', stUnit=LS.get('stUnit')||'M';
 function statementHtml(id){
   const st=S.sec.statements[id]; if(!st) return '';
@@ -3200,6 +3258,9 @@ function perfStrip(){
 }
 function sma(a,k){ const out=[]; let s=0; for(let i=0;i<a.length;i++){ s+=a[i]; if(i>=k) s-=a[i-k]; out.push(i>=k-1?s/k:null); } return out; }
 const pxFmt=(v,dp)=>v>=1000?v.toFixed(0):v.toFixed(Math.max(dp||0,v<10?2:0));
+let ovInt=LS.get('ovint')||'auto', ovMA=LS.get('ovma')||['w10','w40','d50','d150','risk'];
+const OV_MA_W=[['w10','10-wk MA',10,'sma','--mandarin'],['w40','40-wk MA',40,'sma','--oxford']];
+const OV_MA_D=[['d8','8 EMA',8,'ema','--teal'],['d17','17 EMA',17,'ema','--mandarin'],['d34','34 EMA',34,'ema','--claret'],['d50','50 EMA',50,'ema','--oxford'],['d150','150 EMA',150,'ema','--ink2']];
 function overviewChart(){
   if(!S.px) return;
   if(!OV_PERS.some(p=>p[0]===chartPeriod)) chartPeriod='1y';
@@ -3208,12 +3269,23 @@ function overviewChart(){
   const meR=(c[c.length-1]/c[0]-1)*100, spR=retOver(O.spy,null,chartPeriod), df=isNum(spR)?meR-spR:null;
   if(stat) stat.innerHTML=`<b>${esc(S.ticker)} ${pct(meR,1,true)}</b> · ${bench} ${pct(spR,1,true)}${isNum(df)?` · <span class="${df>=0?'ahead':'behind'}">${df>=0?'ahead':'trailing'} by ${Math.abs(df).toFixed(1)} pts</span>`:''} <span class="muted">(${lab}${O.daily?', daily':', weekly'})</span>`;
   if(chartMode==='ohlc'){
-    const ma1=O.daily?sma(p.c,50).slice(k):sma(p.c,10).slice(k), ma2=O.daily?sma(p.c,200).slice(k):sma(p.c,40).slice(k);
-    const cfg={t,lines:[{v:ma1,color:css('--mandarin'),w:1.3},{v:ma2,color:css('--oxford'),w:1.5}],yfmt:pxFmt,lastTag:c[c.length-1],
-      tip:i=>`${dfmt(t[i])}<br>O ${o[i].toFixed(2)} H ${h[i].toFixed(2)}<br>L ${l[i].toFixed(2)} C ${c[i].toFixed(2)}`};
-    if(t.length<=560) cfg.ohlc={o,h,l,c}; else cfg.lines.unshift({v:c,color:css('--bars'),w:1.4});
+    // interval: Auto picks daily up to 1 year, weekly beyond; Daily needs the daily history (about 5 years)
+    const canD=S.d&&S.d.c&&S.d.c.length>60, dailyFits=canD&&(chartPeriod!=='max')&&(perStart(S.d.t[S.d.t.length-1],chartPeriod)>=S.d.t[0]-7*86400||['1d','5d'].includes(chartPeriod));
+    const useD=ovInt==='d'?dailyFits:ovInt==='w'?false:O.daily, P2=useD?S.d:S.px, k2=sliceIdx(P2.t,chartPeriod);
+    const t2=P2.t.slice(k2), o2=P2.o.slice(k2), h2=P2.h.slice(k2), l2=P2.l.slice(k2), c2=P2.c.slice(k2);
+    const defs=useD?OV_MA_D:OV_MA_W, lines=[], legend=[];
+    defs.forEach(([key,lab,len,kind,col])=>{ if(!ovMA.includes(key)) return; const v=(kind==='ema'?ema(P2.c,len):sma(P2.c,len)).slice(k2); lines.push({v,color:css(col),w:1.4}); });
+    const cfg={t:t2,lines,yfmt:pxFmt,lastTag:c2[c2.length-1],
+      tip:i=>`${dfmt(t2[i])}<br>O ${o2[i].toFixed(2)} H ${h2[i].toFixed(2)}<br>L ${l2[i].toFixed(2)} C ${c2[i].toFixed(2)}`};
+    if(t2.length<=560) cfg.ohlc={o:o2,h:h2,l:l2,c:c2}; else cfg.lines.unshift({v:c2,color:css('--bars'),w:1.4});
+    if(ovMA.includes('risk')){ const f=ema(P2.c,useD?50:10), sl=ema(P2.c,useD?150:30), warm=useD?150:30, marks=[];
+      for(let i=Math.max(k2,warm,1);i<P2.c.length;i++){ if(!isNum(f[i-1])||!isNum(sl[i-1])) continue; const a0=f[i-1]-sl[i-1], b0=f[i]-sl[i];
+        if(a0<=0&&b0>0) marks.push({i:i-k2,y:P2.l[i]*0.985,up:true,color:css('--up')}); if(a0>=0&&b0<0) marks.push({i:i-k2,y:P2.h[i]*1.015,up:false,color:css('--down')}); }
+      cfg.marks=marks; }
     mountChart('pxChart',cfg);
-    const lg=$('#ovLegend'); if(lg) lg.innerHTML=`<span style="--c:var(--bars)">${O.daily?'Daily':'Weekly'} OHLC</span><span style="--c:var(--mandarin)">${O.daily?'50-day':'10-wk'} MA</span><span style="--c:var(--oxford)">${O.daily?'200-day':'40-wk'} MA</span>`;
+    const lg=$('#ovLegend'); if(lg){ const chip=(key,lab,col)=>`<button type="button" class="machip ${ovMA.includes(key)?'on':''}" data-ovma="${key}" style="--c:${col}">${lab}</button>`;
+      lg.innerHTML=`<span class="seg" role="group" aria-label="Interval"><button type="button" data-ovint="auto" class="${ovInt==='auto'?'on':''}">Auto</button><button type="button" data-ovint="d" class="${ovInt==='d'?'on':''}"${dailyFits?'':' disabled title="Daily history covers about five years"'}>Daily</button><button type="button" data-ovint="w" class="${ovInt==='w'?'on':''}">Weekly</button></span>
+        <span class="muted" style="font-size:12px">${useD?'Daily':'Weekly'} bars</span>${defs.map(([key,lab,,,col])=>chip(key,lab,`var(${col})`)).join('')}${chip('risk','▲▼ Risk on / off','var(--up)')}`; }
   } else {
     const mine=c.map(v=>(v/c[0]-1)*100); let sp=null;
     if(O.spy){ const a=alignTo(t,O.spy), b0=a.find(isNum); sp=a.map(v=>isNum(v)&&b0?(v/b0-1)*100:null); }
@@ -3283,6 +3355,10 @@ document.addEventListener('click',e=>{
   if(b.id==='inpReset'){ LS.set('inputs',{}); S.inp={}; S.M=model(); render(); toast('Inputs reset'); return; }
   if(d.fin){ finTab=d.fin; render(); return; }
   if(d.mode){ chartMode=d.mode; LS.set('mode',chartMode); render(); return; }
+  if(d.ovint){ ovInt=d.ovint; LS.set('ovint',ovInt); overviewChart(); return; }
+  if(d.ovma){ const i=ovMA.indexOf(d.ovma); if(i>=0) ovMA.splice(i,1); else ovMA.push(d.ovma); LS.set('ovma',ovMA); overviewChart(); return; }
+  if(d.rper){ LS.set('rper',d.rper); render(); return; }
+  if(d.mct){ mcType=d.mct; LS.set('mctype',mcType); render(); return; }
   if(d.pxs){ pxStyle=d.pxs; LS.set('pxstyle',pxStyle); render(); return; }
   if(d.clearrecent){ LS.set('recent',[]); render(); return; }
   if(b.id==='saveTop'){ save(); return; }
