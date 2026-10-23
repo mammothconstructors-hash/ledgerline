@@ -605,13 +605,21 @@ a{color:var(--oxford)} a:hover{color:var(--teal)}
 .chg{border-left:3px solid var(--line);padding:6px 0 6px 12px;margin:6px 0;font-size:14px;line-height:1.5}.chg.add{border-color:var(--l5)}.chg.mod{border-color:var(--oxford)}.chg.del{border-color:var(--l1);color:var(--muted)}
 .chg details{margin-top:4px}.chg summary{cursor:pointer;color:var(--muted);font-size:12.5px}.chgw{color:var(--muted);font-size:13px;margin-top:4px}
 .insgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:4px 0 8px}.inscard{border:1px solid var(--cardline,var(--line));border-radius:12px;padding:10px 12px}.insv{font:700 22px var(--sans);font-variant-numeric:tabular-nums}
-.askbox{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.askbox .helpq{flex:1;min-width:220px}
+.askbox{display:flex;flex-wrap:wrap;gap:10px;align-items:center;width:100%}.askbox .helpq{flex:1;min-width:220px}
 .askans{border-top:1px solid var(--line);margin-top:16px;padding-top:12px}.askq{font:700 16px var(--sans);margin-bottom:6px}
 .cite{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:color-mix(in srgb,var(--teal) 16%,transparent);color:var(--teal);font:700 11px var(--sans);text-decoration:none;vertical-align:2px}
 .asksrc{margin-top:10px;display:grid;gap:8px}.srcrow{font-size:13px;border-left:3px solid color-mix(in srgb,var(--teal) 40%,transparent);padding-left:10px}
 .bellbtn{position:relative;font-size:15px}.belln{position:absolute;top:2px;right:0;min-width:16px;height:16px;border-radius:999px;background:var(--claret);color:#fff;font:700 10px var(--sans);display:grid;place-items:center;padding:0 3px}
 .alertform{border:1px solid color-mix(in srgb,var(--teal) 40%,transparent)}
 .tblwrap.ins td:nth-child(-n+4),.tblwrap.ins th:nth-child(-n+4){text-align:left}
+
+/* Ask AI stands out: gradient tab with a spark, big question box */
+.rail button.askai{font-size:14.5px!important;font-weight:700!important;padding:8px 16px!important;color:#fff!important;background:linear-gradient(135deg,var(--claret),var(--oxford) 55%,var(--teal))!important;box-shadow:0 2px 10px color-mix(in srgb,var(--claret) 30%,transparent)}
+.rail button.askai:hover{filter:brightness(1.08);color:#fff!important}
+.rail button.askai.on{outline:2px solid var(--ink);outline-offset:2px}
+.aispark{margin-right:6px;font-size:13px}
+.askbox .askbig{flex:1 1 320px!important;max-width:none!important;width:auto!important;height:56px!important;font-size:17px!important;padding:0 22px!important;border:2px solid color-mix(in srgb,var(--teal) 45%,var(--cardline,var(--line)))!important}
+.askbox .askgo{height:56px;padding:0 28px;font-size:16px;font-weight:700}
 </style>
 </head><body>
 
@@ -630,7 +638,7 @@ a{color:var(--oxford)} a:hover{color:var(--teal)}
 <div class="wrap" id="coBar"></div>
 <div class="wrap"><nav class="rail" id="rail" hidden></nav></div>
 <main class="wrap" id="main"></main>
-<footer class="wrap foot"><p><b>Important disclosures.</b> LedgerLine is provided for information and education only. It is not investment, legal, tax or accounting advice, and nothing on it is a recommendation or solicitation to buy, sell or hold any security. LedgerLine is not a registered investment adviser or broker-dealer and does not know your financial situation, objectives or risk tolerance.</p><p><b>Trade at your own risk.</b> Investing involves risk, including the loss of all money invested. Trading on margin, or in options, futures, leveraged or inverse products, can produce losses greater than the amount invested. Past performance, back-tested results and model outputs do not guarantee future results. Consult a licensed financial adviser, CPA or tax professional before making any investment decision.</p><p><b>Data.</b> Financial data is read from XBRL tags in SEC EDGAR 10-K and 10-Q filings. Intraday prices are delayed at least 15 minutes and come from IEX, a single US exchange, through Marketstack, so they can differ from the consolidated market price; outside market hours prices are end-of-day closes. Scores, fair values and verdicts are produced automatically by fixed rules and can be incomplete, delayed or wrong. Verify figures against the original filings before relying on them.</p><p>App 8.2. Designed and built by Kevin Rodrigue. © 2026 Kevin Rodrigue. All rights reserved. <a href="/terms.html">Terms of Use</a> · <a href="/privacy.html">Privacy Policy</a></p></footer>
+<footer class="wrap foot"><p><b>Important disclosures.</b> LedgerLine is provided for information and education only. It is not investment, legal, tax or accounting advice, and nothing on it is a recommendation or solicitation to buy, sell or hold any security. LedgerLine is not a registered investment adviser or broker-dealer and does not know your financial situation, objectives or risk tolerance.</p><p><b>Trade at your own risk.</b> Investing involves risk, including the loss of all money invested. Trading on margin, or in options, futures, leveraged or inverse products, can produce losses greater than the amount invested. Past performance, back-tested results and model outputs do not guarantee future results. Consult a licensed financial adviser, CPA or tax professional before making any investment decision.</p><p><b>Data.</b> Financial data is read from XBRL tags in SEC EDGAR 10-K and 10-Q filings. Intraday prices are delayed at least 15 minutes and come from IEX, a single US exchange, through Marketstack, so they can differ from the consolidated market price; outside market hours prices are end-of-day closes. Scores, fair values and verdicts are produced automatically by fixed rules and can be incomplete, delayed or wrong. Verify figures against the original filings before relying on them.</p><p>App 8.3. Designed and built by Kevin Rodrigue. © 2026 Kevin Rodrigue. All rights reserved. <a href="/terms.html">Terms of Use</a> · <a href="/privacy.html">Privacy Policy</a></p></footer>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -2525,9 +2533,10 @@ function checkHtml(){
 }
 
 /* ---- Versions and what's new ---- */
-const APP_VERSION='8.2', WORKER_NEEDED='3.8.0', BUG_EMAIL='kgrodrigue@yahoo.com';
+const APP_VERSION='8.3', WORKER_NEEDED='3.8.0', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
   ['App 7.1','Oct 22, 2026',['Valuation uses core EPS when non-operating gains are more than a quarter of pretax profit (Amazon’s 2025–26 investment mark-ups had pushed its trailing EPS to $12.43 against about $7 from the business, and its fair value to $1,033); the Valuation tab says when this applies','Risk on / off now uses the 50-day vs 200-day EMA (10 vs 40 weeks); 200 EMA added to the Overview chart','Fixed: the return line above the Overview chart now matches the period boxes (both measured from the close before the period starts)']],
+  ['App 8.3','Oct 23, 2026',['Ask AI stands out: highlighted ✦ tab and a full-width question box; Ask AI and plain-English screens are switched on']],
   ['App 8.2','Oct 23, 2026',['Ask AI: ask anything about a company and get a short answer from its latest 10-K and 10-Q, every claim numbered to the exact passage (switches on with the Anthropic key)','Financials → What changed: new, rewritten and dropped paragraphs in MD&A and Risk factors versus the previous filing, plus the numbers that moved most','Management & capital: insider buying and selling from Form 4 filings, with 3, 6 and 12-month net totals and cluster-buying flag','Alerts: 🔔 Alert on any stock (price above or below, 200-day MA cross, new earnings release, below fair value); the bell in the top bar lists them; optional phone and desktop notifications','Library screens: describe a screen in plain English and the AI builds the filters','Installable: add LedgerLine to your home screen like an app']],
   ['App 8.1','Oct 23, 2026',['Technicals: Rank in its sector — the stock’s week, month, quarter and year total return ranked against every S&P 500 stock in its GICS sector, with percentile, sector median, rank in its industry (with the industry median) and in the whole S&P 500, and the sector leaders. Built every evening by the data service (worker 3.7)']],
   ['App 8.0','Oct 23, 2026',['Color pass: four-color ribbon under the masthead, teal-to-blue active tabs and buttons, colored caps and title dots on every card (teal, blue, claret, mandarin), chips tinted in their line color, blue table headers, gradient headline numbers. Same FT palette, light and dark']],
@@ -2923,7 +2932,7 @@ function askAnswerHtml(a){ const txt=esc(a.answer).replace(/\[(S\d+)\]/g,(m0,id)
 function askHtml(){
   const A=(S.ask=S.ask||{list:[],busy:false,err:null});
   return `<div class="hero" style="grid-template-columns:1fr"><div><div class="kicker">Ask the filings</div><h2>Ask anything about ${esc(S.name||S.ticker)}</h2><p class="stand">Answers come only from the company’s latest 10-K and 10-Q, with every claim numbered to the exact passage it came from.</p></div></div>
-    <div class="sec"><div class="askbox"><input id="askQ" class="helpq" type="search" placeholder="e.g. Why did gross margin change this year?" autocomplete="off" ${A.busy?'disabled':''}><button type="button" class="btn primary" data-askgo="1" ${A.busy?'disabled':''}>${A.busy?'Reading the filings…':'Ask'}</button></div>
+    <div class="sec"><div class="askbox"><input id="askQ" class="helpq askbig" type="search" placeholder="e.g. Why did gross margin change this year?" autocomplete="off" ${A.busy?'disabled':''}><button type="button" class="btn primary askgo" data-askgo="1" ${A.busy?'disabled':''}>${A.busy?'Reading the filings…':'Ask'}</button></div>
       <div class="chips" style="margin-top:10px">${ASK_SAMPLES.map(x=>`<button type="button" class="chip" data-askq="${esc(x)}">${esc(x)}</button>`).join('')}</div>
       ${A.err?`<div class="notice" style="margin-top:12px"><h4>${A.err.needsKey?'Ask is ready but not switched on yet':'Couldn’t answer'}</h4><p>${A.err.needsKey?'It switches on once the Anthropic API key is added to the data service.':esc(A.err.message)}</p></div>`:''}
       ${A.busy?skelBox(120):''}${A.list.map(askAnswerHtml).join('')}</div>`; }
@@ -3003,6 +3012,7 @@ function renderRail(){
             if(id==='technicals'){ const T=techData(); if(T) pip=`<span class="pip l${T.lv}">${T.trend==='Uptrend'?'Up':T.trend==='Downtrend'?'Down':'Mixed'}</span>`; }
     if(id==='earnings'){ const E=earningsState(); if(E&&isNum(E.y1)) pip=`<span class="pip l${E.lv}">${pct(E.y1,0,true)}</span>`; }
     if(id==='summary'&&o.v) pip=`<span class="pip l${o.v}">${VERDICT[o.v]}</span>`;
+    if(id==='ask') return `<button type="button" data-step="ask" class="askai ${id===step?'on':''}"><span class="aispark">✦</span>Ask AI</button>`;
     return `<button type="button" data-step="${id}" class="${id===step?'on':''}">${label}${pip}</button>`;
   }).join('');
 }
