@@ -14,6 +14,7 @@ export async function onRequest({ request, env }) {
     const email = String(b.email || '').trim().toLowerCase(), name = String(b.name || '').trim().slice(0, 80), action = ['add', 'remove', 'rename'].includes(b.action) ? b.action : 'add';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'That is not an email address' }, 400);
     if (action === 'remove' && OWNERS.includes(email)) return json({ error: 'You can’t remove the owner (that would lock you out).' }, 400);
+    if (action === 'rename') { await env.DB.prepare('CREATE TABLE IF NOT EXISTS testers (email TEXT PRIMARY KEY, name TEXT, added INTEGER)').run(); await env.DB.prepare('INSERT INTO testers (email, name, added) VALUES (?, ?, ?) ON CONFLICT (email) DO UPDATE SET name = excluded.name').bind(email, name, Date.now()).run(); return json({ ok: true, renamed: true }); }
     const sites = Array.isArray(b.sites) && b.sites.length ? b.sites.map(String).join(',') : 'LedgerLine';
     await env.DB.prepare('INSERT INTO tester_queue (email, name, sites, action) VALUES (?, ?, ?, ?)').bind(email, name, sites, action).run();
     if (name) { await env.DB.prepare('CREATE TABLE IF NOT EXISTS testers (email TEXT PRIMARY KEY, name TEXT, added INTEGER)').run(); await env.DB.prepare('INSERT INTO testers (email, name, added) VALUES (?, ?, ?) ON CONFLICT (email) DO UPDATE SET name = excluded.name').bind(email, name, Date.now()).run(); }
