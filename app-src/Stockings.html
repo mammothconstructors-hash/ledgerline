@@ -1370,7 +1370,7 @@ function techData(){
 }
 // the chart's own series: weekly bars when 1W is picked or the period is 10 years (daily history covers about five)
 function techChartData(){
-  const wantW = ['3y','5y','7y','10y'].includes(techPer) || !(S.d&&S.d.c&&S.d.c.length>220);
+  const hasD=!!(S.d&&S.d.c&&S.d.c.length>220), wantW = !hasD || techInt==='w' || (techInt==='auto'&&['3y','5y','7y','10y'].includes(techPer));
   if(!wantW) return techData();
   if(S._techW===undefined) S._techW = techCalc(S.px, false);
   return S._techW;
@@ -2018,8 +2018,15 @@ function capitalHtml(){
 }
 
 /* ---- Technicals tab ---- */
-let techInt=LS.get('tint')||'d', techPer=LS.get('tper')||'1y', techMode=LS.get('tmode')||'price', strx=LS.get('strx')||'e50';
+let techInt=['auto','d','w'].includes(LS.get('tint2'))?LS.get('tint2'):'auto', techPer=LS.get('tper')||'1y', techMode=LS.get('tmode')||'price', strx=LS.get('strx')||'e50';
 let IND=Object.assign({e17:false,e34:false,e50:true,e100:true,s150:true,e150:true,s200:true,hilo:true,cross:true,vol:true,spy:false,qqq:false,dia:false,iwm:false},LS.get('ind')||{});
+// plain-English trend from the averages: how many the price is above, and how the fast ones sit against the slow ones
+function trendWhy(T){ const last=a=>a&&a.length?a[a.length-1]:null, p=T.price;
+  const avs=T.daily?[['17 EMA',last(T.e17)],['34 EMA',last(T.e34)],['50 EMA',T.e50n],['100 EMA',last(T.e100)],['150 MA',last(T.s150a)],['200 MA',T.s200]]:[['10-week EMA',T.e50n],['40-week EMA',T.e150n]];
+  const ok=avs.filter(a=>isNum(a[1])), above=ok.filter(a=>p>=a[1]).map(a=>a[0]), below=ok.filter(a=>p<a[1]).map(a=>a[0]);
+  const slow=T.daily?T.s200:T.e150n, fast=T.daily?T.e50n:T.e50n, fl=T.daily?'50 EMA':'10-week EMA', sl=T.daily?'200 MA':'40-week EMA';
+  const stack=isNum(fast)&&isNum(slow)?` The ${fl} is ${fast>=slow?'above':'below'} the ${sl}.`:'';
+  return `Price is above <b>${above.length} of ${ok.length}</b> averages${above.length&&below.length?` (above the ${above.join(', ')}; below the ${below.join(', ')})`:above.length?' (all of them)':' (below all of them)'}.${stack}`; }
 function techHtml(){
   const T=techData(); if(!T) return `<div class="notice"><h4>Not enough price history</h4><p>Technicals need at least a year of prices.</p></div>`;
   const ab=(p,ma)=>isNum(ma)?`${money(ma)} · <b>${p>=ma?'above':'below'}</b> (${pct((p/ma-1)*100,1,true)})`:'—';
@@ -2030,11 +2037,11 @@ function techHtml(){
   const st=T.stretch[strx]||T.stretch.e50;
   const perf=perfTable(), p1=perf[4];
   return `<div class="hero"><div><div class="kicker">Technical analysis</div><h2><span class="tone" style="--c:var(--l${T.lv})">${T.trend}</span></h2>
-      <p class="stand">${T.daily?'Daily closing prices':'Weekly prices (daily arrive with the worker update)'}. <b>${T.risk}</b>${T.cross&&T.cross.type===T.risk?` since ${dfmt(T.cross.t)}`:''}: ${T.riskWhy}</p></div>
+      <p class="stand">${T.daily?'Daily closing prices':'Weekly prices (daily arrive with the worker update)'}. ${trendWhy(T)}</p></div>
       <div class="meter"><div class="sc">${isNum(T.rsi)?T.rsi.toFixed(0):'–'}<small> RSI</small></div></div></div>
     <div class="cols even"><div class="sec"><h3>Trend and momentum</h3>${tbl(['',''],[
         ...(T.daily?[['Price vs 17-day EMA',ab(T.price,T.e17&&T.e17[T.e17.length-1])],['Price vs 34-day EMA',ab(T.price,T.e34&&T.e34[T.e34.length-1])],['Price vs 50-day EMA',ab(T.price,T.e50n)],['Price vs 100-day EMA',ab(T.price,T.e100&&T.e100[T.e100.length-1])],['Price vs 150-day MA',ab(T.price,T.s150a&&T.s150a[T.s150a.length-1])],['Price vs 200-day MA',ab(T.price,T.s200)]]:[['Price vs 10-week EMA',ab(T.price,T.e50n)],['Price vs 40-week EMA',ab(T.price,T.e150n)]]),
-        ['Risk on / risk off',`<span class="tone" style="--c:var(--l${T.risk==='Risk on'?5:T.risk==='Risk off'?1:3})"><b>${T.risk}</b></span>${T.cross?` · last switch to ${T.cross.type.toLowerCase()} ${new Date(T.cross.t*1000).toLocaleDateString('en-US',{month:'short',year:'numeric'})}`:''}`],['14-day RSI',rsiL],
+        ['14-day RSI',rsiL],
         ['Bollinger %B (20, 2)',(()=>{ const b=T.pctB; if(!isNum(b)) return '—'; const t=b>1?'above the upper band':b<0?'below the lower band':b>=0.8?'near the upper band':b<=0.2?'near the lower band':'inside the bands'; return `<b>${b.toFixed(2)}</b> · ${t}`; })()],
         ['Williams %R (14)',(()=>{ const w=T.willR; if(!isNum(w)) return '—'; return `<b>${w.toFixed(0)}</b> · ${w>-20?'overbought':w<-80?'oversold':'neutral'}`; })()]],'kv')}</div>
       <div class="sec"><h3>Range and volume</h3>${tbl(['',''],[['52-week high',money(T.hi52)],['52-week low',money(T.lo52)],['52-week position',posL],
@@ -2049,8 +2056,9 @@ function techHtml(){
         :[['Last week’s volume vs 20-week average',isNum(T.volRatio)?`<b>${T.volRatio.toFixed(1)}×</b> · ${vfmt(T.volLast)}`:'—'],['Average weekly volume, 50 weeks',vfmt(T.vol50)]])],'kv')}</div></div>
     <div class="sec">
       <div class="chartbar"><div class="seg" role="group" aria-label="Scale"><button type="button" data-tmode="price" class="${techMode==='price'?'on':''}">Price</button><button type="button" data-tmode="pct" class="${techMode==='pct'?'on':''}">% change</button></div>
+        <div class="seg" role="group" aria-label="Bars">${[['auto','Auto'],['d','Daily'],['w','Weekly']].map(([v,l])=>`<button type="button" data-tint="${v}" class="${techInt===v?'on':''}">${l}</button>`).join('')}</div>
         <div class="seg" role="group" aria-label="Period">${pers.map(p=>`<button type="button" data-tper="${p}" class="${techPer===p?'on':''}">${p.toUpperCase()}</button>`).join('')}</div><span class="num muted" id="techStat" style="margin-left:auto;font-size:12.5px"></span></div>
-      <div class="chips">${(()=>{ const wk=!(techChartData()||{}).daily; return wk?chip('e50','10-week EMA','var(--mandarin)')+chip('e150','40-week EMA','var(--oxford)'):chip('e17','17 EMA','var(--teal)')+chip('e34','34 EMA','var(--claret)')+chip('e50','50 EMA','var(--oxford)')+chip('e100','100 EMA','var(--mandarin)')+chip('s150','150 MA','var(--muted)')+chip('s200','200 MA','var(--ink2)'); })()}${chip('hilo','52-wk high/low','var(--teal)')}${chip('cross','Risk on / off','var(--l5)')}${chip('vol','Volume','var(--muted)')}${BENCH.map(([k,l])=>chip(k.toLowerCase(),'vs '+k,BCOL[k])).join('')}</div>
+      <div class="chips">${(()=>{ const wk=!(techChartData()||{}).daily; return wk?chip('e50','10-week EMA','var(--mandarin)')+chip('e150','40-week EMA','var(--oxford)'):chip('e17','17 EMA','var(--teal)')+chip('e34','34 EMA','var(--claret)')+chip('e50','50 EMA','var(--oxford)')+chip('e100','100 EMA','var(--mandarin)')+chip('s150','150 MA','#8C8C8C')+chip('s200','200 MA','var(--ink2)'); })()}${chip('hilo','52-wk high/low','var(--teal)')}${chip('vol','Volume','var(--muted)')}${BENCH.map(([k,l])=>chip(k.toLowerCase(),'vs '+k,BCOL[k])).join('')}</div>
       <div class="cwrap"><canvas id="techChart" aria-label="Technical chart"></canvas><div class="tip" hidden></div></div>
     </div>
     <div class="sec"><h3>Stretch from the moving averages <small>how far price sits from its average, against the last ${T.daily?'five years':'five years of weeks'}</small></h3>
@@ -2075,11 +2083,11 @@ function techCharts(){
   const pctMode=techMode==='pct'||BENCH.some(([k])=>IND[k.toLowerCase()]), c0=c[0], rb=v=>isNum(v)?(v/c0-1)*100:null;
   const tr=a=>a?a.slice(k).map(pctMode?rb:(v=>v)):null;
   const lines=[];
-  if(IND.e100&&T.e100) lines.push({v:tr(T.e100),color:css('--mandarin'),w:1.4});
-  if(IND.e50&&!T.daily) lines.push({v:tr(T.e50),color:css('--mandarin'),w:1.4});
-  if(T.daily){ if(IND.e17&&T.e17) lines.push({v:tr(T.e17),color:css('--teal'),w:1.2}); if(IND.e34&&T.e34) lines.push({v:tr(T.e34),color:css('--claret'),w:1.2}); if(IND.e50) lines.push({v:tr(T.e50),color:css('--oxford'),w:1.3}); if(IND.s150&&T.s150a) lines.push({v:tr(T.s150a),color:css('--muted'),w:1.4,dash:[5,3]}); }
-  if(IND.e150&&!T.daily) lines.push({v:tr(T.e150),color:css('--oxford'),w:1.5});
-  if(IND.s200&&T.daily) lines.push({v:tr(T.s200a),color:css('--ink2'),w:1.5,dash:[6,3]});
+  if(IND.e100&&T.e100) lines.push({v:tr(T.e100),color:css('--mandarin'),w:1.8});
+  if(IND.e50&&!T.daily) lines.push({v:tr(T.e50),color:css('--mandarin'),w:1.8});
+  if(T.daily){ if(IND.e17&&T.e17) lines.push({v:tr(T.e17),color:css('--teal'),w:1.6}); if(IND.e34&&T.e34) lines.push({v:tr(T.e34),color:css('--claret'),w:1.6}); if(IND.e50) lines.push({v:tr(T.e50),color:css('--oxford'),w:1.8}); if(IND.s150&&T.s150a) lines.push({v:tr(T.s150a),color:'#8C8C8C',w:1.8,dash:[6,3]}); }
+  if(IND.e150&&!T.daily) lines.push({v:tr(T.e150),color:css('--oxford'),w:2});
+  if(IND.s200&&T.daily) lines.push({v:tr(T.s200a),color:css('--ink2'),w:2,dash:[7,3]});
   if(IND.hilo){ lines.push({v:tr(T.hiArr),color:css('--teal'),w:1,dash:[2,3]}); lines.push({v:tr(T.loArr),color:css('--teal'),w:1,dash:[2,3]}); }
   const ref=(ser,col)=>{ const a=alignTo(t,ser); if(!a) return; const b0=a.find(isNum); lines.push({v:a.map(v=>isNum(v)&&b0?(v/b0-1)*100:null),color:col,w:1.6}); };
   BENCH.forEach(([k])=>{ if(IND[k.toLowerCase()]){ const B=bm(k); ref(T.daily?(B.d||B.w):B.w,BCOL[k]); } });
@@ -2088,7 +2096,7 @@ function techCharts(){
   else if(t.length<=560) cfg.ohlc={o,h,l,c}; else lines.unshift({v:c,color:css('--bars'),w:1.4});
   cfg.lines=lines;
   if(IND.vol&&T.v) cfg.vol=T.v.slice(k);
-  if(IND.cross) cfg.marks=T.marks.filter(m=>m.i>=k).map(m=>({i:m.i-k, y:pctMode?rb(T.c[m.i]):T.c[m.i], up:m.up, color:m.up?css('--l5'):css('--l1')}));
+  if(false) cfg.marks=T.marks.filter(m=>m.i>=k).map(m=>({i:m.i-k, y:pctMode?rb(T.c[m.i]):T.c[m.i], up:m.up, color:m.up?css('--l5'):css('--l1')}));
   const stat=$('#techStat'); if(stat){ const me=(c[c.length-1]/c0-1)*100, B=bm(bench), ba=alignTo(t,T.daily?(B.d||B.w):B.w), b0=ba&&ba.find(isNum), b1=ba&&ba[ba.length-1], br=isNum(b0)&&isNum(b1)?(b1/b0-1)*100:null, df=isNum(br)?me-br:null;
     stat.innerHTML=`<b>${esc(S.ticker)} ${pct(me,1,true)}</b> · ${bench} ${pct(br,1,true)}${isNum(df)?` · <span class="${df>=0?'ahead':'behind'}">${df>=0?'beating':'trailing'} ${bench} by ${Math.abs(df).toFixed(1)} pts</span>`:''} <span class="muted">(${techPer.toUpperCase()}, ${T.daily?'daily':'weekly'}, to ${dfmt(t[t.length-1])} close)</span>`; }
   cfg.tip=i=>`${dfmt(t[i])}<br>Close ${c[i].toFixed(2)}${T.daily?[['e17','17 EMA',T.e17],['e34','34 EMA',T.e34],['e50','50 EMA',T.e50],['e100','100 EMA',T.e100],['s150','150 MA',T.s150a]].map(([id,l,a])=>IND[id]&&a&&isNum(a[i+k])?'<br>'+l+' '+a[i+k].toFixed(2):'').join(''):''}${IND.e50&&!T.daily&&isNum(T.e50[i+k])?'<br>10-wk EMA '+T.e50[i+k].toFixed(2):''}${IND.e150&&!T.daily&&isNum(T.e150[i+k])?'<br>40-wk EMA '+T.e150[i+k].toFixed(2):''}${IND.s200&&T.daily&&isNum(T.s200a[i+k])?'<br>200 MA '+T.s200a[i+k].toFixed(2):''}${T.v&&IND.vol?'<br>Vol '+vfmt(T.v[i+k]):''}`;
@@ -2299,7 +2307,7 @@ function checkHtml(){
 const APP_VERSION='7.8', WORKER_NEEDED='3.5', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
   ['App 7.1','Oct 22, 2026',['Valuation uses core EPS when non-operating gains are more than a quarter of pretax profit (Amazon’s 2025–26 investment mark-ups had pushed its trailing EPS to $12.43 against about $7 from the business, and its fair value to $1,033); the Valuation tab says when this applies','Risk on / off now uses the 50-day vs 200-day EMA (10 vs 40 weeks); 200 EMA added to the Overview chart','Fixed: the return line above the Overview chart now matches the period boxes (both measured from the close before the period starts)']],
-  ['App 7.8','Oct 22, 2026',['Technicals, daily: 17, 34, 50 and 100-day EMAs plus 150 and 200-day MAs, on the chart (toggle each) and in the Trend table; weekly: 10 and 40-week EMAs. The 200-day EMA is gone','Technicals: Bollinger %B (20-day, 2 SD) and Williams %R (14)','Custom charts: on % change, ratio metrics (ROIC, margins) plot as their own %; CAGR only for amounts and per-share figures; lines bridge missing years','What’s new listed newest first, with the live data-service version']],
+  ['App 7.8','Oct 22, 2026',['Technicals: Risk on/off removed; the headline says how many averages price is above and whether the 50 EMA is above the 200 MA. Daily / Weekly / Auto bars switch on the chart, and the averages follow (17/34/50/100 EMA, 150/200 MA daily; 10/40-week EMA weekly) with thicker lines','Technicals, daily: 17, 34, 50 and 100-day EMAs plus 150 and 200-day MAs, on the chart (toggle each) and in the Trend table; weekly: 10 and 40-week EMAs. The 200-day EMA is gone','Technicals: Bollinger %B (20-day, 2 SD) and Williams %R (14)','Custom charts: on % change, ratio metrics (ROIC, margins) plot as their own %; CAGR only for amounts and per-share figures; lines bridge missing years','What’s new listed newest first, with the live data-service version']],
   ['App 7.7','Oct 22, 2026',['Custom charts is its own section: up to 7 lines (statement lines, 109 metrics with 17 tagged KPI, share price), Annual/Quarterly/TTM, Actual/% change/Index 100, bars/line/line with dots, decimals Auto with fewer/more buttons, and a Clear chart button. Click any row in Financials or All metrics to add it','Hover explains every number: change vs the prior period, change since the first period on the chart, and CAGR; each line’s label shows its CAGR','% change fixed for costs; duplicate TTM column dropped right after a 10-K','Technicals chart: 100-day EMA and 200-day MA on daily; 10-week and 40-week EMA on weekly; shows how far it is beating or trailing your benchmark through the same close','Thicker 52-week range bars']],
   ['App 7.6','Oct 22, 2026',['KPIs vs metrics: all 109 are metrics; 17 that measure progress toward a company’s long-term goals (growth, margins, ROIC/ROE, free cash flow, leverage, per-share value) are tagged KPI. Chart builder filters: KPIs, Metrics, Line items, Price','Statistics 52-week change and Overview YTD use the same end-of-day closes as the Overview chart and return boxes','Glossary: KPI and Metric cards; risk terms (alpha, Jensen’s alpha, Treynor, Calmar, gain to pain, VaR, CVaR, standard deviation)','One background: table headers, the first column and group rows now match the page instead of showing lighter bands','Legal tab: when Item 3 only points to a note (Costco: “see Note 10”, Cummins: Note 14), the legal-proceedings text from that note is shown with it']],
   ['App 7.5','Oct 22, 2026',['Every statement and All metrics chart gets the same scales as the Chart builder: Actual, % change, or Index 100, so revenue and net income can be compared on one chart','Statistics: alpha vs the S&P 500, Jensen’s alpha, Treynor, Calmar, gain to pain, weekly standard deviation, and a Tail risk box with VaR 95% and 99%, expected shortfall (CVaR) and the worst week','Statements: choose decimals (Auto, 0, 0.0, 0.00, 0.000) alongside Billions, Millions or Full','Chart hover shows growth against the previous period correctly when Newest first is on; year labels no longer collide','Costs: As filed (below zero) or Positive (revenue 10, cost 8, gross profit 2 all drawn above zero), on every chart','Chart builder: Annual, Quarterly or TTM (trailing twelve months at each quarter end)','Two-unit charts: the right axis now shares the left axis’s gridlines and zero line']],
@@ -3492,6 +3500,7 @@ document.addEventListener('click',e=>{
   if(d.step){ step=STEP_ALIAS[d.step]||d.step; if(d.fin) finTab=d.fin; view='company'; render(); window.scrollTo({top:0}); return; }
   if(d.cat){ listCat=d.cat; LS.set('cat',listCat); render(); return; }
   if(d.ind){ IND[d.ind]=!IND[d.ind]; LS.set('ind',IND); render(); return; }
+  if(d.tint){ techInt=d.tint; LS.set('tint2',techInt); render(); return; }
   if(d.tper){ techPer=d.tper; LS.set('tper',techPer); render(); return; }
   if(d.tint){ techInt=d.tint; LS.set('tint',techInt); if(techInt==='d'&&['7y','10y'].includes(techPer)){ techPer='5y'; LS.set('tper',techPer); } render(); return; }
   if(d.tmode){ techMode=d.tmode; LS.set('tmode',techMode); if(techMode==='price'){ BENCH.forEach(([k])=>{ IND[k.toLowerCase()]=false; }); LS.set('ind',IND); } render(); return; }
