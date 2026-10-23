@@ -17,7 +17,7 @@ import UNIVERSE from './universe.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.7.0';
+const WORKER_VERSION = '3.7.1';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -104,13 +104,14 @@ async function sectorRank(ticker, env) {
   const t = String(ticker).trim().toUpperCase().replace('.', '-');
   let me; try { me = await DB.prepare('SELECT * FROM ranks WHERE ticker = ?').bind(t).first(); } catch (e) { me = null; }
   if (!me) return { ticker: t, covered: false };
-  const peers = (await DB.prepare('SELECT ticker, sub, w, m, q, y FROM ranks WHERE sector = ? AND session = ?').bind(me.sector, me.session).all()).results || [];
+  const everyone = (await DB.prepare('SELECT ticker, sector, sub, w, m, q, y FROM ranks WHERE session = ?').bind(me.session).all()).results || [], peers = everyone.filter(p => p.sector === me.sector);
   const per = {};
   for (const k of ['w', 'm', 'q', 'y']) {
     const v = me[k], all = peers.filter(p => p[k] != null), sub = all.filter(p => p.sub === me.sub), srt = a => a.map(p => p[k]).sort((a, b) => b - a);
     const sa = srt(all), ss = srt(sub), med = a => a.length ? (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : null;
     const top = all.slice().sort((a, b) => b[k] - a[k]).slice(0, 3).map(p => [p.ticker, p[k]]);
-    per[k] = v == null ? null : { ret: v, rank: sa.filter(x => x > v).length + 1, n: sa.length, median: med(sa), subRank: ss.filter(x => x > v).length + 1, subN: ss.length, subMedian: med(ss), best: sa[0], worst: sa[sa.length - 1], top };
+    const sx = srt(everyone.filter(p => p[k] != null));
+    per[k] = v == null ? null : { ret: v, rank: sa.filter(x => x > v).length + 1, n: sa.length, median: med(sa), subRank: ss.filter(x => x > v).length + 1, subN: ss.length, subMedian: med(ss), spRank: sx.filter(x => x > v).length + 1, spN: sx.length, spMedian: med(sx), best: sa[0], worst: sa[sa.length - 1], top };
   }
   return { ticker: t, covered: true, sector: me.sector, sub: me.sub, session: me.session, basis: 'total return (dividends reinvested), split-adjusted closes', periods: per };
 }
