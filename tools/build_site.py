@@ -202,6 +202,8 @@ rep("""Business, moat, growth, management, risk and valuation are each scored au
 # boot
 rep("""capsReady.then(()=>{ if(view==='empty'&&mcp){""","""if(SITE){ const first=new URLSearchParams(location.search).get('t'); if(first||last){ $('#q').value=(first||last).split(':').pop(); loadCompany(first||last); } }
 else capsReady.then(()=>{ if(view==='empty'&&mcp){""")
+_wv=re.search(r"WORKER_VERSION = '([0-9.]+)'", open(P('worker','src','index.js')).read())
+if _wv: s=re.sub(r"WORKER_NEEDED='[0-9.]+'", "WORKER_NEEDED='"+_wv.group(1)+"'", s, 1)
 open(P('site','app','index.html'),'w').write(s)
 # also mark the Claude version explicitly
 c=open(P('app-src','Stockings.html')).read()
