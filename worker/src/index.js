@@ -1,3 +1,4 @@
+import UNIVERSE from './universe.js';
 // sec-proxy — one Worker, two jobs:
 //   1. GET /?u=<sec.gov url>   the original relay your Google Sheet uses (unchanged)
 //   2. POST /mcp               an MCP server the LedgerLine page reads through a claude.ai
@@ -16,7 +17,7 @@
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.6.1';
+const WORKER_VERSION = '3.7.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -38,8 +39,81 @@ export default {
     if (url.pathname.startsWith('/api/')) return api(req, url, env || {}, ctx);
     if (url.pathname.startsWith('/billing/') || url.pathname === '/stripe/webhook') return billing(req, url, env || {});
     return relay(req);
+  },
+  // every 2 minutes: if tonight's sector ranks are not built yet, do the next few Marketstack calls (see rankStep)
+  async scheduled(event, env, ctx) {
+    USAGE_DB = env && env.DB || null;
+    if (env && env.DB && env.MARKETSTACK_KEY) ctx.waitUntil(rankStep(env, 3).catch(() => {}));
   }
 };
+
+/* ================= sector ranks: S&P 500 total returns over a week, month, quarter and year, ranked within each GICS sector ================= */
+const RANK_WINS = [['d0', 0], ['w', 7], ['m', 30], ['q', 91], ['y', 365]], RANK_BATCH = 80;
+async function rankSchema(DB) {
+  await DB.batch([
+    DB.prepare('CREATE TABLE IF NOT EXISTS universe (ticker TEXT PRIMARY KEY, sector TEXT, sub TEXT)'),
+    DB.prepare('CREATE TABLE IF NOT EXISTS rank_px (session TEXT, ticker TEXT, win TEXT, date TEXT, adj REAL, PRIMARY KEY (session, ticker, win))'),
+    DB.prepare('CREATE TABLE IF NOT EXISTS rank_job (session TEXT PRIMARY KEY, step INTEGER NOT NULL DEFAULT 0, done INTEGER NOT NULL DEFAULT 0, updated INTEGER)'),
+    DB.prepare('CREATE TABLE IF NOT EXISTS ranks (ticker TEXT PRIMARY KEY, sector TEXT, sub TEXT, session TEXT, w REAL, m REAL, q REAL, y REAL)')
+  ]);  const has = await DB.prepare('SELECT COUNT(*) AS n FROM universe').first();
+  if (!has || !has.n) { const st = DB.prepare('INSERT OR REPLACE INTO universe (ticker, sector, sub) VALUES (?, ?, ?)'); for (let i = 0; i < UNIVERSE.length; i += 100) await DB.batch(UNIVERSE.slice(i, i + 100).map(r => st.bind(r[0], r[1], r[2]))); }
+}
+const dayShift = (iso, d) => new Date(Date.parse(iso + 'T12:00:00Z') - d * 864e5).toISOString().slice(0, 10);
+async function rankStep(env, calls = 3) {
+  const DB = env.DB; await rankSchema(DB);
+  const session = expectedSession();
+  const job = await DB.prepare('SELECT step, done FROM rank_job WHERE session = ?').bind(session).first();
+  if (job && job.done) return { session, done: true };
+  const tickers = ((await DB.prepare('SELECT ticker FROM universe ORDER BY ticker').all()).results || []).map(r => r.ticker);
+  if (!tickers.length) return { session, error: 'universe is empty' };
+  const nb = Math.ceil(tickers.length / RANK_BATCH), total = RANK_WINS.length * nb;
+  let step = job ? job.step : 0;
+  if (!job) await DB.prepare('INSERT INTO rank_job (session, step, done, updated) VALUES (?, 0, 0, ?)').bind(session, Date.now()).run();
+  for (let c = 0; c < calls && step < total; c++, step++) {
+    const [win, back] = RANK_WINS[Math.floor(step / nb)], batch = tickers.slice((step % nb) * RANK_BATCH, (step % nb + 1) * RANK_BATCH);
+    const target = dayShift(session, back), from = dayShift(target, 9), msSym = t => t.replace('-', '.');
+    const back2 = Object.fromEntries(batch.map(t => [msSym(t), t]));
+    const u = `https://api.marketstack.com/v2/eod?access_key=${encodeURIComponent(env.MARKETSTACK_KEY)}&symbols=${encodeURIComponent(batch.map(msSym).join(','))}&date_from=${from}&date_to=${target}&limit=1000`;
+    const r = await msFetch(u, { headers: { Accept: 'application/json' } }, 'ranks'); const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.error) { await DB.prepare('UPDATE rank_job SET updated = ? WHERE session = ?').bind(Date.now(), session).run(); return { session, error: (j.error && (j.error.message || j.error.code)) || r.status }; }
+    const best = {};
+    for (const row of j.data || []) { const t = back2[row.symbol] || row.symbol, d = String(row.date).slice(0, 10), v = Number(row.adj_close ?? row.close); if (!isFinite(v) || v <= 0 || d > target) continue; if (!best[t] || d > best[t].d) best[t] = { d, v }; }
+    const st = DB.prepare('INSERT OR REPLACE INTO rank_px (session, ticker, win, date, adj) VALUES (?, ?, ?, ?, ?)');
+    const ops = Object.entries(best).map(([t, o]) => st.bind(session, t, win, o.d, o.v));
+    ops.push(DB.prepare('UPDATE rank_job SET step = ?, updated = ? WHERE session = ?').bind(step + 1, Date.now(), session));
+    await DB.batch(ops);
+  }
+  if (step >= total) {   // every window pulled: turn closes into returns, keep only this session
+    await DB.batch([
+      DB.prepare(`INSERT OR REPLACE INTO ranks (ticker, sector, sub, session, w, m, q, y)
+        SELECT u.ticker, u.sector, u.sub, ?1,
+          (SELECT p0.adj / pw.adj - 1 FROM rank_px pw WHERE pw.session = ?1 AND pw.ticker = u.ticker AND pw.win = 'w'),
+          (SELECT p0.adj / pm.adj - 1 FROM rank_px pm WHERE pm.session = ?1 AND pm.ticker = u.ticker AND pm.win = 'm'),
+          (SELECT p0.adj / pq.adj - 1 FROM rank_px pq WHERE pq.session = ?1 AND pq.ticker = u.ticker AND pq.win = 'q'),
+          (SELECT p0.adj / py.adj - 1 FROM rank_px py WHERE py.session = ?1 AND py.ticker = u.ticker AND py.win = 'y')
+        FROM universe u JOIN rank_px p0 ON p0.session = ?1 AND p0.ticker = u.ticker AND p0.win = 'd0'`).bind(session),
+      DB.prepare('DELETE FROM rank_px WHERE session <> ?').bind(session),
+      DB.prepare('UPDATE rank_job SET done = 1, updated = ? WHERE session = ?').bind(Date.now(), session)
+    ]);
+    return { session, done: true };
+  }
+  return { session, step, total };
+}
+async function sectorRank(ticker, env) {
+  const DB = env.DB; if (!DB) throw new Error('No database');
+  const t = String(ticker).trim().toUpperCase().replace('.', '-');
+  let me; try { me = await DB.prepare('SELECT * FROM ranks WHERE ticker = ?').bind(t).first(); } catch (e) { me = null; }
+  if (!me) return { ticker: t, covered: false };
+  const peers = (await DB.prepare('SELECT ticker, sub, w, m, q, y FROM ranks WHERE sector = ? AND session = ?').bind(me.sector, me.session).all()).results || [];
+  const per = {};
+  for (const k of ['w', 'm', 'q', 'y']) {
+    const v = me[k], all = peers.filter(p => p[k] != null), sub = all.filter(p => p.sub === me.sub), srt = a => a.map(p => p[k]).sort((a, b) => b - a);
+    const sa = srt(all), ss = srt(sub), med = a => a.length ? (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : null;
+    const top = all.slice().sort((a, b) => b[k] - a[k]).slice(0, 3).map(p => [p.ticker, p[k]]);
+    per[k] = v == null ? null : { ret: v, rank: sa.filter(x => x > v).length + 1, n: sa.length, median: med(sa), subRank: ss.filter(x => x > v).length + 1, subN: ss.length, subMedian: med(ss), best: sa[0], worst: sa[sa.length - 1], top };
+  }
+  return { ticker: t, covered: true, sector: me.sector, sub: me.sub, session: me.session, basis: 'total return (dividends reinvested), split-adjusted closes', periods: per };
+}
 
 /* ================= Marketstack usage counter (D1 database bound as DB) ================= */
 let USAGE_DB = null, MS_LIMIT = 10000, MONTH_CACHE = { t: 0, n: 0 };
@@ -650,6 +724,7 @@ async function api(req, url, env, ctx) {
     if (path === '/api/statements') return out(await secStatements({ ticker: q.get('ticker'), years: q.get('years') }), 200, 3600);
     if (path === '/api/section') return out(await secSection({ ticker: q.get('ticker'), section: q.get('section'), form: q.get('form'), maxChars: q.get('maxChars') }), 200, 3600);
     if (path === '/api/market') return out(await market(q.get('symbol') || '', env, ctx), 200, 900);
+    if (path === '/api/ranks') return out(await sectorRank(q.get('ticker') || '', env), 200, 1800);
     if (path === '/api/usage') return out(await usageData(), 200, 0);
     if (path === '/api/hit' && req.method === 'POST') return out(await recordVisit(req, env), 200, 0);
     if (path === '/api/activity') return (await keyOk(q.get('key'), env)) ? out(await activityData(), 200, 0) : out({ error: 'Private: add ?key= with your USAGE_KEY' }, 403, 0);

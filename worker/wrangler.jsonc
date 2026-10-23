@@ -8,6 +8,8 @@
   // dashboard variables (SITE_URL, Stripe price ids, ...) stay as set in Cloudflare; secrets are never in this repo
   "keep_vars": true,
   "observability": { "enabled": true },
+  // sector ranks: each run does a few Marketstack calls until the night's ranks are built, then does nothing
+  "triggers": { "crons": ["*/2 * * * *"] },
   "d1_databases": [
     { "binding": "DB", "database_name": "ledgerline", "database_id": "e962f8eb-968d-4668-8642-91744195d5ab" }
   ]

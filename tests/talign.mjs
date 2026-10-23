@@ -18,7 +18,8 @@ const mk=async (w,h)=>{ const p=await b.newPage({viewport:{width:w,height:h}}); 
  await p.route('https://fonts.googleapis.com/**',r=>r.abort()); await p.route('https://fonts.gstatic.com/**',r=>r.abort());
  await p.route('https://sec-proxy.mammothconstructors.workers.dev/api/**', async r=>{ const u=new URL(r.request().url()); const t=u.searchParams.get('ticker')||u.searchParams.get('symbol');
   let body, st=200; if(u.pathname==='/api/statements'){ if(['SPY','ASML','VOO'].includes(t)){ st=502; body={error:'No annual 10-K data found for '+t}; } else body=JSON.parse(JSON.stringify(sec)); }
-  else if(u.pathname==='/api/profile') body={name:'COSTCO',exchanges:['NASDAQ'],earnings:earn}; else if(u.pathname==='/api/market'){ body=market(100+t.length*20); if(t==='SPY'){ const d=body.daily, n=d.t.length; d.t.push(d.t[n-1]+86400); ['o','h','l','c'].forEach(k=>d[k].push(d[k][n-1]*0.97)); if(d.v) d.v.push(1); } } else if(u.pathname==='/api/section') body={form:'10-K',filed:'2026-02-01',url:'x',text:'Item 1 Business. We own property.'}; else body={results:[]};
+  else if(u.pathname==='/api/profile') body={name:'COSTCO',exchanges:['NASDAQ'],earnings:earn}; else if(u.pathname==='/api/ranks'){ const P=(r,k)=>({ret:r,rank:k,n:34,median:0.01,subRank:2,subN:5,subMedian:0.02,best:0.2,worst:-0.1,top:[['WMT',0.12],['KR',0.09],['STZ',0.08]]}); body={ticker:t,covered:true,sector:'Consumer Staples',sub:'Consumer Staples Merchandise Retail',session:'2026-10-22',periods:{w:P(0.021,6),m:P(0.074,3),q:P(0.031,14),y:P(-0.02,25)}}; }
+  else if(u.pathname==='/api/market'){ body=market(100+t.length*20); if(t==='SPY'){ const d=body.daily, n=d.t.length; d.t.push(d.t[n-1]+86400); ['o','h','l','c'].forEach(k=>d[k].push(d[k][n-1]*0.97)); if(d.v) d.v.push(1); } } else if(u.pathname==='/api/section') body={form:'10-K',filed:'2026-02-01',url:'x',text:'Item 1 Business. We own property.'}; else body={results:[]};
   await r.fulfill({status:st,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(body)}); });
  return p; };
 const p=await mk(1280,900);
@@ -42,6 +43,9 @@ await p.click('[data-fin="cashflow"]'); await p.waitForTimeout(300);
 const co=await p.evaluate(()=>{ const s=document.querySelector('.msvg'); if(!s) return null; return {ratio:s.getBoundingClientRect().width/s.viewBox.baseVal.width, first:[...s.querySelectorAll('text')].find(t=>/FY|TTM|Q\d/.test(t.textContent))?.textContent, th:document.querySelectorAll('#main thead th')[1]?.textContent}; });
 console.log('cf chart',JSON.stringify(co)); if(co){ if(Math.abs(co.ratio-1)>0.08) throw new Error('chart stretched'); if(!co.th.startsWith(co.first)) throw new Error('chart order differs from table'); }
 const stats=await p.evaluate(async()=>{ document.querySelector('#rail [data-step="stats"]').click(); await new Promise(r=>setTimeout(r,600)); const a=[...document.querySelectorAll('#main td:first-child')]; return [a.length,a.filter(e=>e.dataset.gl).length]; }); console.log('stats tips',stats); if(stats[1]<stats[0]*0.6) throw new Error('stats tips coverage low');
+// sector ranks render on Technicals
+const rk=await p.evaluate(async()=>{ document.querySelector('#rail [data-step="technicals"]').click(); await new Promise(r=>setTimeout(r,900)); const s=[...document.querySelectorAll('#main .sec')].find(x=>/Rank in its sector/.test(x.innerText)); return s?s.querySelectorAll('tbody tr').length:0; });
+console.log('rank rows',rk); if(rk!==4) throw new Error('sector rank table missing');
 // glossary has EBT
 const hasEBT=await p.evaluate(()=>window.__ov.hasGloss('EBT')); if(!hasEBT) throw new Error('EBT missing');
 console.log('ERR',errs.filter(e=>!/get-identity/.test(e))); if(errs.filter(e=>!/get-identity/.test(e)).length) process.exit(1); await b.close();
