@@ -14,7 +14,7 @@ function walk(n,step,start,p0){ const t=[],o=[],h=[],l=[],c=[],v=[]; let p=p0; f
 const now=Math.floor(Date.UTC(2026,9,20)/1000);
 function market(base){ const w=walk(530,7*86400,now-529*7*86400,base/4); const d=walk(1300,86400*1.4,now-1299*86400*1.4,w.c[w.c.length-1]*0.6); const sc=w.c[w.c.length-1]/d.c[d.c.length-1]; ['o','h','l','c'].forEach(k=>d[k]=d[k].map(x=>x*sc)); return {price:w.c.at(-1), change:1.2, changePct:0.8, high52:500, low52:10, weekly:w, daily:d, source:'Mock feed'}; }
 const b=await chromium.launch(); const errs=[];
-const mk=async (w,h)=>{ const p=await b.newPage({viewport:{width:w,height:h}}); p.on('pageerror',e=>errs.push(w+' PAGEERR '+e.message)); p.on('console',m=>{ if(m.type()==='error'&&!/ERR_FAILED|net::/.test(m.text())) errs.push('CONSOLE '+m.text()); });
+const mk=async (w,h)=>{ const p=await b.newPage({viewport:{width:w,height:h}}); p.on('pageerror',e=>errs.push(w+' PAGEERR '+e.message+' '+(e.stack||'').split('\n').slice(1,3).join(' | '))); p.on('console',m=>{ if(m.type()==='error'&&!/ERR_FAILED|net::/.test(m.text())) errs.push('CONSOLE '+m.text()); });
  await p.route('https://fonts.googleapis.com/**',r=>r.abort()); await p.route('https://fonts.gstatic.com/**',r=>r.abort());
  await p.route('https://sec-proxy.mammothconstructors.workers.dev/api/**', async r=>{ const u=new URL(r.request().url()); const t=u.searchParams.get('ticker')||u.searchParams.get('symbol');
   let body, st=200; if(u.pathname==='/api/statements'){ if(['SPY','ASML','VOO'].includes(t)){ st=502; body={error:'No annual 10-K data found for '+t}; } else body=JSON.parse(JSON.stringify(sec)); }

@@ -24,10 +24,10 @@ const mk=async (w,h)=>{ const p=await b.newPage({viewport:{width:w,height:h}}); 
 const p=await mk(1280,900);
 await p.goto(SITE+'/app/index.html'); await p.waitForTimeout(1200);
 await p.click('#resBtn'); await p.waitForTimeout(150); await p.screenshot({path:OUT+'/r1.png',clip:{x:600,y:0,width:680,height:460}});
-await p.click('[data-res="glossary"]'); await p.waitForTimeout(200); console.log('drop hidden', await p.locator('#resDrop').isHidden(), 'terms', await p.locator('.grow').count());
+await p.click('[data-res="glossary"]'); await p.waitForTimeout(200); console.log('drop hidden', await p.locator('#resDrop').isHidden(), 'terms', await p.locator('.gcard').count());
 await p.screenshot({path:OUT+'/r2.png'});
-await p.fill('#glossQ','cash'); await p.waitForTimeout(100); console.log('cash visible', await p.locator('.grow:visible').count());
-await p.fill('#glossQ',''); await p.click('[data-gcat="Debt"]'); console.log('debt', await p.locator('.grow:visible').count());
+await p.fill('#glossQ','cash'); await p.waitForTimeout(100); console.log('cash visible', await p.locator('.gcard:visible').count());
+await p.fill('#glossQ',''); await p.click('[data-gcat="SEC filings"]'); console.log('sec', await p.locator('.gcard:visible').count()); await p.locator('.gcard:visible').first().click(); console.log('open', await p.locator('.gcard.open').count()); await p.screenshot({path:OUT+'/gloss_cards.png'}); await p.click('[data-gcat=""]');
 await p.click('#resBtn'); await p.click('[data-res="samples"]'); await p.waitForTimeout(200); await p.screenshot({path:OUT+'/r3.png',fullPage:true});
 await p.click('.scr[data-exs="quality"]'); await p.waitForTimeout(200); console.log('explorer', (await p.locator('.hero h2').first().innerText()), await p.locator('.extbl tbody tr').count());
 for(const k of ['cashback','income','margins','growreinvest','debt']){ await p.click(`.scr[data-exs="${k}"]`); console.log(k, await p.locator('.extbl tbody tr').count()); }
