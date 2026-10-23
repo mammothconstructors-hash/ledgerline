@@ -17,7 +17,7 @@ import UNIVERSE from './universe.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.9.0';
+const WORKER_VERSION = '3.9.1';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -44,6 +44,7 @@ export default {
   // every 2 minutes: if tonight's sector ranks are not built yet, do the next few Marketstack calls (see rankStep)
   async scheduled(event, env, ctx) {
     USAGE_DB = env && env.DB || null;
+    if (env && env.DB && env.CF_ACCESS_TOKEN) ctx.waitUntil(testerQueue(env).catch(e => rankLog(env, 'error', 'testers: ' + String(e && e.message || e))));
     if (env && env.DB) ctx.waitUntil(rankLog(env, 'cron', event && event.cron || '').then(() => env.MARKETSTACK_KEY ? rankStep(env, 3) : rankLog(env, 'error', 'no MARKETSTACK_KEY')).catch(e => rankLog(env, 'error', String(e && e.message || e))));
   }
 };
@@ -253,7 +254,7 @@ async function policyEdit(env, t, fn) {   // read a policy, change its include l
 async function testerNames(env) { if (!env.DB) return {}; await env.DB.prepare('CREATE TABLE IF NOT EXISTS testers (email TEXT PRIMARY KEY, name TEXT, added INTEGER)').run(); const r = (await env.DB.prepare('SELECT email, name FROM testers').all()).results || []; const m = {}; r.forEach(x => { m[x.email] = x.name; }); return m; }
 async function testersApi(req, url, env) {
   const j = o => new Response(JSON.stringify(o), { status: o.error ? 400 : 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
-  if (!(await keyOk(url.searchParams.get('key'), env))) return j({ error: 'Private' });
+  if (!env.__queue && !(await keyOk(url.searchParams.get('key'), env))) return j({ error: 'Private' });
   if (!env.CF_ACCESS_TOKEN) return j({ error: 'Add the CF_ACCESS_TOKEN secret first' });
   try {
     if (req.method !== 'POST') { const [sites, names] = await Promise.all([accessSites(env), testerNames(env)]); sites.forEach(s => s.emails.forEach(e => { e.name = names[e.email.toLowerCase()] || ''; })); return j({ sites }); }
@@ -273,6 +274,19 @@ async function testersApi(req, url, env) {
     }
     return j({ ok: true, email, action: add ? 'added' : 'removed', sites: done });
   } catch (e) { return j({ error: String(e.message || e) }); }
+}
+// owner shortcut: rows put in tester_queue (email, name, sites = 'all' or site names, action add|remove) are carried out here and marked done
+async function testerQueue(env) {
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS tester_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, name TEXT, sites TEXT DEFAULT 'LedgerLine', action TEXT DEFAULT 'add', done INTEGER DEFAULT 0, result TEXT)").run();
+  const rows = (await env.DB.prepare('SELECT * FROM tester_queue WHERE done = 0 LIMIT 10').all()).results || [];
+  if (!rows.length) return;
+  const sites = await accessSites(env);
+  for (const r of rows) {
+    const want = String(r.sites || 'LedgerLine').toLowerCase(), ids = sites.filter(s => want === 'all' || want.split(',').some(w => s.name.toLowerCase().includes(w.trim()))).map(s => s.id);
+    const req = new Request('https://x/usage/testers', { method: 'POST', body: JSON.stringify({ email: r.email, name: r.name, sites: ids, action: r.action || 'add' }) });
+    const res = await (await testersApi(req, new URL('https://x/usage/testers?key=__queue__'), { ...env, __queue: true })).json().catch(e => ({ error: String(e) }));
+    await env.DB.prepare('UPDATE tester_queue SET done = 1, result = ? WHERE id = ?').bind(JSON.stringify(res).slice(0, 500), r.id).run();
+  }
 }
 function testersHtml(url, env) {
   const key = url.searchParams.get('key') || url.pathname.split('/')[2] || '';
