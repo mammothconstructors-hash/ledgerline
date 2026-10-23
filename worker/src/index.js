@@ -16,7 +16,7 @@
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.5.8';
+const WORKER_VERSION = '3.5.9';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -452,6 +452,13 @@ async function secStatements(args) {
   derive('cashflow', 'fcf', 'Free cash flow (OCF − capex − software)', g => g('ocf') != null && g('capexPPE') != null ? g('ocf') + g('capexPPE') + (g('software') || 0) : null, { b: 1 });
   derive('balance', 'liabilities', 'Total liabilities', g => g('liabEq') != null && g('equity') != null ? g('liabEq') - g('equity') - (g('nciEq') || 0) : null);
 
+  // gross profit must equal revenue − cost as shown: some filers tag GrossProfit on a different revenue base in a single year
+  { const gp = R('income', 'grossProfit'), rv = R('income', 'revenue'), cg = R('income', 'cogs');
+    if (gp && rv && cg) { const fx = (v, r, c) => (v != null && r != null && c != null && Math.abs(v - (r + c)) > Math.abs(r) * 0.02) ? r + c : v;
+      gp.values = gp.values.map((v, i) => fx(v, rv.values[i], cg.values[i])); gp.last = fx(gp.last, rv.last, cg.last); } }
+  // dividends per share: when the per-share tag is missing for a year, dividends paid ÷ shares
+  { const dp = R('income', 'dps'), dv = R('cashflow', 'dividends'), sh = R('income', 'shBasic') || R('income', 'dilShares');
+    if (dp && dv && sh) dp.values = dp.values.map((v, i) => { if (v != null) return v; const d = dv.values[i], n = sh.values[i]; return d != null && n > 0 && d !== 0 ? Math.round(Math.abs(d) / n * 100) / 100 : null; }); }
   // key series for analysis (annual + ttm)
   const val = (sec, k) => R(sec, k) || { values: ends.map(() => null), last: null };
   const pickV = (sec, k, i) => i === -1 ? val(sec, k).last : val(sec, k).values[i];
@@ -520,7 +527,7 @@ async function secStatements(args) {
       { const rvA = R('income', 'revenue'), fyRev = p => { const i = ends.findIndex(e => Math.abs(days(periods.get(e), p.s0)) < 8); return i >= 0 ? rvA?.values[i] : null; };
         const lastFY = rvA ? [...rvA.values].reverse().find(v => v != null) : null;
         rows.revenue = rows.revenue.map((v, i) => { const cap = fyRev(pick[i]) ?? (lastFY ? lastFY * 1.6 : null); return v != null && cap && v > cap * 0.6 ? null : v; }); }   // a quarter can't be most of a year: mismatched tags
-      rows.grossProfit = rows.grossProfit.map((v, i) => v ?? (rows.revenue[i] != null && rows.cogs[i] != null ? rows.revenue[i] + rows.cogs[i] : null));
+      rows.grossProfit = rows.grossProfit.map((v, i) => { const d = rows.revenue[i] != null && rows.cogs[i] != null ? rows.revenue[i] + rows.cogs[i] : null; return v == null ? d : (d != null && Math.abs(v - d) > Math.abs(rows.revenue[i]) * 0.02 ? d : v); });
       rows.fcf = rows.ocf.map((v, i) => v != null && rows.capexPPE[i] != null ? v + rows.capexPPE[i] + (rows.software[i] || 0) : null);
       rows.capex = rows.capexPPE.map((v, i) => v != null ? -(v + (rows.software[i] || 0)) : null);
       rows.ebitda = rows.opIncome.map((v, i) => v != null && rows.da[i] != null ? v + rows.da[i] : null);
