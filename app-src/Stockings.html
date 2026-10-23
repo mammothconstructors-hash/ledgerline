@@ -1139,6 +1139,16 @@ const GRADE=['None','Poor','Fair','Good','Strong','Very strong'];
 function moatGrade(v){ return !isNum(v)?'—': v<1?'None': v<2?'Poor': v<2.75?'Fair': v<3.5?'Good': v<4.25?'Strong':'Very strong'; }
 
 /* the whole sheet model, recomputed whenever inputs change */
+
+// core EPS: when non-operating income is a big share of pretax profit (Amazon's Anthropic mark-ups in 2025–26), value the business on earnings without it
+function coreEPS(){
+  const eps=ttm('eps'), ni=ttm('netIncome'), r=k=>{ const x=stRow('income',k); return x?(isNum(x.last)?x.last:lastNum(x.values)):null; };
+  const pre=r('pretax'), oth=r('otherInc'), tax=r('tax');
+  if(!isNum(eps)||!(ni>0)||!(pre>0)||!isNum(oth)||Math.abs(oth)/pre<0.25) return {adj:false, eps:null};
+  const tr=isNum(tax)?Math.min(0.35,Math.max(0.1,Math.abs(tax)/pre)):0.21, coreNI=(pre-oth)*(1-tr);
+  if(!(coreNI>0)) return {adj:false, eps:null};
+  return {adj:true, eps:eps*coreNI/ni, reported:eps, other:oth, coreNI};
+}
 function model(){
   const F=S.F, I=inputs(), sec=S.src==='SEC'?S.sec:null, K=(sec&&sec.key)||{}, T=(sec&&sec.ttm)||{};
   const price=S.sd.close, M={I, gics:gicsOf(S.ticker)||{}};
@@ -1154,7 +1164,7 @@ function model(){
   const now=(v)=>isNum(v)&&shT>0?v/shT:null;
   const revT=tv('revenue',rev)??ttm('revenue'), fcfT=tv('fcf',fcf)??ttm('fcf'), niT=tv('netIncome',ni)??ttm('netIncome'), ebT=tv('ebitda',ebitdaA)??ttm('ebitda');
   const per={
-    EPS:{label:'EPS', v:eps, now:ttm('eps')??lastNum(eps)},
+    EPS:{label:'EPS', v:eps, now:coreEPS().eps??ttm('eps')??lastNum(eps)},
     FCF:{label:'FCF per share', v:ps(fcf), now:now(fcfT)},
     Sales:{label:'Sales per share', v:ps(rev), now:now(revT)},
     Book:{label:'Book value per share', v:ps(eq), now:now(tv('equity',eq))},
@@ -1172,6 +1182,7 @@ function model(){
   else if(per.FCF.now>0 && (M.fcfMargin??0)>=3){ basis='FCF'; why=`EPS ${per.EPS.now>0?'puts the P/E above 75':'is negative'}, so it’s valued on free cash flow per share.`; }
   else { basis='Sales'; why='EPS and free cash flow are negative or too thin, so sales per share is the only usable base.'; }
   if(!(per[basis].now>0)){ basis = ['EPS','FCF','Sales'].find(b=>per[b].now>0) || basis; }
+  { const ce=coreEPS(); M.core=ce.adj?ce:null; if(ce.adj&&basis==='EPS') why+=` Reported EPS of ${money(ce.reported)} includes ${big(ce.other)} of non-operating gains over the last year (investment mark-ups, sales of stakes and the like), so the model uses core EPS of ${money(ce.eps)}: pretax profit without those gains, after tax.`; }
   const B=per[basis]; M.basisV=B.v; M.revPS=ps(rev); M.basis=basis; M.basisWhy=why; M.metric=B.now; M.mLabel=B.label; M.mShort=SHORTN[basis];
   M.cur = B.now>0 ? price/B.now : null;
   // normal multiple = median of weekly price / trailing metric over the last 10 years
@@ -2205,7 +2216,7 @@ function checkHtml(){
 /* ---- Versions and what's new ---- */
 const APP_VERSION='7.1', WORKER_NEEDED='3.5', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
-  ['App 7.1','Oct 22, 2026',['Risk on / off now uses the 50-day vs 200-day EMA (10 vs 40 weeks); 200 EMA added to the Overview chart','Fixed: the return line above the Overview chart now matches the period boxes (both measured from the close before the period starts)']],
+  ['App 7.1','Oct 22, 2026',['Valuation uses core EPS when non-operating gains are more than a quarter of pretax profit (Amazon’s 2025–26 investment mark-ups had pushed its trailing EPS to $12.43 against about $7 from the business, and its fair value to $1,033); the Valuation tab says when this applies','Risk on / off now uses the 50-day vs 200-day EMA (10 vs 40 weeks); 200 EMA added to the Overview chart','Fixed: the return line above the Overview chart now matches the period boxes (both measured from the close before the period starts)']],
   ['App 7.0','Oct 22, 2026',['Glossary rebuilt as cards: 284 terms — every statement line with the SEC XBRL tags behind it, all 109 metrics with formulas, 63 SEC forms and filing terms, price and risk terms; search, category chips, tap to expand, and Chart it opens the chart builder','All metrics grows to 109: new liquidity (cash ratio, working capital, NCAV), leverage (debt ratio, debt ÷ capital, Altman Z-score), efficiency (DSO, DIO, DPO, cash conversion cycle, turnover), margins (pretax, EBITDA, cash flow, R&D, SG&A), returns (tangible equity, cash ROIC, tax rate), growth (gross profit, operating income, net income, cash flow, assets, book value, dividends, deferred revenue, 5-year rates), quality (accruals, dilution, payouts vs FCF, goodwill) and calculated values (NOPAT, invested capital, owner earnings, tangible book); search box and a chip for each category','All metrics: Annual or Quarterly, newest or oldest first, and click any metric to chart it (up to four) as bars or a line; quarterly view adds 26 metrics per quarter, with valuation and returns on the trailing four quarters','New look, same colors: every section on its own card, pill tabs and controls, one clean sans-serif for numbers, a compact company header with price beside the name, quieter table headers','Statement charts: pick bars or a line with points','Overview: Quick summary in plain English (valuation, margins, returns, growth, balance sheet, verdict, next earnings) and a Frequently asked questions section, both written from the filings and today’s price','Chart builder (Financials → Charts): chart any line item from any statement or any metric, up to six at once, each as bars or a line, hide or remove each, annual or quarterly, actual values on two axes or indexed to 100','Overview chart: Auto, Daily or Weekly bars; weekly 10- and 40-week averages and daily 8, 17, 34, 50 and 150 EMAs, each switched on or off; Risk on / off arrows on or off','Price charts: pick OHLC bars or a line (with a soft fill) on the Overview and Technicals charts; your choice carries to every price chart']],
   ['App 6.26','Oct 22, 2026',['Financials: Ratios & KPIs is now All metrics, 60+ in one place, with new Growth (revenue, EPS, EBITDA, FCF, dividend) and Quality of earnings (cash conversion, stock comp, capex, share change) groups','New Statistics view for every metric: now vs its 10-year median, average, low, high, standard deviation, z-score, percentile and 5-year trend','Find any metric with the search box','Earnings reaction adds report-day swing (standard deviation) and how many times bigger than a normal day, with the share of yearly variance from report days']],
   ['App 6.26','Oct 22, 2026',['New All metrics tab: every ratio LedgerLine computes with its 10-year median, average, range, standard deviation, z-score, percentile and trend, plus return and risk statistics — 1/3/5/10-year returns, best and worst years, volatility, downside volatility, max drawdown, time under water, skew, kurtosis, Sharpe, Sortino, beta, correlation and up/down capture vs the S&P 500','Earnings variance: report-day standard deviation vs a normal day, and the share of the stock’s yearly variance that comes from its four report days','Days to the next earnings report next to the ticker on every tab']],
