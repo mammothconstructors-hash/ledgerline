@@ -94,7 +94,7 @@ const GL_MARKET=[
  ['Percentile','Price & risk','','Where today’s value ranks in its own history: 100th is the highest it has been.'],
  ['Moving average','Price & risk','SMA','Average closing price over a set number of days, smoothing out noise.'],
  ['Exponential moving average','Price & risk','EMA','A moving average that weights recent days more, so it turns sooner.'],
- ['Risk on / risk off','Price & risk','','LedgerLine’s trend switch: risk on when the faster EMA is above the slower one (50 over 150 daily, 10 over 30 weekly).'],
+ ['Risk on / risk off','Price & risk','','LedgerLine’s trend switch: risk on when the faster EMA is above the slower one (50-day over 200-day EMA, or 10-week over 40-week).'],
  ['Relative volume','Price & risk','','Today’s volume against a normal day. Above 2× means something is happening.'],
  ['Benchmark','Price & risk','SPY, QQQ, DIA, IWM','The yardstick: S&P 500, Nasdaq-100, Dow or Russell 2000 ETFs.'],
  ['15-minute delayed','Price & risk','','Prices during the session are 15 minutes old (IEX); the official close posts each evening.'],
