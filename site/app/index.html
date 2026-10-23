@@ -466,6 +466,21 @@ input.helpq,.helpq,.exsel,select{border-radius:999px!important;border:1px solid 
 #main .sec + .sec, #main .sec + div, #main div + .sec{margin-top:14px}
 @media (max-width:640px){.sec{padding:14px 14px 16px;border-radius:10px}.rail{border-radius:14px;margin-bottom:14px}.hero h2{font-size:22px}}
 /* skin pass 2 */
+.cbwrap{display:grid;grid-template-columns:270px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.cbwrap{grid-template-columns:1fr}.cblist{max-height:240px!important}}
+.cbside{background:var(--bg);border:1px solid var(--cardline);border-radius:var(--r2);padding:10px;position:sticky;top:70px}
+.cbsh{display:flex;gap:8px;align-items:baseline;margin-bottom:8px;font-size:13px}.cbsh .linkbtn{margin-left:auto;color:var(--claret)}
+.cbside .helpq{width:100%;margin:0 0 8px;font-size:13px;padding:7px 12px}
+.cblist{max-height:560px;overflow:auto;scrollbar-width:thin}
+.cbg[hidden],.cbi[hidden]{display:none}
+.cbgh{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:10px 4px 4px}
+.cbi{display:flex;align-items:center;gap:7px;width:100%;text-align:left;border:0;background:transparent;padding:5px 8px;border-radius:6px;font-size:12.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbi:hover{background:var(--hov)}.cbi.on{background:var(--ink);color:var(--bg);font-weight:600}.cbi i{width:9px;height:9px;border-radius:50%;flex:none}
+.cbchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.cbchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--cardline);background:var(--bg);border-radius:999px;padding:3px 4px 3px 10px;font-size:12.5px;font-weight:600}
+.cbchip i{width:9px;height:9px;border-radius:50%}.cbchip.off{opacity:.5}
+.cbchip button{border:0;background:transparent;color:var(--muted);padding:2px 6px;border-radius:999px;font-size:12px;cursor:pointer}.cbchip button:hover{background:var(--hov);color:var(--ink)}
+.cbsvg{height:380px}
 .machip{border:1px solid var(--cardline);background:var(--card);color:var(--muted);border-radius:999px;padding:4px 10px;font:600 12px var(--sans);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 .machip::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--c);opacity:.35}
 .machip.on{color:var(--ink);border-color:var(--ink2)}.machip.on::before{opacity:1}
@@ -1819,6 +1834,76 @@ function metricsHtml(){
     ${riskStatsHtml()}
     <div class="sec"><h3>Every ratio <small>from the 10-K and 10-Q filings</small></h3>${ratiosHtml()}</div>`;
 }
+
+/* ---- Chart builder: any line item or metric, mixed bars and lines, two axes ---- */
+let cbSel=LS.get('cbsel')||['income|revenue','income|netIncome','r|operating margin'], cbOpt=LS.get('cbopt')||{'r|operating margin':{t:'line'}}, cbPer=LS.get('cbper')||'a', cbTr=LS.get('cbtr')||'actual', CB=null;
+const CB_COLORS=['#0D7680','#990F3D','#C07A12','#5A3E8C','#2E7D4F','#0F5499'];
+const cbSave=()=>{ LS.set('cbsel',cbSel); LS.set('cbopt',cbOpt); };
+function cbCatalog(per){
+  const sec=S.sec, q=Q(), items=[], cls=u=>u==='USD'||u==='big'?'usd':u==='USD/shares'||u==='$'?'ps':u==='shares'?'sh':u==='%'?'pct':'mult';
+  const groups=[['income','Income statement'],['balance','Balance sheet'],['cashflow','Cash flow'],['oci','Comprehensive income']];
+  let cols=[];
+  if(per==='q'&&q&&q.periods&&q.periods.length){
+    const P=q.periods, n=P.length, k=Math.min(20,n), off=n-k;
+    for(let j=off;j<n;j++) cols.push({head:`Q${P[j].q} '${String(P[j].fy).slice(2)}`, sub:P[j].end});
+    groups.forEach(([id,g])=>{ const st=sec.statements[id]; if(!st) return; st.rows.forEach(r=>{ const a=q.rows[r.key]; if(!Array.isArray(a)) return;
+      const an=r.values.filter(isNum), qs=a.filter(isNum); let flip=false; if(an.length&&qs.length){ const sa=Math.sign(an[an.length-1]), sq=Math.sign(qs.reduce((x,y)=>x+y,0)); flip=!!(sa&&sq&&sa!==sq); }
+      const vals=a.slice(off,n).map(v=>isNum(v)?(flip?-v:v):null); if(vals.some(isNum)) items.push({id:id+'|'+r.key, group:g, label:r.label, unit:r.unit, cls:cls(r.unit), vals}); }); });
+    const RQ=ratiosQHtml(true); RQ.defs.forEach(d=>{ if(!d[1]) return; const vals=RQ.idx.map(i=>{ const v=d[1](i); return isNum(v)&&isFinite(v)?v:null; }); if(vals.some(isNum)) items.push({id:'r|'+d[0].toLowerCase(), group:'Metrics', label:d[0], unit:d[2], cls:cls(d[2]), vals, f:RQ.f}); });
+  } else {
+    const yrs=sec.years, lp=sec.lastPeriod; cols=yrs.map(y=>({head:'FY'+y.fy, sub:y.end})); if(lp) cols.push({head:'TTM', sub:lp.end});
+    groups.forEach(([id,g])=>{ const st=sec.statements[id]; if(!st) return; st.rows.forEach(r=>{ const vals=[...r.values]; if(lp) vals.push(isNum(r.last)?r.last:null); if(vals.some(isNum)) items.push({id:id+'|'+r.key, group:g, label:r.label, unit:r.unit, cls:cls(r.unit), vals}); }); });
+    const RA=ratiosHtml(true); RA.defs.forEach(d=>{ if(!d[1]) return; const vals=[]; for(let i=RA.off;i<RA.n;i++){ const v=d[1](i,false); vals.push(isNum(v)&&isFinite(v)?v:null); } if(lp){ const v=d[1](RA.n-1,true); vals.push(isNum(v)&&isFinite(v)?v:null); } if(vals.some(isNum)) items.push({id:'r|'+d[0].toLowerCase(), group:'Metrics', label:d[0], unit:d[2], cls:cls(d[2]), vals, f:RA.f}); });
+  }
+  return {cols, items};
+}
+function cbFmt(it,v){ if(!isNum(v)) return '—'; if(it.f&&it.unit!=='USD') return it.f(v,it.unit); if(it.unit==='USD/shares') return fx(v,2); if(it.unit==='shares') return vfmt(v); return big(v); }
+function chartBuilderHtml(){
+  if(!S.sec) return '';
+  const hasQ=!!(Q()&&Q().periods&&Q().periods.length), per=hasQ?cbPer:'a', C=cbCatalog(per), byId=new Map(C.items.map(it=>[it.id,it]));
+  const sel=cbSel.map(id=>byId.get(id)).filter(Boolean), vis=sel.filter(it=>!(cbOpt[it.id]||{}).h);
+  const clsSet=[...new Set(vis.map(it=>it.cls))], indexed=cbTr==='index'||clsSet.length>2;
+  // list
+  const groups=[...new Set(C.items.map(it=>it.group))];
+  const list=groups.map(g=>`<div class="cbg"><div class="cbgh">${esc(g)}</div>${C.items.filter(it=>it.group===g).map(it=>{ const k=cbSel.indexOf(it.id); return `<button type="button" class="cbi${k>=0?' on':''}" data-cbadd="${esc(it.id)}" data-k="${esc((it.label+' '+g).toLowerCase())}">${k>=0?`<i style="background:${CB_COLORS[k%6]}"></i>`:''}${esc(it.label)}</button>`; }).join('')}</div>`).join('');
+  // chart
+  const n=C.cols.length, W=1000, H=380, pl=74, pr=74, pt=16, pb=36, bw=(W-pl-pr)/n;
+  let svg='';
+  if(vis.length){
+    const series=vis.map(it=>{ const base=it.vals.find(v=>isNum(v)&&v!==0); return {it, v:indexed?it.vals.map(v=>isNum(v)&&base?v/Math.abs(base)*100:null):it.vals, t:(cbOpt[it.id]||{}).t||(it.cls==='pct'||it.cls==='mult'||it.cls==='ps'?'line':'bar'), color:CB_COLORS[cbSel.indexOf(it.id)%6]}; });
+    const axisOf=s0=>indexed?0:(s0.it.cls===vis[0].cls?0:1);
+    const ax=[0,1].map(a=>{ const vs=series.filter(s0=>axisOf(s0)===a).flatMap(s0=>s0.v).filter(isNum); if(!vs.length) return null; let lo=Math.min(...vs), hi=Math.max(...vs);
+      if(series.some(s0=>axisOf(s0)===a&&s0.t==='bar')||lo>0&&lo<hi*0.35){ lo=Math.min(0,lo); hi=Math.max(0,hi); } if(hi===lo){ hi+=1; lo-=1; }
+      const nice=x0=>{ const e=Math.pow(10,Math.floor(Math.log10(Math.abs(x0)||1))), f0=Math.abs(x0)/e; return (f0<=1?1:f0<=2?2:f0<=5?5:10)*e; }, st=nice((hi-lo)/5);
+      return {lo:Math.floor(lo/st)*st, hi:Math.ceil(hi/st)*st, st, it:series.find(s0=>axisOf(s0)===a).it}; });
+    const Y=(a,v)=>{ const A=ax[a]; return pt+(A.hi-v)/(A.hi-A.lo)*(H-pt-pb); };
+    const tick=(a,v)=>indexed?v.toFixed(0):cbFmt(ax[a].it,v);
+    for(let v=ax[0].lo; v<=ax[0].hi+ax[0].st/2; v+=ax[0].st) svg+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(0,v)}" y2="${Y(0,v)}" class="${Math.abs(v)<ax[0].st/2?'z':'gl'}"/><text x="${pl-8}" y="${Y(0,v)+4}" text-anchor="end">${tick(0,v)}</text>`;
+    if(ax[1]) for(let v=ax[1].lo; v<=ax[1].hi+ax[1].st/2; v+=ax[1].st) svg+=`<text x="${W-pr+8}" y="${Y(1,v)+4}" text-anchor="start">${tick(1,v)}</text>`;
+    const every=Math.ceil(n/12); C.cols.forEach((c,i)=>{ if(i%every===0||i===n-1) svg+=`<text x="${pl+bw*i+bw/2}" y="${H-12}" text-anchor="middle">${esc(c.head)}</text>`; });
+    const bars=series.filter(s0=>s0.t==='bar'), gw=bw*0.74, each=bars.length?gw/bars.length:0;
+    bars.forEach((s0,k)=>{ const a=axisOf(s0), z=Y(a,Math.max(ax[a].lo,Math.min(ax[a].hi,0))); s0.v.forEach((v,i)=>{ if(!isNum(v)) return; const x0=pl+bw*i+(bw-gw)/2+each*k, y0=Y(a,v); svg+=`<rect x="${x0}" y="${Math.min(y0,z)}" width="${Math.max(1,each-1.5)}" height="${Math.max(1,Math.abs(z-y0))}" rx="2" fill="${s0.color}" opacity="${v<0?.55:.88}"/>`; }); });
+    series.filter(s0=>s0.t==='line').forEach(s0=>{ const a=axisOf(s0); let d='', pen=false; s0.v.forEach((v,i)=>{ if(!isNum(v)){ pen=false; return; } d+=(pen?'L':'M')+(pl+bw*i+bw/2)+','+Y(a,v); pen=true; });
+      svg+=`<path d="${d}" fill="none" stroke="${s0.color}" stroke-width="2.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`; if(n<=40) s0.v.forEach((v,i)=>{ if(isNum(v)) svg+=`<circle cx="${pl+bw*i+bw/2}" cy="${Y(a,v)}" r="3.4" fill="${s0.color}"/>`; }); });
+    CB={cols:C.cols, series, indexed, pl, bw, n};
+  } else CB=null;
+  const chip=it=>{ const o=cbOpt[it.id]||{}, t=o.t||(['pct','mult','ps'].includes(it.cls)?'line':'bar'), k=cbSel.indexOf(it.id);
+    return `<span class="cbchip${o.h?' off':''}"><i style="background:${CB_COLORS[k%6]}"></i>${esc(it.label)}<button type="button" data-cbvis="${esc(it.id)}" title="${o.h?'Show':'Hide'}">${o.h?'◌':'●'}</button><button type="button" data-cbtype="${esc(it.id)}" title="Switch bars / line" class="cbt">${t==='bar'?'▮▮':'╱'}</button><button type="button" data-cbx="${esc(it.id)}" title="Remove">×</button></span>`; };
+  const axisNote=indexed?(cbTr==='index'?'Indexed: each series starts at 100':'Three kinds of units picked, so each series is indexed to 100 at its first value'):(clsSet.length===2?'Two units: left axis for '+esc(vis[0].label)+', right axis for '+esc((vis.find(it=>it.cls!==vis[0].cls)||{}).label||''):'');
+  return `<div class="cbwrap"><aside class="cbside"><div class="cbsh"><b>Line items &amp; metrics</b><span class="muted">${sel.length}/6</span>${sel.length?'<button type="button" class="linkbtn" data-cbclear="1">Clear</button>':''}</div><input id="cbQ" class="helpq" type="search" placeholder="Search ${C.items.length} items" autocomplete="off"><div class="cblist">${list}</div></aside>
+    <section class="cbmain"><div class="sttools" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"><span class="seg"><button type="button" data-cbper="a" class="${per==='a'?'on':''}">Annual</button><button type="button" data-cbper="q" class="${per==='q'?'on':''}"${hasQ?'':' disabled'}>Quarterly</button></span><span class="seg"><button type="button" data-cbtr="actual" class="${cbTr==='actual'?'on':''}">Actual</button><button type="button" data-cbtr="index" class="${cbTr==='index'?'on':''}">Indexed to 100</button></span></div>
+      <div class="cbchips">${sel.map(chip).join('')||'<span class="muted">Pick line items or metrics on the left. Up to six, mixed bars and lines.</span>'}</div>
+      ${vis.length?`<div class="mwrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="cbsvg msvg" data-pl="${pl}" data-bw="${bw}" data-n="${n}">${svg}<rect class="mhl" x="0" y="${pt}" width="${bw}" height="${H-pt-pb}" style="display:none"/></svg><div class="mtip" hidden></div></div>`:''}
+      <p class="fine" style="margin-top:6px">${axisNote?axisNote+'. ':''}${per==='a'?'Fiscal years from the 10-Ks; TTM is the trailing twelve months.':'Quarters from the 10-Qs (fiscal Q4 = 10-K year minus nine months).'} Hover for values.</p></section></div>`;
+}
+function cbHover(ev){
+  const svg=ev.target.closest('.cbsvg'); if(!svg||!CB) return; const wrap=svg.parentElement, tip=wrap.querySelector('.mtip'), hl=svg.querySelector('.mhl');
+  const box=svg.getBoundingClientRect(), xv=(ev.clientX-box.left)/box.width*1000, i=Math.floor((xv-CB.pl)/CB.bw);
+  if(i<0||i>=CB.n){ tip.hidden=true; hl.style.display='none'; return; } hl.setAttribute('x',CB.pl+CB.bw*i); hl.style.display='';
+  tip.innerHTML=`<div class="th">${esc(CB.cols[i].head)}${CB.cols[i].sub?' · '+esc(CB.cols[i].sub):''}</div>`+CB.series.map(s0=>{ const raw=s0.it.vals[i]; return `<div><i style="background:${s0.color}"></i>${esc(s0.it.label)} <b>${cbFmt(s0.it,raw)}</b>${CB.indexed&&isNum(s0.v[i])?` <span class="muted">(${s0.v[i].toFixed(0)})</span>`:''}</div>`; }).join(''); tip.hidden=false;
+  const px=(CB.pl+CB.bw*i+CB.bw/2)/1000*box.width; tip.style.left=Math.min(Math.max(8,px-tip.offsetWidth/2),box.width-tip.offsetWidth-8)+'px';
+}
+document.addEventListener('mousemove',e=>{ if(e.target.closest&&e.target.closest('.cbsvg')) cbHover(e); });
 function nextRepHtml(X){
   const N=X.next, P0=X.pending, out=[];
   const tc=c=>c?` <span class="tcode t${c}">${c}</span>`:'';
@@ -1980,7 +2065,7 @@ function rToolbar(annual){
   const sg=(k,cur,opts)=>`<span class="seg">${opts.map(([v,l,dis])=>`<button type="button" data-${k}="${v}" class="${cur===v?'on':''}"${dis?' disabled title="'+esc(dis)+'"':''}>${l}</button>`).join('')}</span>`;
   return `<div class="sttools" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">${sg('rper',rp,[['a','Annual'],['q','Quarterly',hasQ?'':'No quarterly data']])}${sg('sord',stOrder,[['new','Newest first'],['old','Oldest first']])}<span class="muted" style="font-size:12.5px;align-self:center">Click any metric to chart it, up to four</span></div>`;
 }
-function ratiosQHtml(){
+function ratiosQHtml(collect){
   const q=Q(), P=q.periods, R=new Proxy(q.rows,{get:(o,kk)=>o[kk]||[]}), n=P.length, k=Math.min(20,n), off=n-k, tax=inputs().tax/100;
   const sum4=(a,i)=>{ if(i<3) return null; let t=0; for(let j=i-3;j<=i;j++){ if(!isNum(a[j])) return null; t+=a[j]; } return t; };
   const debt=i=>(R.ltDebt[i]||0)+(R.curDebt[i]||0), cash=i=>isNum(R.cash[i])?R.cash[i]+(R.stInv[i]||0):null;
@@ -2005,6 +2090,7 @@ function ratiosQHtml(){
     ['Stock comp ÷ revenue',i=>H(pos(R.sbc[i],R.revenue[i])),'%'],['Capex ÷ revenue',i=>isNum(R.capex[i])?H(pos(Math.abs(R.capex[i]),R.revenue[i])):null,'%']];
   const f=(v,u)=>!isNum(v)||!isFinite(v)?'—':u==='%'?pct(v):u==='$'?fx(v,2):u==='x2'?x(v,2):x(v);
   const idx=[...Array(k).keys()].map(j=>off+j), lab=i=>`Q${P[i].q} '${String(P[i].fy).slice(2)}`;
+  if(collect) return {defs, idx, P, f};
   const ord=stOrder==='new'?idx.slice().reverse():idx, picks=(stSel.ratiosq||[]).slice(0,4), pickRows=[];
   const body=defs.map(d=>{ if(!d[1]) return `<tr class="b grp mgrp"><td colspan="${k+2}">${d[0]}</td></tr>`;
     const key=d[0].toLowerCase(), vals=idx.map(i=>d[1](i)), pk=picks.indexOf(key);
@@ -2017,8 +2103,8 @@ function ratiosQHtml(){
     <div class="tblwrap"><table class="mtbl"><thead><tr><th>Quarterly metrics</th>${ord.map(i=>`<th>${lab(i)}<span class="yy">${esc(P[i].end)}</span></th>`).join('')}<th></th></tr></thead><tbody>${body}</tbody></table></div>
     <p class="fine" style="margin-top:8px">Each quarter from its 10-Q (fiscal Q4 = the 10-K year minus nine months). Valuation and return ratios use the trailing four quarters and the price on the quarter’s last day. Growth compares with the same quarter a year earlier.</p>`;
 }
-function ratiosHtml(){
-  if((LS.get('rper')||'a')==='q'&&Q()) return ratiosQHtml();
+function ratiosHtml(collect){
+  if(!collect&&(LS.get('rper')||'a')==='q'&&Q()) return ratiosQHtml();
   const yrs=S.sec.years, n=yrs.length, k=n, off=0, K=S.sec.key, T=S.sec.ttm||{}, F=S.F, I=inputs(), tax=I.tax/100;
   const pE=yrs.map(y=>pxAt(Date.parse(y.end)/1000));
   const g=(key,i,t)=>{ if(t&&isNum(T[key])) return T[key]; const a=K[key]; return a&&isNum(a[i])?a[i]:null; };
@@ -2070,6 +2156,7 @@ function ratiosHtml(){
     ['Diluted share change',(i,t)=>{ const j=t?n-1:i; const a=g('dilShares',j), b0=j>0?g('dilShares',j-1):null; return isNum(a)&&b0>0?(a/b0-1)*100:null; },'%','low'],
   ];
   const f=(v,u)=>!isNum(v)||!isFinite(v)?'—':u==='%'?pct(v):u==='$'?fx(v,2):u==='big'?big(v):u==='x2'?x(v,2):x(v);
+  if(collect) return {defs, n, off, yrs, f};
   const csv=[['Ratio',...yrs.slice(off).map(y=>'FY'+y.fy),'TTM','10-yr median'].join(',')];
   const mv=LS.get('mview')||(step==='metrics'?'stats':'years'), nM=defs.filter(d=>d[1]).length;
   const sdv=a=>{ if(a.length<3) return null; const m=a.reduce((x,y)=>x+y,0)/a.length; return Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/(a.length-1)); };
@@ -2130,7 +2217,7 @@ function checkHtml(){
 /* ---- Versions and what's new ---- */
 const APP_VERSION='7.0', WORKER_NEEDED='3.5', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
-  ['App 7.0','Oct 22, 2026',['All metrics: Annual or Quarterly, newest or oldest first, and click any metric to chart it (up to four) as bars or a line; quarterly view adds 26 metrics per quarter, with valuation and returns on the trailing four quarters','New look, same colors: every section on its own card, pill tabs and controls, one clean sans-serif for numbers, a compact company header with price beside the name, quieter table headers','Statement charts: pick bars or a line with points','Overview chart: Auto, Daily or Weekly bars; weekly 10- and 40-week averages and daily 8, 17, 34, 50 and 150 EMAs, each switched on or off; Risk on / off arrows on or off','Price charts: pick OHLC bars or a line (with a soft fill) on the Overview and Technicals charts; your choice carries to every price chart']],
+  ['App 7.0','Oct 22, 2026',['All metrics: Annual or Quarterly, newest or oldest first, and click any metric to chart it (up to four) as bars or a line; quarterly view adds 26 metrics per quarter, with valuation and returns on the trailing four quarters','New look, same colors: every section on its own card, pill tabs and controls, one clean sans-serif for numbers, a compact company header with price beside the name, quieter table headers','Statement charts: pick bars or a line with points','Chart builder (Financials → Charts): chart any line item from any statement or any metric, up to six at once, each as bars or a line, hide or remove each, annual or quarterly, actual values on two axes or indexed to 100','Overview chart: Auto, Daily or Weekly bars; weekly 10- and 40-week averages and daily 8, 17, 34, 50 and 150 EMAs, each switched on or off; Risk on / off arrows on or off','Price charts: pick OHLC bars or a line (with a soft fill) on the Overview and Technicals charts; your choice carries to every price chart']],
   ['App 6.26','Oct 22, 2026',['Financials: Ratios & KPIs is now All metrics, 60+ in one place, with new Growth (revenue, EPS, EBITDA, FCF, dividend) and Quality of earnings (cash conversion, stock comp, capex, share change) groups','New Statistics view for every metric: now vs its 10-year median, average, low, high, standard deviation, z-score, percentile and 5-year trend','Find any metric with the search box','Earnings reaction adds report-day swing (standard deviation) and how many times bigger than a normal day, with the share of yearly variance from report days']],
   ['App 6.26','Oct 22, 2026',['New All metrics tab: every ratio LedgerLine computes with its 10-year median, average, range, standard deviation, z-score, percentile and trend, plus return and risk statistics — 1/3/5/10-year returns, best and worst years, volatility, downside volatility, max drawdown, time under water, skew, kurtosis, Sharpe, Sortino, beta, correlation and up/down capture vs the S&P 500','Earnings variance: report-day standard deviation vs a normal day, and the share of the stock’s yearly variance that comes from its four report days','Days to the next earnings report next to the ticker on every tab']],
   ['App 6.25','Oct 22, 2026',['Next earnings report: countdown (in 12 days, tomorrow, today), highlighted inside a week; an overdue warning when last year’s timing has passed with no release','Days to the next earnings report on every company page, next to the ticker (tap it to open the Earnings tab)','Results that are out before the 10-Q is filed now show at the top of the reaction table, marked 10-Q pending, with the report-day move']],
@@ -3021,7 +3108,7 @@ function financialsHtml(){
   const tabs=[['income','Income statement'],['balance','Balance sheet'],['cashflow','Cash flow'],['oci','Comprehensive income'],['ratios','All metrics'],['quarterly','Quarterly'],['check','Data check'],['mdna','MD&A'],['notes','Notes'],['risk','Risk factors'],['business','Business'],['legal','Legal'],['charts','Charts']];
   let body='';
   if(S.src!=='SEC' && finTab!=='charts') body = secSetupHtml();
-  else if(finTab==='charts') body=`<div class="minis">${['revenue','grossProfit','opIncome','netIncome','fcf','eps','ebitda','debt'].map(k=>miniHtml({revenue:'Revenue',grossProfit:'Gross profit',opIncome:'Operating income',netIncome:'Net income',fcf:'Free cash flow',eps:'EPS',ebitda:'EBITDA',debt:'Total debt'}[k],k,k==='eps'?v=>'$'+v.toFixed(2):null)).join('')}</div>`;
+  else if(finTab==='charts') body=chartBuilderHtml();
   else if(finTab==='ratios') body=ratiosHtml();
   else if(finTab==='quarterly') body=quarterlyHtml();
   else if(finTab==='check') body=checkHtml();
@@ -3054,7 +3141,7 @@ function metricChart(id, cols, rows, unitLbl, fmt){
     <div class="mwrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" class="msvg" data-pl="${pl}" data-bw="${bw}" data-n="${n}">${g}<rect class="mhl" x="0" y="${pt}" width="${bw}" height="${H-pt-pb}" style="display:none"/><rect class="mhit" x="${pl}" y="0" width="${W-pl-pr}" height="${H}" fill="transparent"/></svg><div class="mtip" hidden></div></div></div>`;
 }
 function mcHover(ev){
-  const svg=ev.target.closest('.msvg'); if(!svg||!MC) return; const wrap=svg.parentElement, tip=wrap.querySelector('.mtip'), hl=svg.querySelector('.mhl');
+  const svg=ev.target.closest('.msvg'); if(!svg||!MC||svg.classList.contains('cbsvg')) return; const wrap=svg.parentElement, tip=wrap.querySelector('.mtip'), hl=svg.querySelector('.mhl');
   const box=svg.getBoundingClientRect(), xv=(ev.clientX-box.left)/box.width*1000, pl=+svg.dataset.pl, bw=+svg.dataset.bw, n=+svg.dataset.n;
   const i=Math.floor((xv-pl)/bw); if(i<0||i>=n){ tip.hidden=true; hl.style.display='none'; return; }
   hl.setAttribute('x',pl+bw*i); hl.style.display='';
@@ -3355,6 +3442,13 @@ document.addEventListener('click',e=>{
   if(b.id==='inpReset'){ LS.set('inputs',{}); S.inp={}; S.M=model(); render(); toast('Inputs reset'); return; }
   if(d.fin){ finTab=d.fin; render(); return; }
   if(d.mode){ chartMode=d.mode; LS.set('mode',chartMode); render(); return; }
+  if(d.cbadd){ const i=cbSel.indexOf(d.cbadd); if(i>=0) cbSel.splice(i,1); else { if(cbSel.length>=6) cbSel.shift(); cbSel.push(d.cbadd); } cbSave(); render(); return; }
+  if(d.cbvis){ const o=cbOpt[d.cbvis]=cbOpt[d.cbvis]||{}; o.h=!o.h; cbSave(); render(); return; }
+  if(d.cbtype){ const it=d.cbtype, o=cbOpt[it]=cbOpt[it]||{}; const cur=o.t||(/^r\|/.test(it)?'line':'bar'); o.t=cur==='bar'?'line':'bar'; cbSave(); render(); return; }
+  if(d.cbx){ cbSel=cbSel.filter(x0=>x0!==d.cbx); cbSave(); render(); return; }
+  if(d.cbclear){ cbSel=[]; cbSave(); render(); return; }
+  if(d.cbper){ cbPer=d.cbper; LS.set('cbper',cbPer); render(); return; }
+  if(d.cbtr){ cbTr=d.cbtr; LS.set('cbtr',cbTr); render(); return; }
   if(d.ovint){ ovInt=d.ovint; LS.set('ovint',ovInt); overviewChart(); return; }
   if(d.ovma){ const i=ovMA.indexOf(d.ovma); if(i>=0) ovMA.splice(i,1); else ovMA.push(d.ovma); LS.set('ovma',ovMA); overviewChart(); return; }
   if(d.rper){ LS.set('rper',d.rper); render(); return; }
@@ -3382,6 +3476,7 @@ document.addEventListener('click',e=>{
   if(d.open){ $('#q').value=d.open.split(':')[1]||d.open; step='summary'; loadCompany(d.open); return; }
 });
 document.addEventListener('input',e=>{ if(e.target.id==='notes'&&S) S.notes=e.target.value;
+  if(e.target.id==='cbQ'){ const qq=e.target.value.trim().toLowerCase(); document.querySelectorAll('.cbi').forEach(b0=>{ b0.hidden=!!qq&&!b0.dataset.k.includes(qq); }); document.querySelectorAll('.cbg').forEach(g0=>{ g0.hidden=![...g0.querySelectorAll('.cbi')].some(b0=>!b0.hidden); }); return; }
   if(e.target.id==='glossQ'){ glossFilter(); return; }
   if(e.target.id==='mQ'){ const q=e.target.value.trim().toLowerCase(); document.querySelectorAll('.mrow2').forEach(r=>{ r.hidden=!!q&&!r.dataset.mk.includes(q); }); document.querySelectorAll('.mgrp').forEach(g=>{ let x=g.nextElementSibling, any=false; while(x&&!x.classList.contains('mgrp')){ if(!x.hidden) any=true; x=x.nextElementSibling; } g.hidden=!!q&&!any; }); return; }
   if(e.target.id==='helpQ'){ const q=e.target.value.trim().toLowerCase(); let n=0; document.querySelectorAll('.hrow').forEach(r=>{ const on=!q||r.dataset.k.includes(q); r.hidden=!on; if(on) n++; }); document.querySelectorAll('.hsec').forEach(sec=>{ sec.hidden=![...sec.querySelectorAll('.hrow')].some(r=>!r.hidden); }); const none=document.getElementById('helpNone'); if(none) none.hidden=n>0; } });
