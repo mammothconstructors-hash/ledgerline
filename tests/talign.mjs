@@ -37,6 +37,11 @@ await p.click('#rail button[data-step="financials"]'); await p.waitForTimeout(40
 const n1=await p.locator('#main [data-gl]').count(); console.log('tips labelled',n1); if(n1<5) throw new Error('tips not attached');
 await p.locator('#main [data-gl]').first().hover(); await p.waitForTimeout(100); const tip=await p.locator('#glTip').innerText(); console.log('tip',tip.slice(0,80).replace(/\n/g,' | ')); if(!tip) throw new Error('no tip');
 await p.click('#tipsBtn'); await p.waitForTimeout(100); const n2=await p.locator('#main [data-gl]').count(); if(n2) throw new Error('tips still on'); await p.click('#tipsBtn');
+// charts follow the table order and are drawn at their on-screen width
+await p.click('[data-fin="cashflow"]'); await p.waitForTimeout(300);
+const co=await p.evaluate(()=>{ const s=document.querySelector('.msvg'); if(!s) return null; return {ratio:s.getBoundingClientRect().width/s.viewBox.baseVal.width, first:[...s.querySelectorAll('text')].find(t=>/FY|TTM|Q\d/.test(t.textContent))?.textContent, th:document.querySelectorAll('#main thead th')[1]?.textContent}; });
+console.log('cf chart',JSON.stringify(co)); if(co){ if(Math.abs(co.ratio-1)>0.08) throw new Error('chart stretched'); if(!co.th.startsWith(co.first)) throw new Error('chart order differs from table'); }
+const stats=await p.evaluate(async()=>{ document.querySelector('#rail [data-step="stats"]').click(); await new Promise(r=>setTimeout(r,600)); const a=[...document.querySelectorAll('#main td:first-child')]; return [a.length,a.filter(e=>e.dataset.gl).length]; }); console.log('stats tips',stats); if(stats[1]<stats[0]*0.6) throw new Error('stats tips coverage low');
 // glossary has EBT
 const hasEBT=await p.evaluate(()=>window.__ov.hasGloss('EBT')); if(!hasEBT) throw new Error('EBT missing');
 console.log('ERR',errs.filter(e=>!/get-identity/.test(e))); if(errs.filter(e=>!/get-identity/.test(e)).length) process.exit(1); await b.close();

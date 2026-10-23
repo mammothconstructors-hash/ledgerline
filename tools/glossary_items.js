@@ -58,6 +58,8 @@ const GL_LINES={
  chgRec:['','Cash effect of receivables rising or falling. Rising receivables use cash: sales booked but not yet collected.'],
  chgInv:['','Cash effect of inventory rising or falling. Building inventory uses cash.'],
  chgAp:['','Cash effect of payables rising or falling. Paying suppliers later frees up cash.'],
+ cfNI:['Starting point of the cash flow statement','Net income, including the share owned by minority holders, that the cash flow statement starts from before adding back non-cash charges.'],
+ fcf:['FCF, owner cash','Cash from operations minus capital spending and capitalized software: the cash left for dividends, buybacks, debt paydown or acquisitions.'],
  ocf:['CFO, cash from operations','Cash produced by running the business: net income adjusted for non-cash charges and working-capital swings.'],
  capexPPE:['Capex','Cash spent buying or building property, plant and equipment.'],
  software:['','Cash spent developing software the company capitalizes as an asset instead of expensing.'],
@@ -77,6 +79,8 @@ const GL_LINES={
  ociHedge:['','Gains or losses on hedges of future cash flows, parked in equity until the hedged item hits earnings.'],
  ociPension:['','Changes in pension and retiree-plan obligations from actuarial assumptions and plan returns.'],
  ociTotal:['OCI','All the gains and losses that bypass net income in the period.'],
+ ociNI:['','Net income including the share owned by minority holders: the line other comprehensive income is added to.'],
+ aociEnd:['AOCI','The running total of other comprehensive income sitting in shareholders’ equity at period end.'],
  compInc:['','Net income plus other comprehensive income: the full change in equity from everything except dealings with owners.']
 };
 const GL_METRICS={
