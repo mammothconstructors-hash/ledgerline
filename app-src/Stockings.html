@@ -382,6 +382,102 @@ dl.method dd{color:var(--ink2)}
 @media (max-width:640px){dl.method{grid-template-columns:1fr}dl.method dt{border-bottom:0;padding-bottom:0}}
 .disc{font-size:12px;color:var(--muted);margin-top:8px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:var(--onnavy);padding:8px 14px;border-radius:2px;font-size:13px;font-weight:600;z-index:20}
+/* ===== LedgerLine 7 skin: same palette, layered cards, one sans for UI ===== */
+:root{--card:#FFF9F3;--cardline:#EAD7C6;--r:12px;--r2:8px;--shadow:0 1px 2px rgba(51,48,46,.05),0 6px 18px rgba(51,48,46,.06);--hov:#FBEBDD}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--card:#23262D;--cardline:#343944;--hov:#2A2E37;--shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25)}}
+:root[data-theme="dark"]{--card:#23262D;--cardline:#343944;--hov:#2A2E37;--shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25)}
+body{font-size:14.5px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+/* top bar: slimmer, softer controls */
+.top .wrap{padding-block:7px}
+.search{border-radius:999px;border-color:transparent;box-shadow:inset 0 0 0 1px var(--cardline)}
+.search input{padding:8px 14px}
+.search button{border-radius:0 999px 999px 0;padding:0 18px}
+.toplinks button,.toplinks a{border-radius:999px!important}
+.toplinks .startbtn{border-color:rgba(255,241,229,.28)}
+.resdrop{border-radius:var(--r);border-color:var(--cardline);background:var(--card);padding:8px;box-shadow:0 16px 40px rgba(0,0,0,.18)}
+.resdrop button,.resdrop a{border-radius:var(--r2)}
+/* company header: compact */
+.co{padding-block:18px 12px;border-bottom:0}
+.co h1{font-size:clamp(26px,3.6vw,36px)}
+.co .px b{font-size:28px}
+/* tabs: pills */
+.rail{gap:4px;border-bottom:0;padding:6px;background:var(--card);border:1px solid var(--cardline);border-radius:999px;box-shadow:var(--shadow);margin:2px 0 18px;flex-wrap:nowrap}
+.rail button{border-bottom:0!important;border-radius:999px;padding:7px 13px;font-size:13.5px;color:var(--ink2);transition:background .15s,color .15s}
+.rail button:hover{background:var(--hov);color:var(--ink)}
+.rail button.on{background:var(--teal);color:#fff}
+.rail button.on .pip{background:rgba(255,255,255,.22);color:#fff}
+.rail .pip{border-radius:999px}
+@media (min-width:1100px){.rail{flex-wrap:wrap;border-radius:18px}}
+/* section heroes: one line headline, sans */
+.hero{padding:4px 2px 16px;border-bottom:0;gap:4px 24px}
+.hero h2{font-family:var(--sans);font-weight:700;font-size:clamp(22px,2.6vw,30px);letter-spacing:-.015em;margin:4px 0 6px;line-height:1.15}
+.hero .stand{font-family:var(--sans);font-size:14.5px;line-height:1.55;color:var(--muted);max-width:78ch}
+.kicker{font-size:11px;letter-spacing:.09em}
+/* every section is a card */
+.sec{background:var(--card);border:1px solid var(--cardline);border-radius:var(--r);box-shadow:var(--shadow);padding:16px 18px 18px;border-top:1px solid var(--cardline)}
+.sec .sec{background:transparent;border:0;box-shadow:none;padding:0;border-radius:0}
+.sec > h3{font-size:15px;font-weight:700;letter-spacing:-.005em;margin-bottom:12px}
+.sec > h3 small{font-size:12px}
+.mini{border-top:0;background:var(--bg);border-radius:var(--r2);padding:10px 12px;border:1px solid var(--cardline)}
+.notice{border-radius:var(--r);border:1px solid var(--cardline);border-top:3px solid var(--teal);background:var(--card);box-shadow:var(--shadow)}
+/* stat cells: label small caps, value strong */
+.stat{border-bottom:1px solid var(--cardline)}
+.stat .k{font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+.stat .v{font-weight:650;font-variant-numeric:tabular-nums}
+/* tables: quiet headers, aligned digits, hover rows */
+.tblwrap{border-top:0;border-radius:var(--r2)}
+table{font-size:13px}
+thead th{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--ink2);background:var(--card)}
+th,td{border-bottom:1px solid var(--cardline);padding:8px 10px}
+th:first-child,td:first-child{background:var(--card)}
+tbody tr:hover td{background:var(--hov)}
+td{font-variant-numeric:tabular-nums}
+/* segmented controls: soft pill groups */
+.seg{background:var(--bg);border:1px solid var(--cardline);border-radius:999px;padding:3px;gap:2px}
+.seg button{border-radius:999px;padding:5px 11px;color:var(--ink2);transition:background .15s}
+.seg button:hover{background:var(--hov)}
+.seg button.on{background:var(--ink);color:var(--bg);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.seg .seglbl{padding:0 6px 0 8px}
+.seg2{border-radius:999px;border-color:var(--cardline);padding:3px;background:var(--bg)}.seg2 button{border-radius:999px;padding:5px 12px}
+.sttools .seg,.chartbar .seg{box-shadow:none}
+.btn{border-radius:999px;height:30px;padding:0 14px;border-color:var(--cardline);background:var(--card)}
+.btn:hover{background:var(--hov)}
+.btn.primary{border-color:var(--teal)}
+.pchip{border-radius:var(--r2)!important}
+.erchip{background:var(--card)}
+.nextrep{border-radius:var(--r2);border-color:var(--cardline)}
+.tcode,.pend{border-radius:4px}
+input.helpq,.helpq,.exsel,select{border-radius:999px!important;border:1px solid var(--cardline)!important;background:var(--card)!important;padding:9px 14px}
+.scr,.sample,.srow{border-radius:var(--r2)!important;background:var(--card)}
+.scr{border:1px solid var(--cardline)}
+.scr.on{border-color:var(--teal);box-shadow:inset 0 0 0 1px var(--teal)}
+.gchip{border-color:var(--cardline);background:var(--card)}
+.gchip.on{background:var(--teal);border-color:var(--teal);color:#fff}
+/* charts: lighter frame */
+.cwrap canvas{border-radius:var(--r2)}
+.cwrap .tip{border-radius:var(--r2);box-shadow:var(--shadow);border:1px solid var(--cardline);background:var(--card)}
+/* breathing room between cards */
+#main .sec + .sec, #main .sec + div, #main div + .sec{margin-top:14px}
+@media (max-width:640px){.sec{padding:14px 14px 16px;border-radius:10px}.rail{border-radius:14px;margin-bottom:14px}.hero h2{font-size:22px}}
+/* skin pass 2 */
+.seg{max-width:100%;overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}.seg::-webkit-scrollbar{display:none}.seg button{white-space:nowrap;flex:none}
+.tblwrap{border-top:0!important}
+@media (max-width:640px){.glance{grid-template-columns:1fr 1fr;gap:0 14px}.glance b,.glance .v{font-size:16px}}
+#main,.resdrop{--serif:"Hanken Grotesk","Metric",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+.co{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:6px 28px}
+.co .src{font-size:11.5px;margin-top:6px;max-width:90ch}
+.co .pxblock{gap:22px;align-items:flex-end;padding-bottom:2px}
+@media (max-width:700px){.co{grid-template-columns:1fr}.co .pxblock{justify-content:flex-start}}
+.mcap b,.co .px b{font-family:var(--sans);font-weight:700;letter-spacing:-.02em}
+.mcap .mk,.co .px .mk{font-size:10.5px}
+.subnav{gap:4px;background:var(--bg);border:1px solid var(--cardline);border-radius:999px;padding:4px;display:inline-flex;max-width:100%;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+.subnav::-webkit-scrollbar{display:none}
+.subnav button{border:0!important;border-radius:999px;padding:6px 12px;white-space:nowrap}
+.subnav button:hover{background:var(--hov)}
+.subnav button.on{background:var(--ink);color:var(--bg)}
+.glance b,.glance .v{font-weight:700;letter-spacing:-.01em}
+.ffacts{border-color:var(--cardline);border-radius:var(--r2);background:var(--bg);padding:0 14px}
+.stat{border-bottom-color:var(--cardline)}
 </style>
 
 <header class="top">
@@ -457,7 +553,8 @@ const VERDICT = {5:'Buy',4:'Wait for price',3:'Hold',2:'No new money',1:'Avoid'}
 let S=null, step='overview', view='empty';
 let mcp=null, sample=null, db=null;
 let caps={mcp:'pending',sample:'pending',db:'pending'};
-let chartPeriod = LS.get('period') || '5y', chartMode = LS.get('mode') || 'ohlc';
+let chartPeriod = LS.get('period') || '5y', chartMode = LS.get('mode') || 'ohlc', pxStyle = LS.get('pxstyle') || 'bars';
+const pxStyleSeg=()=>`<div class="seg" role="group" aria-label="Price chart style"><button type="button" data-pxs="bars" class="${pxStyle==='bars'?'on':''}" title="Open, high, low, close bars">OHLC bars</button><button type="button" data-pxs="line" class="${pxStyle==='line'?'on':''}" title="Closing price as a line">Line</button></div>`;
 let errState=null, listDocs=null, listUnsub=null, finTab='income';
 
 const capsReady = (async () => {
@@ -1836,8 +1933,9 @@ function checkHtml(){
 }
 
 /* ---- Versions and what's new ---- */
-const APP_VERSION='6.26', WORKER_NEEDED='3.5', BUG_EMAIL='kgrodrigue@yahoo.com';
+const APP_VERSION='7.0', WORKER_NEEDED='3.5', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
+  ['App 7.0','Oct 22, 2026',['New look, same colors: every section on its own card, pill tabs and controls, one clean sans-serif for numbers, a compact company header with price beside the name, quieter table headers','Price charts: pick OHLC bars or a line (with a soft fill) on the Overview and Technicals charts; your choice carries to every price chart']],
   ['App 6.26','Oct 22, 2026',['Financials: Ratios & KPIs is now All metrics, 60+ in one place, with new Growth (revenue, EPS, EBITDA, FCF, dividend) and Quality of earnings (cash conversion, stock comp, capex, share change) groups','New Statistics view for every metric: now vs its 10-year median, average, low, high, standard deviation, z-score, percentile and 5-year trend','Find any metric with the search box','Earnings reaction adds report-day swing (standard deviation) and how many times bigger than a normal day, with the share of yearly variance from report days']],
   ['App 6.26','Oct 22, 2026',['New All metrics tab: every ratio LedgerLine computes with its 10-year median, average, range, standard deviation, z-score, percentile and trend, plus return and risk statistics — 1/3/5/10-year returns, best and worst years, volatility, downside volatility, max drawdown, time under water, skew, kurtosis, Sharpe, Sortino, beta, correlation and up/down capture vs the S&P 500','Earnings variance: report-day standard deviation vs a normal day, and the share of the stock’s yearly variance that comes from its four report days','Days to the next earnings report next to the ticker on every tab']],
   ['App 6.25','Oct 22, 2026',['Next earnings report: countdown (in 12 days, tomorrow, today), highlighted inside a week; an overdue warning when last year’s timing has passed with no release','Days to the next earnings report on every company page, next to the ticker (tap it to open the Earnings tab)','Results that are out before the 10-Q is filed now show at the top of the reaction table, marked 10-Q pending, with the report-day move']],
@@ -2265,7 +2363,7 @@ function fundHtml(){
   const msg = f ? `<b>${esc(t)}</b> is an exchange-traded fund that ${esc(f[1])}. LedgerLine scores individual US stocks from their SEC 10-K and 10-Q filings, and funds don’t file those, so there’s no verdict, valuation or financials here: just price performance against the market and the technicals.`
     : `LedgerLine scores US-listed companies that file 10-K annual reports with the SEC. <b>${esc(t)}</b> has no 10-K data on EDGAR, so it’s most likely an ETF or fund, or a foreign company that files a 20-F instead. Here is its price performance against the market and the technicals.`;
   return `<div class="sheet"><div class="notice"><h4>${f?'US stocks only: this is an ETF':'US stocks only: no 10-K filings for '+esc(t)}</h4><p>${msg}</p></div>
-    <div class="sec">${perfStrip()}<div class="chartbar"><div class="seg" role="group" aria-label="Chart view"><button type="button" data-mode="ohlc" class="${chartMode==='ohlc'?'on':''}">Price</button><button type="button" data-mode="vs" class="${chartMode==='vs'?'on':''}">vs ${bench}</button></div>${benchSeg()}
+    <div class="sec">${perfStrip()}<div class="chartbar"><div class="seg" role="group" aria-label="Chart view"><button type="button" data-mode="ohlc" class="${chartMode==='ohlc'?'on':''}">Price</button><button type="button" data-mode="vs" class="${chartMode==='vs'?'on':''}">vs ${bench}</button></div>${pxStyleSeg()}${benchSeg()}
       <span class="num muted" id="perStat" style="margin-left:auto;font-size:12.5px"></span></div>
       <div class="cwrap"><canvas id="pxChart" aria-label="Price chart"></canvas><div class="tip" hidden></div></div>
       <div class="legend" id="ovLegend" style="margin-top:6px"></div></div>
@@ -2465,7 +2563,7 @@ function overviewHtml(){
     </div></div>
   ${profileHtml()}${S.src==='SEC'?bizHtml():''}
   <div class="sec">
-    ${perfStrip()}<div class="chartbar"><div class="seg" role="group" aria-label="Chart view"><button type="button" data-mode="ohlc" class="${chartMode==='ohlc'?'on':''}">Price</button><button type="button" data-mode="vs" class="${chartMode==='vs'?'on':''}">vs ${bench}</button></div>${benchSeg()}
+    ${perfStrip()}<div class="chartbar"><div class="seg" role="group" aria-label="Chart view"><button type="button" data-mode="ohlc" class="${chartMode==='ohlc'?'on':''}">Price</button><button type="button" data-mode="vs" class="${chartMode==='vs'?'on':''}">vs ${bench}</button></div>${pxStyleSeg()}${benchSeg()}
 
       <span class="num muted" id="perStat" style="margin-left:auto;font-size:12.5px"></span></div>
     <div class="cwrap"><canvas id="pxChart" aria-label="Price chart"></canvas><div class="tip" hidden></div></div>
@@ -2898,10 +2996,12 @@ function drawChart(canvas,cfg,hover){
   const wrap=canvas.parentElement, W=canvas.clientWidth, H=canvas.clientHeight; if(!W||!H) return;
   const dpr=window.devicePixelRatio||1; canvas.width=W*dpr; canvas.height=H*dpr;
   const g=canvas.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
-  const bars=css('--bars'), muted=css('--muted'), line=css('--line'), bg=css('--bg');
+  const bars=css('--bars'), muted=css('--muted'), line=css('--cardline')||css('--line'), bg=css('--bg');
+  if(cfg.ohlc&&pxStyle==='line') cfg=Object.assign({},cfg,{ohlc:null, area:cfg.ohlc.c});
   const n=cfg.t.length; if(!n) return;
   let lo=Infinity, hi=-Infinity; const take=v=>{ if(isNum(v)){ lo=Math.min(lo,v); hi=Math.max(hi,v); } };
   if(cfg.ohlc){ cfg.ohlc.h.forEach(take); cfg.ohlc.l.forEach(take); }
+  if(cfg.area) cfg.area.forEach(take);
   (cfg.lines||[]).forEach(l=>l.v.forEach(take)); (cfg.hlines||[]).forEach(h=>take(h.y));
   if(cfg.band){ take(cfg.band.lo); take(cfg.band.hi); }
   if(!isFinite(lo)) return;
@@ -2919,9 +3019,13 @@ function drawChart(canvas,cfg,hover){
   const every=Math.max(1,Math.ceil(years.length/Math.max(2,Math.floor(cw/70))));
   years.forEach(([i,yr],k)=>{ if(k%every) return; const xx=X(i); if(xx-lastX<40||xx<16) return; lastX=xx; g.fillStyle=muted; g.fillText(String(yr),xx,H-6); });
   g.textAlign='left';
-  g.strokeStyle=css('--ink'); g.beginPath(); g.moveTo(pl,pt+ch+.5); g.lineTo(pl+cw,pt+ch+.5); g.stroke();
+  g.strokeStyle=css('--line'); g.beginPath(); g.moveTo(pl,pt+ch+.5); g.lineTo(pl+cw,pt+ch+.5); g.stroke();
   if(cfg.band){ g.fillStyle=css('--paper2'); g.fillRect(pl,Y(cfg.band.hi),cw,Y(cfg.band.lo)-Y(cfg.band.hi)); }
   (cfg.hlines||[]).forEach(h=>{ g.strokeStyle=h.color; g.lineWidth=1.2; g.setLineDash(h.dash||[]); g.beginPath(); g.moveTo(pl,Y(h.y)); g.lineTo(pl+cw,Y(h.y)); g.stroke(); g.setLineDash([]); });
+  if(cfg.area){ const a=cfg.area, tl=css('--teal'), pts=[]; for(let i=0;i<n;i++) if(isNum(a[i])) pts.push([X(i),Y(a[i])]);
+    if(pts.length>1){ const gr=g.createLinearGradient(0,pt,0,pt+ch); gr.addColorStop(0,tl+'40'); gr.addColorStop(1,tl+'00');
+      g.beginPath(); g.moveTo(pts[0][0],pt+ch); pts.forEach(q=>g.lineTo(q[0],q[1])); g.lineTo(pts[pts.length-1][0],pt+ch); g.closePath(); g.fillStyle=gr; g.fill();
+      g.beginPath(); pts.forEach((q,k)=>k?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1])); g.strokeStyle=tl; g.lineWidth=2; g.lineJoin='round'; g.stroke(); } }
   if(cfg.ohlc){ const o=cfg.ohlc, tick=Math.max(1,Math.min(4,cw/n*.35)); g.strokeStyle=bars; g.lineWidth=cw/n>3?1.2:1; g.beginPath();
     for(let i=0;i<n;i++){ if(!isNum(o.h[i])||!isNum(o.l[i])) continue; const xx=Math.round(X(i))+.5; g.moveTo(xx,Y(o.h[i])); g.lineTo(xx,Y(o.l[i])); if(cw/n>2){ g.moveTo(xx-tick,Y(o.o[i])); g.lineTo(xx,Y(o.o[i])); g.moveTo(xx,Y(o.c[i])); g.lineTo(xx+tick,Y(o.c[i])); } } g.stroke(); }
   (cfg.lines||[]).forEach(l=>{ g.strokeStyle=l.color; g.lineWidth=l.w||1.6; g.setLineDash(l.dash||[]); g.beginPath(); let on=false; l.v.forEach((v,i)=>{ if(!isNum(v)){ on=false; return; } const xx=X(i), yy=Y(v); if(on) g.lineTo(xx,yy); else { g.moveTo(xx,yy); on=true; } }); g.stroke(); g.setLineDash([]); });
@@ -3038,6 +3142,7 @@ document.addEventListener('click',e=>{
   if(b.id==='inpReset'){ LS.set('inputs',{}); S.inp={}; S.M=model(); render(); toast('Inputs reset'); return; }
   if(d.fin){ finTab=d.fin; render(); return; }
   if(d.mode){ chartMode=d.mode; LS.set('mode',chartMode); render(); return; }
+  if(d.pxs){ pxStyle=d.pxs; LS.set('pxstyle',pxStyle); render(); return; }
   if(d.clearrecent){ LS.set('recent',[]); render(); return; }
   if(b.id==='saveTop'){ save(); return; }
   if(d.explore){ view='explore'; render(); window.scrollTo({top:0}); return; }
