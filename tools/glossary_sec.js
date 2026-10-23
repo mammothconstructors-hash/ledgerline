@@ -65,6 +65,8 @@ const GL_SEC=[
  ['SEC data APIs','EDGAR & XBRL','data.sec.gov','The SEC’s free JSON services (submissions, companyfacts, frames) and nightly bulk downloads. LedgerLine reads them directly, no third party.']
 ];
 const GL_MARKET=[
+ ['EBT','Concepts','Earnings before taxes · pretax income','Profit after every cost, including interest, but before income tax. Revenue − operating costs − interest ± other income = EBT; EBT − income tax = net income. Comparing EBT across years strips out tax-rate changes.','Shown as Pretax income on the income statement (XBRL IncomeLossFromContinuingOperationsBeforeIncomeTaxes…). Pretax margin = EBT ÷ revenue.'],
+ ['EBIT','Concepts','Earnings before interest and taxes · operating income','Profit from the business itself before financing costs and tax: EBT + interest expense. Lets you compare companies with different debt loads.','LedgerLine uses operating income as EBIT; it feeds EV/EBIT, interest cover and the Altman Z-score.'],
  ['TTM','Concepts','Trailing twelve months','The last four reported quarters added together: the most current full-year view between annual reports.'],
  ['Fair value','Concepts','LedgerLine fair value','LedgerLine’s estimate: normalized earnings power × the stock’s own normal multiple, blended with the buy-below price. A model, not a promise.'],
  ['Margin of safety','Concepts','','How far below fair value the price sits: the cushion if the estimate is wrong.','20%+ for most companies.'],

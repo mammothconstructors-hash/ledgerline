@@ -16,7 +16,7 @@
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.5.9';
+const WORKER_VERSION = '3.6.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -709,6 +709,16 @@ async function market(symbol, env = {}, ctx) {
   const cache = typeof caches !== 'undefined' ? caches.default : null;
   let data = null;
   if (cache) { const hit = await cache.match(key); if (hit) data = await hit.json(); }
+  if (data && env.MARKETSTACK_KEY && cache) {   // after the close, square every symbol up to the latest session: re-pull end-of-day prices at most once an hour until it posts
+    const exp = expectedSession(), last = new Date(data.asOf * 1000).toISOString().slice(0, 10);
+    if (exp && last < exp) {
+      const hk = new Request(`https://ledgerline-cache.internal/market-retry/${sym}/${exp}/${Math.floor(Date.now() / 3600e3)}`);
+      if (!(await cache.match(hk))) {
+        await cache.put(hk, new Response('1', { headers: { 'Cache-Control': 'public, max-age=3600' } }));
+        try { const fresh = await marketstack(sym, env.MARKETSTACK_KEY); if (fresh && fresh.asOf > data.asOf) { data = fresh; const put = cache.put(key, new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=21600' } })); if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put; } } catch (e) { }
+      }
+    }
+  }
   if (data) { if (env.MARKETSTACK_KEY) { try { const q = await liveQuote(sym, env.MARKETSTACK_KEY, cache, ctx, data.asOf); if (q) return applyQuote(data, q); } catch (e) { } } return data; }
   if (env.MARKETSTACK_KEY) data = await marketstack(sym, env.MARKETSTACK_KEY);
   else throw new Error('Price feed not configured: add MARKETSTACK_KEY to the worker.');
@@ -717,6 +727,20 @@ async function market(symbol, env = {}, ctx) {
   return data;
 }
 
+
+// New York time without Intl time zones: UTC−4 from the second Sunday of March to the first Sunday of November, else UTC−5
+function nyNow(ms = Date.now()) {
+  const y = new Date(ms).getUTCFullYear(), sun = (m, nth) => { const d = new Date(Date.UTC(y, m, 1)); const first = (7 - d.getUTCDay()) % 7 + 1; return Date.UTC(y, m, first + 7 * (nth - 1)); };
+  const dstStart = sun(2, 2) + 7 * 3600e3, dstEnd = sun(10, 1) + 6 * 3600e3, off = ms >= dstStart && ms < dstEnd ? 4 : 5;
+  return new Date(ms - off * 3600e3);   // read with getUTC* fields
+}
+// the last session whose official close should be out by now (after 6 PM New York time today, else the previous weekday)
+function expectedSession() {
+  const ny = nyNow(); let d = new Date(Date.UTC(ny.getUTCFullYear(), ny.getUTCMonth(), ny.getUTCDate()));
+  if (ny.getUTCHours() < 18) d = new Date(d.getTime() - 86400e3);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d = new Date(d.getTime() - 86400e3);
+  return d.toISOString().slice(0, 10);
+}
 // 15-minute delayed quote (IEX via Marketstack intraday), cached 15 minutes per symbol
 async function liveQuote(sym, apiKey, cache, ctx, eodAsOf) {
   const now = new Date(), et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
