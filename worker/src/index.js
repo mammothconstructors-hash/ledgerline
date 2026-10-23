@@ -17,7 +17,7 @@ import UNIVERSE from './universe.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.9.1';
+const WORKER_VERSION = '3.9.2';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -222,7 +222,7 @@ table{border-collapse:collapse;width:100%;font-size:14px;margin-top:12px}h2{font
 /* ================= testers: who may sign in to each site behind Cloudflare Access (needs the CF_ACCESS_TOKEN secret) ================= */
 const CF_ACCOUNT = '51799e9e2cfaf727a3bc287626828255';
 async function cfApi(env, path, init = {}) {
-  const r = await fetch('https://api.cloudflare.com/client/v4/accounts/' + (env.CF_ACCOUNT_ID || CF_ACCOUNT) + path, { ...init, headers: { Authorization: 'Bearer ' + env.CF_ACCESS_TOKEN, 'Content-Type': 'application/json', ...(init.headers || {}) } });
+  const r = await fetch('https://api.cloudflare.com/client/v4/accounts/' + (env.CF_ACCOUNT_ID || CF_ACCOUNT) + path, { ...init, headers: { Authorization: 'Bearer ' + String(env.CF_ACCESS_TOKEN).replace(/\s+/g, '').replace(/^Bearer/i, ''), 'Content-Type': 'application/json', ...(init.headers || {}) } });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || j.success === false) throw new Error('Cloudflare: ' + ((j.errors && j.errors[0] && j.errors[0].message) || r.status));
   return j.result;
