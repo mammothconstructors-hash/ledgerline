@@ -70,7 +70,7 @@ jobs:
         run: |
           v=$(grep -o "WORKER_VERSION = '[0-9.]*'" worker/src/index.js | grep -o "[0-9.]*")
           for i in 1 2 3 4 5 6; do
-            got=$(curl -fsS https://sec-proxy.mammothconstructors.workers.dev/mcp | grep -o "server [0-9]*\.[0-9]*\.[0-9]*" | grep -o "[0-9][0-9.]*" || true)
+            got=$(curl -sS https://sec-proxy.mammothconstructors.workers.dev/mcp | grep -o "server [0-9]*\.[0-9]*\.[0-9]*" | grep -o "[0-9][0-9.]*" || true)
             [ "$got" = "$v" ] && echo "worker $got live" && exit 0; sleep 10
           done
           echo "expected worker $v, live says $got"; exit 1
