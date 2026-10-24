@@ -30,7 +30,11 @@ function isoDate(s) {   // "23-Oct-2026", "Oct 22, 2026", "10/22/2026", "2026-10
 async function get(url, kind = 'text', headers = {}) {
   const r = await fetch(url, { headers: { ...UA, ...headers }, redirect: 'follow', cf: { cacheTtl: 3600, cacheEverything: true } });
   if (!r.ok) throw new Error(`${new URL(url).hostname} returned ${r.status}`);
-  return kind === 'json' ? r.json() : kind === 'bin' ? new Uint8Array(await r.arrayBuffer()) : r.text();
+  if (kind === 'bin') return new Uint8Array(await r.arrayBuffer());
+  const txt = await r.text();
+  if (kind === 'json') { try { return JSON.parse(txt); } catch (e) { throw new Error(`${new URL(url).hostname} sent ${(r.headers.get('content-type') || '?').split(';')[0]}, not JSON: ${txt.slice(0, 60).replace(/\s+/g, ' ')}`); } }
+  if (/^\s*<(!doctype|html)/i.test(txt)) throw new Error(`${new URL(url).hostname} sent a web page, not a file`);
+  return txt;
 }
 function csvRows(t) {
   const rows = []; let row = [], f = '', q = false;
@@ -102,10 +106,14 @@ async function ssga(t) {
 /* ---- iShares: daily .csv with a few lines of fund details on top ---- */
 async function ishares(t) {
   const [id, slug] = ISHARES[t];
-  let txt;
-  try { txt = await get(`https://www.ishares.com/us/products/${id}/${slug}/1467271812596.ajax?fileType=csv&fileName=${t}_holdings&dataType=fund`); }
-  catch (e) { txt = await get(`https://www.ishares.com/us/products/${id}/${slug}/latest-holdings.csv`); }
-  const rows = csvRows(txt.replace(/^﻿/, '')), { meta, body } = table(rows), flat = meta.map(r => r.join(' ')).join('\n');
+  // two download links; use the first that holds a holdings table, and say what came back if neither does
+  let rows = null, meta, body; const seen = [];
+  for (const u of [`https://www.ishares.com/us/products/${id}/${slug}/1467271812596.ajax?fileType=csv&fileName=${t}_holdings&dataType=fund`, `https://www.ishares.com/us/products/${id}/${slug}/latest-holdings.csv`, `https://www.ishares.com/us/products/${id}/fund/1467271812596.ajax?fileType=csv&fileName=${t}_holdings&dataType=fund`]) {
+    try { const txt = (await get(u, 'text', { Accept: 'text/csv,*/*', Referer: `https://www.ishares.com/us/products/${id}/${slug}` })).replace(/^﻿/, ''); rows = csvRows(txt); ({ meta, body } = table(rows)); break; }
+    catch (e) { seen.push(String(e.message || e).slice(0, 80)); rows = null; }
+  }
+  if (!rows) throw new Error('iShares file: ' + seen.join(' | '));
+  const flat = meta.map(r => r.join(' ')).join('\n');
   return { asOf: isoDate((flat.match(/holdings as of\s*([^\n]+)/i) || [])[1]), fund: (meta[0] || [])[0] || null, holdings: normRows(body) };
 }
 /* ---- Invesco: holdings JSON behind their site ---- */

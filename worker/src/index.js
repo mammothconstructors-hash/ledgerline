@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.13.0';
+const WORKER_VERSION = '3.13.1';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -200,7 +200,7 @@ async function etfHoldings(symbol, env) {
   // 3.13.0: the fund company's own daily file first; SEC N-PORT (3-4 months behind) only if that fails
   let out = null, why = '';
   try { const r = await issuerHoldings(sym); if (r) out = await finishHoldings(sym, day, r, env); } catch (e) { why = String(e && e.message || e); }
-  if (!out || !out.count) { out = await secHoldings(sym, env, day); if (why) out.issuerError = why.slice(0, 200); }
+  if (!out || !out.count) { try { out = await secHoldings(sym, env, day); } catch (e) { out = { symbol: sym, day, count: 0, holdings: [], sectors: [], unavailable: true, reason: 'SEC lookup failed: ' + String(e && e.message || e).slice(0, 160) }; } if (why) out.issuerError = why.slice(0, 300); }
   if (!out.count && env.MARKETSTACK_KEY) {
     const ms = await msHoldings(sym, env, day).catch(e => ({ count: 0, reason: String(e && e.message || e) }));
     if (ms.count) out = ms; else out = { ...out, reason: out.reason + ' Marketstack has no holdings for it either.' };
