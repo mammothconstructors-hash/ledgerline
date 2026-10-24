@@ -66,6 +66,14 @@ jobs:
           set -o pipefail
           npx wrangler pages deploy site --project-name=ledgerline --branch=main --commit-hash=${{ github.sha }} --commit-message="deploy ${{ github.sha }}" 2>&1 | tee p.log || { tail -25 p.log | grep -v '^\s*$' | sed 's/^/::error::/' ; exit 1; }
           grep -o 'https://[a-z0-9.-]*pages.dev[^ ]*' p.log | tail -1 | sed 's/^/::notice::site deployed /'
+      - name: Deploy the KGR Vol Board (Pages project vol-board)
+        run: |
+          set -o pipefail
+          B=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/vol-board | jq -r '.result.production_branch // "main"')
+          echo "::notice::vol-board production branch is $B"
+          mkdir -p vb-out && cp vol-board/index.html vb-out/index.html
+          npx wrangler pages deploy vb-out --project-name=vol-board --branch="$B" --commit-hash=${{ github.sha }} --commit-message="deploy ${{ github.sha }}" 2>&1 | tee v.log || { tail -25 v.log | grep -v '^\s*$' | sed 's/^/::error::/' ; exit 1; }
+          grep -o 'https://[a-z0-9.-]*pages.dev[^ ]*' v.log | tail -1 | sed 's/^/::notice::vol board deployed /'
       - name: Smoke test the live worker
         run: |
           v=$(grep -o "WORKER_VERSION = '[0-9.]*'" worker/src/index.js | grep -o "[0-9.]*")

@@ -25,5 +25,10 @@ export async function onRequest({ request, env }) {
   let names = {}; try { ((await env.DB.prepare('SELECT email, name FROM testers').all()).results || []).forEach(r => { names[r.email] = r.name; }); } catch (e) { }
   const cache = c && c.v ? JSON.parse(c.v) : null;
   if (cache) cache.sites.forEach(s => s.emails.forEach(e => { e.name = names[e.email.toLowerCase()] || e.name || ''; }));
-  return json({ me: who, cache, queue: q });
+  // live presence: both sites ping the worker on open and every 60 s while on screen (worker 3.18.0), read straight from D1
+  let presence = [], signins = [];
+  try { presence = (await env.DB.prepare('SELECT email, site, first_ts, last_ts, screen FROM presence ORDER BY last_ts DESC LIMIT 200').all()).results || []; } catch (e) { }
+  try { signins = (await env.DB.prepare('SELECT email, site, ts FROM signins ORDER BY ts DESC LIMIT 30').all()).results || []; } catch (e) { }
+  presence.forEach(p => { p.name = names[p.email] || ''; }); signins.forEach(p => { p.name = names[p.email] || ''; });
+  return json({ me: who, cache, queue: q, presence, signins, now: Math.floor(Date.now() / 1000) });
 }

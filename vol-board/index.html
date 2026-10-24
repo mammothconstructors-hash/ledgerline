@@ -471,7 +471,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 const SHEET_ID="";
 const SHEET_URL="";
 const GS="Google Sheets", TV="Tradingview";
-const PAGE_VERSION="2.12.0s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
+const PAGE_VERSION="2.12.1s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
 const GROUPS={C:{name:"Cyclicals",c:"var(--cyc)"},T:{name:"Tech & Innovation",c:"var(--tech)"},D:{name:"Defensives",c:"var(--def)"},
   I:{name:"Indices",c:"var(--idx)"},B:{name:"Bonds",c:"var(--bnd)"},M:{name:"Commodities",c:"var(--cmd)"}};
 const SCREENS={sectors:{title:"Sector Rotation",groups:["C","T","D"]},macro:{title:"Cross-Asset Regime",groups:["I","B","M"]},vix:{title:"VIX Term & Carry"},fsv:{title:"Vol Surface Δ"},lev:{title:"3x Leverage"}};
@@ -1202,6 +1202,8 @@ function startFsv(){if(!LIVE.mcp||fsStarted)return;fsStarted=true;
 
 /* ---------- how it works ---------- */
 const GLOSS=[
+["Online now","Board","Someone has the board open on screen and it checked in within the last two and a half minutes. The board checks in every 60 seconds while it is showing.","Owner only: seen on the Testers page with the screen each person is on."],
+["Sign-in","Board","Opening the board after 20 minutes or more away. Each one is logged with the site it was for, so the owner sees which board a tester came in on.","Testers sign in with their email and a one-time code; sessions last two days for testers, 30 days for the owner."],
 ["Edge finder","3x funds","Entry setups tested on each fund's history: buy at the close the day a setup fires, hold for the chosen period. A trigger counts once, then not again for 10 trading days.","Sorted by edge. Look for a positive edge, a high % up, enough separate signals (4 or more) and a worst drop you can survive. Live now shows setups that fired in the last 5 trading days."],
 ["Edge vs any day","3x funds","A setup's average return over the hold minus the average from buying on any day, in percentage points.","Positive means the setup beat just buying whenever. The bigger and the more separate signals, the more it means."],
 ["Drop below entry","3x funds","How far the fund went under your buy price during the hold: the average across signals, and the worst one.","Size or scale in so the worst drop is survivable; it is the pain you sit through even when the trade ends up."],
@@ -1268,6 +1270,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.12.1 · LedgerLine worker 3.18.0 · Oct 24 2026</dt><dd>Sign-ins show up for the owner within a minute. The board now checks in when it opens and every 60 seconds while it is on screen, with the screen being viewed, so the owner's Testers page shows who is online now, which site they signed in to (KGR Vol Board or LedgerLine) and when. Nothing about what you look at is recorded beyond the screen name.</dd>
    <dt>Page 2.12.0 · LedgerLine worker 3.17.0 · Oct 24 2026</dt><dd>3x Leverage: new <b>Edge finder</b>. It tests entry setups on each fund’s history: index down 2% or 3% in a day, three red days in a row, index 5/10/20% below its high, the fund 20/30/40/50% below its high, vol crush (Heavy drag fading) and calm trend. For each: signals, separate signals, average return over your hold, edge against buying on any day, % up, average and worst drop below your entry, and how often 1/3 fund + bills beat the index. A Live now box flags any setup that fired in the last 5 trading days. UPRO, UDOW and URTY now have the full 10 years of history (they started in mid-2020 before). Distributions are clearer: green bars gained, red bars lost, a bold zero line and the % on each side printed on top; the drag-regime charts now show the gap directly (fund minus 3× the index, and the mix minus the index). Stats and Charts no longer split this screen: everything is on one page with jump buttons under the cards.</dd>
    <dt>Page 2.11.3 · LedgerLine worker 3.16.2 · Oct 24 2026</dt><dd>3x Leverage: the page number now shows at the top right of the screen so you can tell at a glance which version is live. Each chart draws on its own, so one bad number can no longer blank the whole screen. The data service also keeps serving older copies of the page, so the backtest charts show even before a new upload.</dd>
    <dt>Page 2.11.2 · Oct 24 2026</dt><dd>3x Leverage charts sharper: larger labels and tick numbers on the compass, Carry, backtest distributions, drag bars and σ bars; crisp grid lines; solid fills (no see-through bars that looked soft); the compass is bigger, full width with its reads table under it, dots with labels that no longer overlap, and a wider vertical scale (outer ring now IV at about 1.6× realized) so the funds spread out.</dd>
@@ -1390,7 +1393,10 @@ async function fetchTab(range){const [tab,rg]=range.split("!");const gid=GIDS[ta
     v=v.map(row=>{let k=row.length;while(k&&row[k-1]==="")k--;return row.slice(0,k)});
     return{payload:{values:v},cache:{storedAt:Date.now()}}}catch(e){last=e}}
   throw{code:"feed_unavailable",cause:last}}
+let kgrEmail=null;
+function kgrBeat(beat){if(!kgrEmail||document.visibilityState!=="visible")return;fetch("https://sec-proxy.mammothconstructors.workers.dev/api/hit",{method:"POST",headers:{"content-type":"text/plain"},body:JSON.stringify({email:kgrEmail,beat:beat?1:0,screen:typeof screen==="string"?screen:""})}).catch(()=>{})}
 async function kgrVisit(){try{const r=await fetch("/cdn-cgi/access/get-identity",{credentials:"include",cache:"no-store"});if(!r.ok)return;const j=await r.json();if(!j||!j.email)return;
+  if(!kgrEmail){kgrEmail=j.email;kgrBeat(0);setInterval(()=>kgrBeat(1),60000);document.addEventListener("visibilitychange",()=>kgrBeat(1))}
   await fetch("https://kgr-vol-data.mammothconstructors.workers.dev/api/visit?k=pPlTEhqC9cAqGljGlAL_8NPy",{method:"POST",headers:{"content-type":"text/plain"},body:JSON.stringify({email:j.email,screen:typeof screen==="string"?screen:""})})}catch(e){}}
 function makeFeed(){return{
   watchTool(server,tool,args,cb,opts){let stop=false;const run=async()=>{if(stop)return;try{cb({type:"data",result:await fetchTab(args.range)})}catch(e){cb({type:"error",error:{code:e.code||"feed_unavailable"}})}};

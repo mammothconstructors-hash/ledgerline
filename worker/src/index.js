@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.17.1';
+const WORKER_VERSION = '3.18.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -525,18 +525,36 @@ async function usageData() {
   return { month: m, used, limit: MS_LIMIT, pct: Math.round(used / MS_LIMIT * 1000) / 10, today: days[today] || 0, projected, byKind: { eod, intraday, other }, days, intradayPaused: used >= MS_LIMIT * 0.95, since: rows.length ? rows[0].day : null };
 }
 /* ---- who uses LedgerLine: one row per email per day (New York time); a visit is an app open 30+ minutes after the last ---- */
+/* 3.18.0 presence: both sites (LedgerLine and the KGR Vol Board) post here when a signed-in person opens them and then
+   every 60 seconds while the page is on screen. presence keeps each person's first and last moment on each site; signins
+   logs a new row when someone arrives after 20+ minutes away. The owner's Testers tab reads both straight from D1, so a
+   sign-in shows within a minute. visits (LedgerLine's daily counts) is unchanged and only counts LedgerLine. */
+const SITE_NAMES = { 'https://vol-board.pages.dev': 'KGR Vol Board' };
+async function presenceTables(db) {
+  await db.batch([
+    db.prepare('CREATE TABLE IF NOT EXISTS presence (email TEXT, site TEXT, first_ts INTEGER, last_ts INTEGER, screen TEXT, PRIMARY KEY (email, site))'),
+    db.prepare('CREATE TABLE IF NOT EXISTS signins (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, site TEXT, ts INTEGER)')]);
+}
 async function recordVisit(req, env) {
   if (!USAGE_DB) return { ok: false };
-  const site = (env.SITE_URL || 'https://ledgerline-dv0.pages.dev').replace(/\/+$/, ''), origin = req.headers.get('Origin') || '';
-  if (origin !== site) return { ok: false };   // browsers always send Origin on this call; anything else is a script
+  const home = (env.SITE_URL || 'https://ledgerline-dv0.pages.dev').replace(/\/+$/, ''), origin = req.headers.get('Origin') || '';
+  const siteName = origin === home ? 'LedgerLine' : SITE_NAMES[origin];
+  if (!siteName) return { ok: false };   // browsers always send Origin on this call; anything else is a script
   let b = {}; try { b = JSON.parse(await req.text()); } catch (e) { }
   const email = String(b.email || '').trim().toLowerCase();
   if (!/^[^@\s]{1,64}@[^@\s]{1,190}\.[a-z]{2,}$/.test(email)) return { ok: false };
-  const now = Math.floor(Date.now() / 1000), day = etDay();
-  const last = await USAGE_DB.prepare('SELECT MAX(last_ts) AS t FROM visits WHERE email = ?').bind(email).first();
-  const add = !last || !last.t || now - last.t >= 1800 ? 1 : 0;
-  await USAGE_DB.prepare('INSERT INTO visits (email, day, n, first_ts, last_ts) VALUES (?, ?, ?, ?, ?) ON CONFLICT (email, day) DO UPDATE SET n = n + ?, last_ts = ?').bind(email, day, add, now, now, add, now).run();
-  return { ok: true };
+  const now = Math.floor(Date.now() / 1000), day = etDay(), screen = String(b.screen || '').slice(0, 40);
+  await presenceTables(USAGE_DB);
+  const p = await USAGE_DB.prepare('SELECT last_ts FROM presence WHERE email = ? AND site = ?').bind(email, siteName).first();
+  const writes = [USAGE_DB.prepare("INSERT INTO presence (email, site, first_ts, last_ts, screen) VALUES (?, ?, ?, ?, ?) ON CONFLICT (email, site) DO UPDATE SET last_ts = excluded.last_ts, screen = CASE WHEN excluded.screen <> '' THEN excluded.screen ELSE presence.screen END").bind(email, siteName, now, now, screen)];
+  if (!p || !p.last_ts || now - p.last_ts >= 1200) writes.push(USAGE_DB.prepare('INSERT INTO signins (email, site, ts) VALUES (?, ?, ?)').bind(email, siteName, now));
+  if (siteName === 'LedgerLine' && !b.beat) {
+    const last = await USAGE_DB.prepare('SELECT MAX(last_ts) AS t FROM visits WHERE email = ?').bind(email).first();
+    const add = !last || !last.t || now - last.t >= 1800 ? 1 : 0;
+    writes.push(USAGE_DB.prepare('INSERT INTO visits (email, day, n, first_ts, last_ts) VALUES (?, ?, ?, ?, ?) ON CONFLICT (email, day) DO UPDATE SET n = n + ?, last_ts = ?').bind(email, day, add, now, now, add, now));
+  }
+  await USAGE_DB.batch(writes);
+  return { ok: true, site: siteName };
 }
 async function activityData() {
   if (!USAGE_DB) return { error: 'not connected' };
@@ -605,6 +623,9 @@ async function accessSites(env) {
   const listItems = {};
   for (const l of (lists || []).filter(l => l.type === 'EMAIL')) listItems[l.id] = { name: l.name, emails: ((await cfApi(env, '/gateway/lists/' + l.id + '/items').catch(() => [])) || []).flat().map(i => i.value).filter(Boolean) };
   const last = {}; (users || []).forEach(u => { if (u.email) last[u.email.toLowerCase()] = u.last_successful_login || null; });
+  const byApp = {};   // per-site sign-ins from the Access log, newest first (skipped if the token can't read audit logs)
+  const logs = await cfApi(env, '/access/logs/access_requests?limit=500&direction=desc').catch(() => null);
+  (Array.isArray(logs) ? logs : []).forEach(l => { if (!l || !l.user_email || l.allowed === false) return; const k = String(l.app_uid || l.app_domain || '') + '|' + l.user_email.toLowerCase(); if (!byApp[k]) byApp[k] = l.created_at; });
   const sites = [];
   for (const a of (apps || []).filter(a => a.type === 'self_hosted' || a.domain)) {
     const pols = (a.policies || []).filter(p => (p.decision || 'allow') === 'allow');
@@ -613,7 +634,7 @@ async function accessSites(env) {
       if (inc.email_list && listItems[inc.email_list.id]) { listItems[inc.email_list.id].emails.forEach(e => emails.add(e)); targets.push({ kind: 'list', id: inc.email_list.id, name: listItems[inc.email_list.id].name }); }
       if (inc.email && inc.email.email) { emails.add(inc.email.email); if (!targets.some(t => t.kind === 'policy' && t.id === p.id)) targets.push({ kind: 'policy', id: p.id, app: a.id, reusable: !!p.reusable, name: p.name }); }
     }
-    sites.push({ id: a.id, name: a.name, domain: a.domain, emails: [...emails].sort().map(e => ({ email: e, last: last[e.toLowerCase()] || null })), targets });
+    sites.push({ id: a.id, name: a.name, domain: a.domain, emails: [...emails].sort().map(e => ({ email: e, last: last[e.toLowerCase()] || null, login: byApp[a.id + '|' + e.toLowerCase()] || byApp[a.domain + '|' + e.toLowerCase()] || null })), targets, logs: Array.isArray(logs) });
   }
   return sites;
 }
@@ -652,7 +673,7 @@ async function testerQueue(env) {
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS tester_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, name TEXT, sites TEXT DEFAULT 'LedgerLine', action TEXT DEFAULT 'add', done INTEGER DEFAULT 0, result TEXT)").run();
   const rows = (await env.DB.prepare('SELECT * FROM tester_queue WHERE done = 0 LIMIT 10').all()).results || [];
   const cacheRow = await env.DB.prepare("SELECT v FROM settings WHERE k = 'tester_cache'").first().catch(() => null), cacheAge = cacheRow ? Date.now() - (JSON.parse(cacheRow.v).t || 0) : Infinity;
-  if (!rows.length && cacheAge < 10 * 60e3) return;   // nothing to do: refresh the copy of the tester lists every 10 minutes
+  if (!rows.length && cacheAge < 90e3) return;   // nothing queued: refresh the tester lists and sign-ins on every 2-minute run
   let sites = await accessSites(env);
   for (const r of rows) {
     const want = String(r.sites || 'LedgerLine').toLowerCase(), ids = sites.filter(s => want === 'all' || want.split(',').some(w => s.name.toLowerCase().includes(w.trim()))).map(s => s.id);
@@ -661,7 +682,7 @@ async function testerQueue(env) {
     await env.DB.prepare('UPDATE tester_queue SET done = 1, result = ? WHERE id = ?').bind(JSON.stringify(res).slice(0, 500), r.id).run();
   }
   if (rows.length) sites = await accessSites(env);
-  await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('tester_cache', ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v").bind(JSON.stringify({ t: Date.now(), sites: sites.map(s => ({ id: s.id, name: s.name, domain: s.domain, emails: s.emails })) })).run();
+  await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('tester_cache', ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v").bind(JSON.stringify({ t: Date.now(), sites: sites.map(s => ({ id: s.id, name: s.name, domain: s.domain, emails: s.emails, logs: s.logs })) })).run();
 }
 function testersHtml(url, env) {
   const key = url.searchParams.get('key') || url.pathname.split('/')[2] || '';
