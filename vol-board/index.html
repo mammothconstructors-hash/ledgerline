@@ -201,6 +201,12 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .scr{border-radius:999px;padding:6px 16px;border-color:transparent;background:transparent;transition:background .18s var(--ease),color .18s var(--ease),box-shadow .18s var(--ease)}
 .scr:hover{background:var(--panel);box-shadow:var(--sh1)}
 .scr[aria-current="true"]{background:var(--accent);color:var(--panel);border-color:var(--accent);box-shadow:0 2px 10px rgba(122,74,28,.28)}
+.themeseg{display:inline-flex;align-items:center;gap:2px;padding:4px;background:var(--strip);border-radius:999px;box-shadow:inset 0 1px 2px rgba(30,28,25,.06);vertical-align:top;margin-left:8px}
+.themeseg button{display:inline-flex;align-items:center;gap:6px;font:600 14px/1 var(--sans);color:var(--ink3);background:transparent;border:0;border-radius:999px;padding:8px 13px;min-height:36px;cursor:pointer;transition:background .15s,color .15s}
+.themeseg button:hover{color:var(--ink)}
+.themeseg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--sh1)}
+.tabrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}.tabrow .themeseg{margin-left:0}
+@media (max-width:560px){.themeseg button span{display:none}.themeseg button{padding:8px 10px}}
 .tabs{border-bottom:0;gap:4px;background:var(--strip);padding:4px;border-radius:999px;width:max-content;max-width:100%;box-shadow:inset 0 1px 2px rgba(30,28,25,.06)}
 .tab{border:0;border-radius:999px;padding:7px 18px;margin:0;font-weight:600;transition:background .18s var(--ease),color .18s var(--ease),box-shadow .18s var(--ease)}
 .tab[aria-selected="true"]{background:var(--panel);color:var(--accent);box-shadow:var(--sh1)}
@@ -334,11 +340,13 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
     <button class="scr" data-scr="lev" aria-current="false">3x Leverage</button>
   </nav>
   <div class="top"><div style="display:flex;flex-direction:column;gap:2px"><h1 id="title">VIX Term &amp; Carry</h1><span class="src" id="src"><span class="upd">Last update <b>10:41 PM ET</b></span> · VIX index (Cboe, 15-min delayed) <b>4:15 PM ET</b> · VIX futures (Cboe settle) <b>2026-10-22</b> · VIX options (Cboe, 15-min delayed) <b>4:15 PM ET</b> · page v2.9.1s</span><span class="byline">Made by Kevin Rodrigue</span></div><div class="events" id="events"></div></div>
+  <div class="tabrow">
   <div class="tabs" role="tablist" id="tabs">
     <button class="tab" role="tab" id="tabMetrics" aria-selected="false">Stats</button>
     <button class="tab" role="tab" id="tabDash" aria-selected="true">Charts</button>
     <button class="tab" role="tab" id="tabHow" aria-selected="false">How it works</button>
-    <button class="tab" type="button" id="themeBtn" title="Switch between light and dark" aria-pressed="false">☾ Dark</button>
+  </div>
+  <span class="themeseg" id="themeSeg" role="group" aria-label="Theme"><button type="button" data-th="light" title="Light"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><span>Light</span></button><button type="button" data-th="dark" title="Dark"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.2 8.2 0 1 0 10.2 10.2z"/></svg><span>Dark</span></button></span>
   </div>
   <div class="banner" id="banner" hidden="">Waiting for Cboe VIX data from the data feed. Showing a generated sample series until it arrives.</div>
   <div class="gauges" id="gauges"><div class="gauge"><svg viewBox="0 0 120 70" aria-hidden="true"><path d="M14 57.99999999999999 A46 46 0 0 1 106 58" fill="none" stroke="var(--grid)" stroke-width="10" stroke-linecap="round"></path>
@@ -1274,7 +1282,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
-   <dt>Page 2.14.0 · Oct 24 2026</dt><dd>New look, easier on the eyes, the same as LedgerLine: warm off-white pages in light mode and soft charcoal in dark (never pure white or pure black), about 13:1 contrast for main text and 6–7:1 for secondary text. ☾ Dark / ☀ Light switch next to How it works; it remembers your choice and until then follows your device. The whole board now has a dark mode, not just the 3x screen. Inter for reading text with figures that line up; Source Serif stays for titles. Text is larger: nothing under 13px. Accent colors toned down; VIX price bars black (off-white in dark).</dd>
+   <dt>Page 2.14.0 · Oct 24 2026</dt><dd>New look, easier on the eyes, the same as LedgerLine: warm off-white pages in light mode and soft charcoal in dark (never pure white or pure black), about 13:1 contrast for main text and 6–7:1 for secondary text. Light | Dark switch next to the Stats, Charts and How it works tabs (icons only on a phone); it remembers your choice and until then follows your device. The whole board now has a dark mode, not just the 3x screen. Inter for reading text with figures that line up; Source Serif stays for titles. Text is larger: nothing under 13px. Accent colors toned down; VIX price bars black (off-white in dark).</dd>
    <dt>Page 2.13.0 · Oct 24 2026</dt><dd>3x Leverage, Edge finder: clearer setup names (Red day, Big red day, Losing streak, Pullback, Correction, Bear market, Trough, Deep trough, Crash zone, Washout, Vol crush, Calm at the highs). Every setup gets a <b>Grade</b> against buying on any day: A strong edge, B edge, C slight edge, — none, thin when there are fewer than 4 separate signals. Live now is wider: the last 10 trading days, plus any trough setup whose zone still holds today, and it leads with the best graded setup in plain words. New <b>Add ladders</b> test scaling in: a third at the fund 20% below its high, a third more at 30% and 40%; and a third at the index 5% below its high, more at 10% and 15%. The drag label call now compares against buying on any day too, so it can say Edge on.</dd>
    <dt>Page 2.12.2 · LedgerLine worker 3.18.1 · Oct 24 2026</dt><dd>3x Leverage: tapping a fund, a hold period, a drag label or a setup now redraws in place, so the page no longer jumps up or down (most noticeable on iPad). The backtest loading in also keeps your place.</dd>
    <dt>Page 2.12.1 · LedgerLine worker 3.18.0 · Oct 24 2026</dt><dd>Sign-ins show up for the owner within a minute. The board now checks in when it opens and every 60 seconds while it is on screen, with the screen being viewed, so the owner's Testers page shows who is online now, which site they signed in to (KGR Vol Board or LedgerLine) and when. Nothing about what you look at is recorded beyond the screen name.</dd>
@@ -1938,11 +1946,11 @@ renderHow();setupScreen();refresh();boot();
 
 
 <script>
-/* Light / Dark switch (2.14.0): remembers the choice in kgr_theme, shared with LedgerLine; until then it follows the device. Charts redraw on change. */
-(function(){const root=document.documentElement,b=document.getElementById("themeBtn");if(!b)return;
+/* Light / Dark switch (2.14.0): two-part control, remembers the choice in kgr_theme (shared with LedgerLine); until then it follows the device. Charts follow the colors. */
+(function(){const root=document.documentElement,w=document.getElementById("themeSeg");if(!w)return;
  const cur=()=>root.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
- const label=()=>{const d=cur()==="dark";b.textContent=d?"☀ Light":"☾ Dark";b.setAttribute("aria-pressed",String(d))};
- b.addEventListener("click",e=>{e.stopPropagation();const n=cur()==="dark"?"light":"dark";root.setAttribute("data-theme",n);try{localStorage.setItem("kgr_theme",n)}catch(_){}label();try{window.dispatchEvent(new Event("resize"))}catch(_){}});
- try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",label)}catch(_){}label()})();
+ const sync=()=>{const c=cur();w.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.th===c)))};
+ w.addEventListener("click",e=>{const b=e.target.closest("button[data-th]");if(!b)return;e.stopPropagation();root.setAttribute("data-theme",b.dataset.th);try{localStorage.setItem("kgr_theme",b.dataset.th)}catch(_){}sync();try{window.dispatchEvent(new Event("resize"))}catch(_){}});
+ try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",sync)}catch(_){}sync()})();
 </script>
 </body></html>

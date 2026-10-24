@@ -27,7 +27,9 @@ jobs:
       - name: Build the site from app-src
         run: npm run build
       - name: Run the site tests (every tab, phone + desktop, light + dark)
-        run: npm test
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee test.log || { grep -v '^\s*$' test.log | grep -A14 '^FAIL\|FAILED\|Error' | head -60 | sed 's/%/%25/g' | sed 's/^/::error::/' ; exit 1; }
       - name: Keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4
