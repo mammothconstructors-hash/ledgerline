@@ -233,7 +233,8 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .kask-wait{color:var(--ink3);font-size:14px}.kask-err{background:color-mix(in srgb,var(--bad) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--bad) 40%,transparent);border-radius:10px;padding:10px 12px;font-size:14px}
 .screens .brandrow{display:inline-flex;align-items:center;gap:8px;margin-right:10px;letter-spacing:normal}.brandrow b{font:800 16px var(--sans);letter-spacing:.02em;color:var(--ink);white-space:nowrap}.brandrow b em{font-style:normal;color:var(--accent)}
 .llhome{display:inline-flex;line-height:0}.appsw{font:600 13px var(--sans);letter-spacing:normal;text-transform:none;color:var(--ink3);text-decoration:none;border:1px solid var(--rule);border-radius:999px;padding:4px 10px;white-space:nowrap}.appsw:hover{color:var(--ink);background:var(--strip)}
-@media (max-width:1300px){.appsw{display:none}}
+.homepill{font-weight:700;color:var(--ink)}
+@media (max-width:700px){.appsw{padding:3px 8px;font-size:12px}}
 .kfoot{max-width:1180px;margin:36px auto 24px;padding:16px max(16px,env(safe-area-inset-left,0px)) 0;border-top:1px solid var(--rule);font:13.5px/1.55 var(--sans);color:var(--ink3)}.kfoot p{margin:0 0 8px}.kfoot b{color:var(--ink2)}
 .tabrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}.tabrow .themeseg{margin-left:0}
 @media (max-width:560px){.themeseg button span{display:none}.themeseg button{padding:8px 10px}}
@@ -362,7 +363,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 </style>
 </head><body>
 <div class="wrap">
-  <nav class="screens" aria-label="Screens"><span class="brandrow"><a class="llhome" href="https://ledgerline-dv0.pages.dev/" title="LedgerLine home"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="28" height="28" aria-hidden="true" style="flex:none;display:block"><rect width="48" height="48" rx="11" fill="#FBF7F1"/><path d="M10 14h20.5l6-6" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 7.5h7v7" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 24h17" fill="none" stroke="#A39C93" stroke-width="4" stroke-linecap="round"/><path d="M10 34h14.5l6 6" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 40.5h7v-7" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></a><b>LedgerLine <em>Regime</em></b><a class="appsw" href="https://ledgerline-dv0.pages.dev/app/" title="Switch to LedgerLine Research: stocks and ETFs">Research ↗</a></span>
+  <nav class="screens" aria-label="Screens"><span class="brandrow"><a class="llhome" href="https://ledgerline-dv0.pages.dev/" title="LedgerLine home"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="28" height="28" aria-hidden="true" style="flex:none;display:block"><rect width="48" height="48" rx="11" fill="#FBF7F1"/><path d="M10 14h20.5l6-6" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 7.5h7v7" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 24h17" fill="none" stroke="#A39C93" stroke-width="4" stroke-linecap="round"/><path d="M10 34h14.5l6 6" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 40.5h7v-7" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></a><b>LedgerLine <em>Regime</em></b><a class="appsw homepill" href="https://ledgerline-dv0.pages.dev/" title="LedgerLine home: both apps">⌂ Home</a> <a class="appsw" href="https://ledgerline-dv0.pages.dev/app/" title="Switch to LedgerLine Research: stocks and ETFs">Research ↗</a></span>
     <button class="scr" data-scr="macro" aria-current="false">Cross-Asset Regime</button>
     <button class="scr" data-scr="sectors" aria-current="false">Sector Rotation</button>
     <button class="scr" data-scr="fsv" aria-current="false">Vol Surface Δ</button>
@@ -513,7 +514,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 const SHEET_ID="";
 const SHEET_URL="";
 const GS="Google Sheets", TV="Tradingview";
-const BUILD_ID="__BUILD_ID__", PAGE_VERSION="2.17.0s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
+const BUILD_ID="__BUILD_ID__", PAGE_VERSION="2.22.0s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
 const GROUPS={C:{name:"Cyclicals",c:"var(--cyc)"},T:{name:"Tech & Innovation",c:"var(--tech)"},D:{name:"Defensives",c:"var(--def)"},
   I:{name:"Indices",c:"var(--idx)"},B:{name:"Bonds",c:"var(--bnd)"},M:{name:"Commodities",c:"var(--cmd)"}};
 const SCREENS={sectors:{title:"Sector Rotation",groups:["C","T","D"]},macro:{title:"Cross-Asset Regime",groups:["I","B","M"]},vix:{title:"VIX Term & Carry"},fsv:{title:"Vol Surface Δ"},lev:{title:"3x Leverage"}};
@@ -1370,6 +1371,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.22.0 · Oct 24 2026</dt><dd>⌂ Home button next to the logo takes you to the LedgerLine home page. The Home and Research ↗ switches now show on every screen size, including iPad and phone</dd>
    <dt>Page 2.21.0 · Oct 24 2026</dt><dd>Disclosures at the foot of every screen: information only, the risks of options and leveraged funds, data delays, and the copyright and trademark notice (© 2026 KGR). The byline under the title now reads © 2026 KGR · LedgerLine Regime.</dd>
    <dt>Page 2.20.0 · Oct 24 2026</dt><dd>The two skew charts beside the Regime Quadrant get the same design. <b>Skew Map</b> (put skew z against IV z) reads Upside chase, Fear bid, Complacent and Quiet hedging. <b>Skew Shift</b> (change in skew against the 1-week σ move) reads Fear confirms, Hedged rally, Calm selloff and Clean rally. Both have real axes, a neutral center box and labels that never overlap.</dd>
    <dt>Page 2.19.0 · Oct 24 2026</dt><dd>The round compasses are gone. The Regime screens and the 3x screen now use the <b>Regime Quadrant</b>: a rectangular chart split into four zones, Paid to wait (sell puts), Rent the rally (sell calls), Cheap rebound (buy calls) and Cheap insurance (buy puts), tinted warm where premium is rich and cool where it is cheap. Square strength bands replace the rings (a hatched spread zone in the middle, then strong and extreme), both axes show real values, and every ticker gets a dot with a label that never overlaps. Strength is now the larger of the two readings, so it matches the square bands.</dd>
