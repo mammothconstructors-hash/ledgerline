@@ -2157,9 +2157,9 @@ function ddCalc(d){
   big.forEach(e=>piv.push({p:lo[e.tr],i:e.tr}));
   piv.sort((a,b)=>a.p-b.p); const zones=[];
   for(const v of piv){ const z=zones[zones.length-1]; if(z&&v.p<=z.lo*1.025){ z.pts.push(v); z.hi=Math.max(z.hi,v.p); } else zones.push({lo:v.p,hi:v.p,pts:[v]}); }
-  const px=c[n-1], sup=zones.map(z=>({lo:z.lo,hi:z.hi,mid:z.pts.reduce((a,v)=>a+v.p,0)/z.pts.length,touch:z.pts.length,last:Math.max(...z.pts.map(v=>v.i))}))
+  const px=c[n-1], allZ=zones.map(z=>({lo:z.lo,hi:z.hi,mid:z.pts.reduce((a,v)=>a+v.p,0)/z.pts.length,touch:z.pts.length})), sup=zones.map(z=>({lo:z.lo,hi:z.hi,mid:z.pts.reduce((a,v)=>a+v.p,0)/z.pts.length,touch:z.pts.length,last:Math.max(...z.pts.map(v=>v.i))}))
     .filter(z=>z.hi<px).sort((a,b)=>b.mid-a.mid).slice(0,5);
-  return {t,c,dd,n,eps,big,worst,avgDepth,avgUnder,today,deeper,sup,px,from:t[0]};
+  return {t,c,dd,n,eps,big,worst,avgDepth,avgUnder,today,deeper,sup,px,from:t[0],hiNow:px/(1+today/100),allZ};
 }
 function ddSvg(D){
   const W=900,H=190,pl=40,pr=10,pt=10,pb=22, lo=Math.min(-5,Math.floor(Math.min(...D.dd)/10)*10), X=i=>pl+i/(D.n-1)*(W-pl-pr), Y=v=>pt+(v/lo)*(H-pt-pb);
@@ -2174,6 +2174,13 @@ function ddMeter(D){   // where today sits: 0 at the high, full scale at the 5-y
   const m=Math.min(D.worst?D.worst.depth:-1,-1), at=v=>Math.max(0,Math.min(100,v/m*100));
   return `<div class="ddm"><div class="ddbar"><span class="ddfill" style="width:${at(D.today)}%"></span>${isNum(D.avgDepth)?`<i class="ddavg" style="left:${at(D.avgDepth)}%" title="Average 10%+ drop"></i>`:''}<i class="ddnow" style="left:${at(D.today)}%" title="Today"></i></div>
     <div class="ddlab"><span>At the high</span>${isNum(D.avgDepth)?`<span style="left:${at(D.avgDepth)}%">Avg ${D.avgDepth.toFixed(0)}%</span>`:''}<span>5-yr worst ${m.toFixed(0)}%</span></div></div>`;
+}
+function ddLevels(D){   // price targets from the current high: a 10% pullback, the average 10%+ drop, 20%, the 5-year worst; each with the nearest support zone
+  const H=D.hiNow, L=[['10% pullback',-10],['Average 10%+ drop',D.avgDepth],['20% drop',-20],['5-year worst',D.worst&&D.worst.depth]].filter(([,v])=>isNum(v)&&v<0).sort((a,b)=>b[1]-a[1]);
+  const seen=new Set(); const rows=L.filter(([,v])=>{ const k=Math.round(v); if(seen.has(k)) return false; seen.add(k); return true; }).map(([lab,v])=>{ const p=H*(1+v/100), z=D.allZ.reduce((a,z)=>!a||Math.abs(z.mid/p-1)<Math.abs(a.mid/p-1)?z:a,null), near=z&&Math.abs(z.mid/p-1)<=0.04;
+    const hit=D.px<=p; return `<tr${lab.startsWith('Average')?' class="b"':''}><td style="text-align:left">${lab}</td><td class="num">${pct(v,1)}</td><td class="num"><b>${money(p)}</b></td><td class="num">${hit?'<b>reached</b>':pct((p/D.px-1)*100,1)}</td><td>${near?`${money(z.mid)} <span class="muted">held ${z.touch}×</span>`:'<span class="muted">no zone within 4%</span>'}</td></tr>`; }).join('');
+  return `<h3 style="margin-top:16px">Where a normal drop would land <small>from the high of ${money(D.hiNow)}</small></h3><div class="tblwrap"><table><thead><tr><th style="text-align:left">Drop from the high</th><th>Size</th><th>Price</th><th>From today</th><th style="text-align:left">Support near it</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="fine">Each level is the current high less that drop. Where a support zone sits within 4% of a level, the two together make a firmer buy area.</p>`;
 }
 function ddRead(D){
   if(D.today>-2) return 'At or near its high.';
@@ -2193,6 +2200,7 @@ function ddHtml(){
     ${ddMeter(D)}${stats}
     <div style="margin-top:12px">${ddSvg(D)}</div>
     <p class="fine">Shaded: how far below its running high each day closed. Dashed: the average depth of its 10%+ drops. Red dot: the 5-year worst, ${w?ddDay(D.t[w.pk])+' to '+ddDay(D.t[w.tr]):''}, ${rec}. Black dot: today.</p>
+    ${ddLevels(D)}
     ${rows?`<h3 style="margin-top:16px">Every 10%+ drop</h3><div class="tblwrap"><table><thead><tr><th style="text-align:left">Peak</th><th>Trough</th><th>Drop</th><th>Days down</th><th>Back to the high</th></tr></thead><tbody>${rows}</tbody></table></div>`:''}
     <h3 style="margin-top:16px">Support zones below today</h3>${sup?`<div class="tblwrap"><table><thead><tr><th style="text-align:left">Zone</th><th>From today</th><th>Times it held</th><th>Last held</th></tr></thead><tbody>${sup}</tbody></table></div>
     <p class="fine">Prices where daily lows turned back up (lowest low of 21 sessions) and where each 10%+ drop bottomed, grouped within 2.5%. More holds means a firmer floor.</p>`:'<p class="fine">No earlier lows below today’s price in five years.</p>'}
@@ -2494,7 +2502,7 @@ function checkHtml(){
 const APP_VERSION='8.7', WORKER_NEEDED='3.5', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
   ['App 7.1','Oct 22, 2026',['Valuation uses core EPS when non-operating gains are more than a quarter of pretax profit (Amazon’s 2025–26 investment mark-ups had pushed its trailing EPS to $12.43 against about $7 from the business, and its fair value to $1,033); the Valuation tab says when this applies','Risk on / off now uses the 50-day vs 200-day EMA (10 vs 40 weeks); 200 EMA added to the Overview chart','Fixed: the return line above the Overview chart now matches the period boxes (both measured from the close before the period starts)']],
-  ['App 8.7','Oct 23, 2026',['☆ Save on ETF pages: funds go to My list with the price on the day','ETFs: new 3x leveraged group first: TQQQ, UPRO, UDOW, URTY, TNA and SOXL','SPY’s page compares with QQQ instead of itself; a benchmark fund drops its own column from the performance table','Drawdowns and support on every Technicals view (stocks and ETFs): 5-year worst peak-to-trough drop with dates and recovery, average 10%+ drop, average distance below the high, where today sits on a meter and an underwater chart, every 10%+ drop listed, support zones below today, and SPY, QQQ and TQQQ side by side']],
+  ['App 8.7','Oct 23, 2026',['☆ Save on ETF pages: funds go to My list with the price on the day','Drawdowns: Where a normal drop would land: price at a 10% pullback, the average 10%+ drop, 20% and the 5-year worst from today’s high, each matched to the nearest support zone','ETFs: new 3x leveraged group first: TQQQ, UPRO, UDOW, URTY, TNA and SOXL','SPY’s page compares with QQQ instead of itself; a benchmark fund drops its own column from the performance table','Drawdowns and support on every Technicals view (stocks and ETFs): 5-year worst peak-to-trough drop with dates and recovery, average 10%+ drop, average distance below the high, where today sits on a meter and an underwater chart, every 10%+ drop listed, support zones below today, and SPY, QQQ and TQQQ side by side']],
   ['App 8.6','Oct 23, 2026',['ETF holdings are current: read daily from State Street (SPDR), iShares and Invesco and monthly from Vanguard, with the SEC N-PORT filing only as a fallback; each page shows the as-of date and where the list came from','SPY, QQQ, DIA and IWM now use the daily file too, not the quarterly list built into the page']],
   ['App 8.5','Oct 23, 2026',['ETFs in the top bar: every fund LedgerLine knows, grouped (market indexes, whole market and world, dividends, sectors, themes), plus a box for any ETF ticker','Every ETF page now shows what it holds: top 25 holdings, top-10 share, net assets and sector mix, read from the fund’s latest SEC N-PORT filing (before, only SPY, QQQ, DIA and IWM had holdings); cash and securities-lending collateral are shown on their own line, not as a holding','Worker 3.12: sector ranks cost one price lookup per stock a night instead of five, and the Marketstack usage counter now counts every stock in a request, the way Marketstack bills']],
   ['App 8.4','Oct 23, 2026',['Owner: 👥 Testers in the top bar (only for the owner’s sign-in) to add, name and remove testers on LedgerLine and the Vol Board, no Cloudflare screens needed']],
