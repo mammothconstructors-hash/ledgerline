@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.18.2';
+const WORKER_VERSION = '3.19.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -1275,6 +1275,140 @@ async function askFilings(ticker, question, env) {
   const used = new Set((answer.match(/\[S\d+\]/g) || []).map(x => x.slice(1, -1)));
   return { ticker: t.toUpperCase(), name: docs[0].name, question: qn, answer, model: env.AI_MODEL || AI_MODEL, sources: src.filter(x => used.has(x.id)).map(x => ({ ...x, text: x.text.slice(0, 600) })) };
 }
+/* ================= Ask AI research agent (3.19.0) =================
+   The model answers with everything LedgerLine shows for the open stock (sent by the page as text, cited [D]), and can go get more:
+   stock_data (prices, returns, technicals and key financials for any ticker), filing_section (any 10-K/10-Q section, cited [S#])
+   and a live web search (news, lawsuits, analyst moves; cited [W#]). Up to 8 rounds, 4 web searches. Falls back to no web search
+   if the account doesn't allow it. */
+const askNum = (v, d = 2) => v == null || !isFinite(v) ? null : +Number(v).toFixed(d);
+function priceFacts(m) {
+  const d = m && m.daily; if (!d || !d.c || !d.c.length) return { error: 'no price history' };
+  const c = d.c, n = c.length, last = m.price || c[n - 1], at = k => n > k ? c[n - 1 - k] : null, ret = k => { const b = at(k); return b ? askNum((last / b - 1) * 100, 1) : null; };
+  const sma = k => n >= k ? c.slice(-k).reduce((a, x) => a + x, 0) / k : null;
+  let g = 0, l = 0; for (let i = Math.max(1, n - 14); i < n; i++) { const ch = c[i] - c[i - 1]; if (ch > 0) g += ch; else l -= ch; } const rsi = l === 0 ? 100 : 100 - 100 / (1 + g / l);
+  const lr = []; for (let i = Math.max(1, n - 60); i < n; i++) lr.push(Math.log(c[i] / c[i - 1])); const sd = a => { const mu = a.reduce((x, y) => x + y, 0) / a.length; return Math.sqrt(a.reduce((x, y) => x + (y - mu) ** 2, 0) / (a.length - 1)); };
+  const yStart = Date.UTC(new Date().getUTCFullYear(), 0, 1) / 1000; let yi = d.t.findIndex(t => t >= yStart); const ytd = yi > 0 ? askNum((last / c[yi - 1] - 1) * 100, 1) : null;
+  const w = m.weekly && m.weekly.c || [], wk = k => w.length > k ? askNum((last / w[w.length - 1 - k] - 1) * 100, 1) : null, hi5 = w.length ? Math.max(...w.slice(-260), last) : null;
+  const vol30 = d.v ? d.v.slice(-30).reduce((a, x) => a + x, 0) / Math.min(30, d.v.length) : null;
+  return { price: askNum(last), asOf: new Date((m.quoteTime || m.asOf) * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' UTC', priceNote: m.delayed ? '15-min delayed' : 'end of day',
+    changeToday: askNum(m.changePct, 2), ret1W: ret(5), ret1M: ret(21), ret3M: ret(63), ret6M: ret(126), ret1Y: ret(252), ytd, ret3Y: wk(156), ret5Y: wk(260),
+    high52: askNum(m.high52), low52: askNum(m.low52), fromHigh52: m.high52 ? askNum((last / m.high52 - 1) * 100, 1) : null, fromHigh5Y: hi5 ? askNum((last / hi5 - 1) * 100, 1) : null,
+    sma50: askNum(sma(50)), sma200: askNum(sma(200)), rsi14: askNum(rsi, 0), realizedVol20: lr.length > 20 ? askNum(sd(lr.slice(-20)) * Math.sqrt(252) * 100, 1) : null, realizedVol60: lr.length > 30 ? askNum(sd(lr) * Math.sqrt(252) * 100, 1) : null,
+    avgVolume30: vol30 ? Math.round(vol30) : null };
+}
+function finFacts(st) {
+  if (!st || !st.key || !st.years) return null;
+  const k = st.key, ys = st.years, n = ys.length, pick = ['revenue', 'grossProfit', 'opIncome', 'netIncome', 'eps', 'fcf', 'ocf', 'capex', 'sbc', 'cash', 'debt', 'netDebt', 'equity', 'sharesOut', 'dps', 'buybacks'];
+  const rows = {}; for (const f of pick) if (k[f]) rows[f] = k[f].slice(-5).map(v => v == null ? null : (Math.abs(v) >= 1e5 ? askNum(v / 1e6, 0) : askNum(v, 2)));
+  const out = { name: st.name, fiscalYears: ys.slice(-5).map(y => y.fy), unitNote: 'money in $ millions except eps and dps (per share)', annual: rows };
+  if (st.ttm) { out.ttm = {}; for (const f of pick) if (st.ttm[f] != null) out.ttm[f] = Math.abs(st.ttm[f]) >= 1e5 ? askNum(st.ttm[f] / 1e6, 0) : askNum(st.ttm[f], 2); out.ttmLabel = st.lastPeriod && st.lastPeriod.label; }
+  return out;
+}
+async function stockData(ticker, env, ctx) {
+  const t = String(ticker || '').trim().toUpperCase(); if (!/^[A-Z0-9.\-^]{1,12}$/.test(t)) return { error: 'bad ticker' };
+  const [m, st] = await Promise.all([market(t, env, ctx).catch(e => ({ error: String(e.message || e) })), secStatements({ ticker: t, years: 6 }).catch(() => null)]);
+  return { ticker: t, prices: m.error ? { error: m.error } : priceFacts(m), financials: finFacts(st) || 'no SEC financials (fund, ETF or foreign filer)' };
+}
+const ASK_TOOLS = [
+  { name: 'stock_data', description: 'LedgerLine data for any US stock or ETF: latest price and change, returns (1W to 5Y, YTD), 52-week and 5-year high distance, 50/200-day averages, RSI, realized volatility, volume, and five years of key annual financials plus trailing twelve months (revenue, profits, EPS, free cash flow, cash, debt, shares, dividends, buybacks). Use for any ticker other than the open one, or to check numbers.', input_schema: { type: 'object', properties: { ticker: { type: 'string', description: 'US ticker, e.g. NVDA, SPY, BRK-B' } }, required: ['ticker'] } },
+  { name: 'filing_section', description: 'Full text of one section of a company’s latest 10-K (annual) or 10-Q (quarterly) from SEC EDGAR. sections: business, risk (risk factors), mdna (management discussion of results, outlook, liquidity), legal (lawsuits, investigations, contingencies), notes (financial statement notes: debt maturities, segments, leases, commitments). 10-Q has no business section.', input_schema: { type: 'object', properties: { ticker: { type: 'string' }, form: { type: 'string', enum: ['10-K', '10-Q'] }, section: { type: 'string', enum: ['business', 'risk', 'mdna', 'legal', 'notes'] }, nth: { type: 'integer', description: '0 = latest (default), 1 = the one before, 2 = two back; use for year-ago or prior-quarter comparisons' } }, required: ['ticker', 'section'] } },
+  { name: 'list_filings', description: 'A company’s recent SEC filings of any type (8-K, 10-K, 10-Q, DEF 14A proxy, S-1, 13D/13G, SC TO, 424B, 4 and more) with dates, descriptions and document links. Use it to find a specific filing, then read_filing to open it.', input_schema: { type: 'object', properties: { ticker: { type: 'string' }, form: { type: 'string', description: 'optional form filter, e.g. 8-K or DEF 14A' } }, required: ['ticker'] } },
+  { name: 'read_filing', description: 'Open any document on sec.gov (a link from list_filings) and return its text, cited by the [S#] label at the top of the result. offset lets you read further into long documents.', input_schema: { type: 'object', properties: { url: { type: 'string' }, offset: { type: 'integer', description: 'character offset to start from, default 0' } }, required: ['url'] } }
+];
+async function listFilings(ticker, form) {
+  const co = await cikFor(ticker); const r = await secGet(`https://data.sec.gov/submissions/CIK${co.cik}.json`, 3600); if (!r) throw new Error('No SEC filings found for ' + ticker);
+  const rec = (await r.json()).filings?.recent || {}, out = [], want = String(form || '').trim().toUpperCase();
+  for (let i = 0; i < (rec.form || []).length && out.length < 40; i++) { if (want && rec.form[i].toUpperCase() !== want) continue; out.push({ form: rec.form[i], filed: rec.filingDate[i], period: rec.reportDate?.[i] || '', items: rec.items?.[i] || '', description: rec.primaryDocDescription?.[i] || '', url: `https://www.sec.gov/Archives/edgar/data/${co.cikInt}/${rec.accessionNumber[i].replace(/-/g, '')}/${rec.primaryDocument[i]}` }); }
+  return { ticker: String(ticker).toUpperCase(), name: co.name, filings: out };
+}
+async function readFiling(url, offset) {
+  const u = String(url || ''); if (!/^https:\/\/(www\.)?sec\.gov\//.test(u)) throw new Error('read_filing only opens sec.gov documents');
+  const r = await secGet(u, 86400); if (!r) throw new Error('Document not found'); const raw = await r.text();
+  const text = /<html|<body|<div|<p[ >]/i.test(raw.slice(0, 5000)) ? htmlToText(raw) : raw; const from = Math.max(0, parseInt(offset) || 0);
+  return { url: u, chars: text.length, from, text: text.slice(from, from + 40000) };
+}
+const WEB_TOOL = { type: 'web_search_20250305', name: 'web_search', max_uses: 8 }, FETCH_TOOL = { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: 5, max_content_tokens: 20000 };
+async function claudeMsg(env, body, beta) {
+  let last;
+  for (let k = 0; k < 4; k++) {
+    const headers = { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' }; if (beta) headers['anthropic-beta'] = beta;
+    const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers, body: JSON.stringify({ model: env.AI_MODEL || AI_MODEL, ...body }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) return j;
+    last = new Error('AI service: ' + ((j.error && j.error.message) || r.status)); last.status = r.status;
+    if (![429, 500, 502, 503, 504, 529].includes(r.status)) throw last;   // busy or overloaded: wait and try again
+    await new Promise(res => setTimeout(res, 1500 * (k + 1)));
+  }
+  throw last;
+}
+async function askAgent(ticker, question, context, env, ctx) {
+  const t = String(ticker || '').trim().toUpperCase(), qn = String(question || '').trim().slice(0, 600), pageData = String(context || '').slice(0, 45000);
+  if (!qn) throw new Error('question is required');
+  const today = new Date().toISOString().slice(0, 10);
+  const system = `You are LedgerLine's research analyst. Today is ${today}. Answer the user's question about stocks, funds and markets directly and completely, like a sharp buy-side analyst talking to an experienced investor.
+Sources you have, in order of preference:
+- [D] LedgerLine's own data for the stock open on the page (prices, returns, technicals, valuation, fair value, scores, verdict, earnings, metrics, statements), given below. Use it first for anything about price, valuation or numbers.
+- stock_data tool: the same kind of numbers for any other ticker, cited [D:TICKER].
+- filing_section tool: the full text of a 10-K or 10-Q section, cited by the [S#] label at the top of each result. Use legal for lawsuits and investigations, notes for debt and segments, mdna for results and outlook, risk for risk factors.
+- web_search: current events the data and filings can't have: news, lawsuits and their status, regulatory action, analyst ratings and price targets, guidance, why the stock moved. Search whenever the question is about anything recent or outside the filings, and always for lawsuits, news or "why is it up/down".
+- list_filings and read_filing: any other SEC filing (8-K earnings releases and events, DEF 14A proxy for pay and board, S-1, 13D/13G stakes, Form 4 insider trades, older annual reports). Find it with list_filings, open it with read_filing; cite [S#].
+- web_fetch: open a full web page (a search result, an investor-relations page, a press release) when the search snippet isn't enough.
+Work like a researcher: use as many lookups as the question needs, check numbers against a second source when it matters, and never give up with "the excerpts don't say" when another tool could find it. If a tool errors, try another route.
+Rules: lead with the direct answer in the first sentence. Use real numbers. Cite every factual claim with [D], [D:TICKER] or [S#]; web facts are cited automatically. If sources conflict, say so and prefer the newest. If something can't be found, say exactly what you checked. No hype, no filler, no investment advice disclaimers. Format in Markdown: short paragraphs, **bold** key figures sparingly, "- " bullets for lists, at most about 300 words unless the question needs a table.`;
+  const user = [ t ? `Stock open on the page: ${t}` : 'No stock is open on the page.', `Question: ${qn}`, pageData ? `[D] LedgerLine page data for ${t}, as shown on the site right now:\n${pageData}` : ''].filter(Boolean).join('\n\n');
+  const messages = [{ role: 'user', content: user }], sources = [], web = [], data = new Set();
+  let useFetch = true, webOn = true, finalBlocks = [], rounds = 0, done = false;
+  const toolSet = () => [...ASK_TOOLS, ...(webOn ? [WEB_TOOL] : []), ...(webOn && useFetch ? [FETCH_TOOL] : [])];
+  for (let turn = 0; turn < 14 && !done; turn++) {
+    let r;
+    try { r = await claudeMsg(env, { system, messages, tools: toolSet(), max_tokens: 3000 }, webOn && useFetch ? 'web-fetch-2025-09-10' : undefined); }
+    catch (e) { if (useFetch && /fetch|beta/i.test(e.message) && e.status === 400) { useFetch = false; turn--; continue; } if (webOn && /web_search|tool|beta/i.test(e.message) && e.status === 400) { webOn = false; turn--; continue; } throw e; }
+    messages.push({ role: 'assistant', content: r.content });
+    if (r.stop_reason === 'pause_turn') { finalBlocks.push(...r.content); continue; }
+    if (r.stop_reason === 'tool_use' && rounds < 10) {
+      rounds++; finalBlocks = [];
+      const results = [];
+      for (const b of r.content.filter(b => b.type === 'tool_use')) {
+        let text;
+        try {
+          if (b.name === 'stock_data') { const d = await stockData(b.input.ticker, env, ctx); data.add(d.ticker); text = `[D:${d.ticker}] ` + JSON.stringify(d); }
+          else if (b.name === 'filing_section') {
+            const form = b.input.form === '10-Q' ? '10-Q' : '10-K', section = b.input.section === 'business' && form === '10-Q' ? 'mdna' : b.input.section;
+            const sec = await secSection({ ticker: b.input.ticker || t, form, section, maxChars: 30000, nth: b.input.nth });
+            const id = 'S' + (sources.length + 1); sources.push({ id, ticker: sec.ticker, form: sec.form, section: sec.sectionName, filed: sec.filed, period: sec.periodOfReport, url: sec.url, text: sec.text.slice(0, 600) });
+            text = `[${id}] ${sec.ticker} ${sec.form} filed ${sec.filed}, ${sec.sectionName}${sec.truncated ? ' (first 30,000 characters)' : ''}:\n${sec.text}`;
+          } else if (b.name === 'list_filings') { text = JSON.stringify(await listFilings(b.input.ticker || t, b.input.form)); }
+          else if (b.name === 'read_filing') {
+            const d = await readFiling(b.input.url, b.input.offset); const id = 'S' + (sources.length + 1);
+            sources.push({ id, ticker: t, form: 'Filing', section: (d.url.split('/').pop() || '').slice(0, 60), filed: '', url: d.url, text: d.text.slice(0, 600) });
+            text = `[${id}] ${d.url} (characters ${d.from}–${d.from + d.text.length} of ${d.chars}${d.from + d.text.length < d.chars ? '; call again with offset to read more' : ''}):\n${d.text}`;
+          } else text = 'Unknown tool';
+        } catch (e) { text = 'Error: ' + String(e.message || e); }
+        results.push({ type: 'tool_result', tool_use_id: b.id, content: text.slice(0, 60000) });
+      }
+      messages.push({ role: 'user', content: results });
+      continue;
+    }
+    if (r.stop_reason === 'tool_use') {   // out of tool rounds: answer with what it has
+      messages.push({ role: 'user', content: r.content.filter(b => b.type === 'tool_use').map(b => ({ type: 'tool_result', tool_use_id: b.id, content: 'Tool limit reached. Answer now with what you have.' })) });
+      const f = await claudeMsg(env, { system, messages, tools: toolSet(), tool_choice: { type: 'none' }, max_tokens: 3000 }, webOn && useFetch ? 'web-fetch-2025-09-10' : undefined);
+      finalBlocks = f.content; done = true; break;
+    }
+    finalBlocks.push(...r.content); done = true;
+  }
+  // build the answer: text blocks in order, web citations turned into [W#] markers
+  let answer = '';
+  for (const b of finalBlocks) {
+    if (b.type !== 'text') continue;
+    answer += b.text;
+    const marks = [];
+    for (const c of b.citations || []) { if (!c.url) continue; let w = web.find(x => x.url === c.url); if (!w) { w = { id: 'W' + (web.length + 1), url: c.url, title: c.title || c.url }; web.push(w); } if (!marks.includes(w.id)) marks.push(w.id); }
+    if (marks.length) answer += ' ' + marks.map(m => `[${m}]`).join('');
+  }
+  answer = answer.replace(/[ \t]+\n/g, '\n').trim() || 'I couldn’t put an answer together for that. Try asking it a different way.';
+  const usedS = new Set((answer.match(/\[S\d+\]/g) || []).map(x => x.slice(1, -1)));
+  return { ticker: t, question: qn, answer, model: env.AI_MODEL || AI_MODEL, web: webOn, sources: sources.filter(x => usedS.has(x.id)), webSources: web, looked: [...data] };
+}
 // plain-English screen: the model turns a request into filters over the columns the app sends
 async function aiScreen(query, fields, env) {
   const qn = String(query || '').trim().slice(0, 300); if (!qn) throw new Error('query is required');
@@ -1373,7 +1507,7 @@ async function api(req, url, env, ctx) {
       if (!env.ANTHROPIC_API_KEY) return out({ error: 'AI is not switched on yet', needsKey: true }, 503, 0);
       if (!(await aiQuota(env, req))) return out({ error: 'Daily question limit reached; try again tomorrow' }, 429, 0);
       const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
-      if (path === '/api/ask') return out(await askFilings(body.ticker || q.get('ticker'), body.question || q.get('q'), env), 200, 0);
+      if (path === '/api/ask') return out(await askAgent(body.ticker || q.get('ticker'), body.question || q.get('q'), body.context, env, ctx), 200, 0);
       return out(await aiScreen(body.query || q.get('q'), body.fields, env), 200, 0);
     }
     if (path === '/api/insiders') return out(await insiders(q.get('ticker') || ''), 200, 21600);
