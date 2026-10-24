@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.13.2';
+const WORKER_VERSION = '3.14.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -205,6 +205,7 @@ async function etfHoldings(symbol, env) {
     const ms = await msHoldings(sym, env, day).catch(e => ({ count: 0, reason: String(e && e.message || e) }));
     if (ms.count) out = ms; else out = { ...out, reason: out.reason + ' Marketstack has no holdings for it either.' };
   }
+  out = { ...out, checkedAt: Date.now() };
   if (DB) await DB.prepare('INSERT INTO etf_hold (symbol, day, body) VALUES (?, ?, ?) ON CONFLICT (symbol) DO UPDATE SET day = excluded.day, body = excluded.body').bind(sym, day, JSON.stringify({ ...out, checked: true })).run();
   return out;
 }
@@ -229,6 +230,24 @@ async function msHoldings(sym, env, day) {
   const top10 = rows.slice(0, 10).reduce((a, h) => a + h.weight, 0), b = j.basics || (j.data && j.data.basics) || {}, at = (j.output && j.output.attributes) || {};
   return { symbol: sym, fund: pickStr(at, ['series_name']) || pickStr(b, ['fund_name']) || sym, day, asOf: pickStr(at, ['rep_pd_date', 'report_date', 'date']) || null, count: rows.length,
     top10Weight: Math.round(top10 * 100) / 100, cashWeight: Math.round(cashW * 100) / 100, sectors: [], holdings: rows.slice(0, 500), source: 'Marketstack ETF holdings (SEC N-PORT)' };
+}
+// 3.14.0: implied volatility (IV30) and the day's quote from Cboe's free delayed quotes, cached 15 minutes per symbol
+async function impliedVol(symbol) {
+  const sym = String(symbol || '').trim().toUpperCase().replace('.', '-');
+  if (!/^[A-Z][A-Z0-9-]{0,9}$/.test(sym)) throw new Error('symbol is required');
+  const key = new Request(`https://ledgerline-cache.internal/iv/${sym}/${Math.floor(Date.now() / 900e3)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
+  if (cache) { const hit = await cache.match(key); if (hit) return hit.json(); }
+  const r = await fetch(`https://cdn.cboe.com/api/global/delayed_quotes/quotes/${encodeURIComponent(sym)}.json`, { headers: { 'User-Agent': 'Mozilla/5.0 (LedgerLine)', Accept: 'application/json' } });
+  let out;
+  if (!r.ok) out = { symbol: sym, iv30: null, reason: r.status === 403 || r.status === 404 ? 'Cboe has no options quote for ' + sym : 'Cboe returned ' + r.status };
+  else {
+    const j = await r.json().catch(() => ({})), q = j.data || {}, n = v => (v === null || v === undefined || v === '' || !isFinite(Number(v))) ? null : Number(v);
+    out = { symbol: sym, iv30: n(q.iv30), iv30Change: n(q.iv30_change), price: n(q.current_price), prevClose: n(q.prev_day_close), stamp: j.timestamp || null, source: 'Cboe delayed quote (15 minutes)' };
+    if (!out.iv30) out.reason = 'Cboe has no implied volatility for ' + sym;
+  }
+  out.checkedAt = Date.now();
+  if (cache) await cache.put(key, new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=900' } }));
+  return out;
 }
 async function finishHoldings(sym, day, r, env) {
   const isCash = h => /money market|cash collateral|liquidity fund|government (money|cash)|cash management|^cash\b|us dollar/i.test(h.name) || /cash|money market/i.test(h.type || '');
@@ -1148,6 +1167,7 @@ async function api(req, url, env, ctx) {
     if (path === '/api/section') return out(await secSection({ ticker: q.get('ticker'), section: q.get('section'), form: q.get('form'), maxChars: q.get('maxChars') }), 200, 3600);
     if (path === '/api/market') { rankNudge(env, ctx); return out(await market(q.get('symbol') || '', env, ctx), 200, 900); }
     if (path === '/api/ranks') { rankNudge(env, ctx); return out(await sectorRank(q.get('ticker') || '', env), 200, 600); }
+    if (path === '/api/iv') return out(await impliedVol(q.get('symbol') || q.get('ticker') || ''), 200, 600);
     if (path === '/api/etf-holdings') return out(await etfHoldings(q.get('symbol') || q.get('ticker') || '', env), 200, 3600);
     if (path === '/api/usage') return out(await usageData(), 200, 0);
     if (path === '/api/hit' && req.method === 'POST') return out(await recordVisit(req, env), 200, 0);
