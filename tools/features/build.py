@@ -3,7 +3,7 @@ ROOT=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 P=lambda *a: os.path.join(ROOT,*a)
 import re, random
 idx=open(P('site','index.html')).read()
-root=re.search(r':root\{.*?\n@media \(prefers-color-scheme: dark\)\{:root\{.*?\}\}',idx,re.S).group(0)
+root=re.search(r':root\{.*?\n:root\[data-theme="dark"\]\{.*?\}',idx,re.S).group(0)
 header=re.search(r'<header class="top">.*?</header>',idx,re.S).group(0)
 footer=re.search(r'<footer class="wrap">.*?</footer>',idx,re.S).group(0)
 brand=re.search(r'<a class="brand".*?</a>',header,re.S).group(0)
