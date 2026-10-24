@@ -1309,6 +1309,11 @@ async function api(req, url, env, ctx) {
     if (path === '/api/market') { rankNudge(env, ctx); return out(await market(q.get('symbol') || '', env, ctx), 200, 900); }
     if (path === '/api/ranks') { rankNudge(env, ctx); return out(await sectorRank(q.get('ticker') || '', env), 200, 600); }
     if (path === '/api/levboard') return out(await levBoard(env, ctx), 200, 900);
+    if (path === '/api/levraw') { try { const sym = String(q.get('symbol') || '').toUpperCase(), from = q.get('from') || '2016-01-01', to = q.get('to') || '2021-01-01';
+      const u = `https://api.marketstack.com/v2/eod?access_key=${encodeURIComponent(env.MARKETSTACK_KEY)}&symbols=${encodeURIComponent(sym)}&date_from=${from}&date_to=${to}&limit=1000&sort=ASC`;
+      const r = await msFetch(u, { headers: { Accept: 'application/json' } }, 'eod'), j = await r.json(); const d = j.data || [], jumps = [];
+      for (let i = 1; i < d.length; i++) { const k = d[i].close / d[i - 1].close; if (k > 1.5 || k < 0.67) jumps.push([String(d[i].date).slice(0, 10), Math.round(k * 1000) / 1000, d[i].split_factor, d[i].exchange]); }
+      return out({ total: j.pagination && j.pagination.total, n: d.length, first: d[0] && [String(d[0].date).slice(0, 10), d[0].close, d[0].exchange], last: d.length ? [String(d[d.length - 1].date).slice(0, 10), d[d.length - 1].close] : null, jumps, err: j.error || null }, 200, 0); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
     if (path === '/api/levlong') { try { const d = await lvLong(String(q.get('symbol') || '').toUpperCase(), env, ctx), iso = x => new Date(x * 1000).toISOString().slice(0, 10), j = []; for (let i = 1; i < d.c.length; i++) { const r = d.c[i] / d.c[i - 1]; if (r > 1.35 || r < 0.65) j.push([iso(d.t[i]), Math.round(r * 1000) / 1000]); } return out({ n: d.c.length, first: d.t.length ? iso(d.t[0]) : null, last: d.t.length ? iso(d.t[d.t.length - 1]) : null, jumps: j }, 200, 600); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
     if (path === '/api/levregime') { try { return out(await levRegime(q.get('fund') || '', env, ctx), 200, 3600); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
     if (path === '/api/iv') return out(await impliedVol(q.get('symbol') || q.get('ticker') || ''), 200, 600);
