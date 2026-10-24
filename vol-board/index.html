@@ -206,9 +206,11 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .themeseg button:hover{color:var(--ink)}
 .themeseg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--sh1)}
 @media (max-width:1100px){.row3,.row2{grid-template-columns:minmax(0,1fr)!important}.row3>*,.row2>*{min-width:0}}
-/* Ask AI (2.15.0): floating button and side panel */
-.kask-fab{position:fixed;right:18px;bottom:18px;z-index:60;display:inline-flex;align-items:center;gap:8px;font:700 15px/1 var(--sans);padding:13px 18px;border-radius:999px;border:1px solid color-mix(in srgb,var(--accent) 50%,transparent);background:var(--accent);color:var(--page);box-shadow:var(--sh2);cursor:pointer}
-.kask-fab:hover{filter:brightness(1.06)}
+/* Ask AI (2.15.1): button in the top bar, side panel */
+.askbtn{display:inline-flex;align-items:center;gap:7px;font:700 15px var(--sans);padding:6px 16px;border-radius:999px;cursor:pointer;color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);transition:background .18s var(--ease)}
+.askbtn span{font:inherit;letter-spacing:normal;text-transform:none;color:inherit}
+.askbtn:hover{background:color-mix(in srgb,var(--accent) 18%,var(--panel))}
+.askbtn[aria-expanded="true"]{background:var(--accent);color:var(--page);border-color:var(--accent)}
 .kask{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);z-index:70;background:var(--panel);border-left:1px solid var(--rule);box-shadow:-12px 0 32px rgba(0,0,0,.18);display:flex;flex-direction:column;transform:translateX(102%);transition:transform .22s var(--ease)}
 .kask.open{transform:none}
 .kask-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--rule)}
@@ -226,7 +228,6 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .kask-src{font-size:13.5px;color:var(--ink3);display:grid;gap:4px;border-top:1px solid var(--grid);padding-top:8px}.kask-src a{color:var(--ink)}
 .kask-item{border-bottom:1px solid var(--rule);padding-bottom:12px}
 .kask-wait{color:var(--ink3);font-size:14px}.kask-err{background:color-mix(in srgb,var(--bad) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--bad) 40%,transparent);border-radius:10px;padding:10px 12px;font-size:14px}
-@media (max-width:560px){.kask-fab span{display:none}.kask-fab{padding:13px 15px}}
 .tabrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}.tabrow .themeseg{margin-left:0}
 @media (max-width:560px){.themeseg button span{display:none}.themeseg button{padding:8px 10px}}
 .tabs{border-bottom:0;gap:4px;background:var(--strip);padding:4px;border-radius:999px;width:max-content;max-width:100%;box-shadow:inset 0 1px 2px rgba(30,28,25,.06)}
@@ -360,6 +361,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
     <button class="scr" data-scr="fsv" aria-current="false">Vol Surface Δ</button>
     <button class="scr" data-scr="vix" aria-current="true">VIX Term &amp; Carry</button>
     <button class="scr" data-scr="lev" aria-current="false">3x Leverage</button>
+    <button class="askbtn" id="kaskFab" type="button" aria-controls="kask" aria-expanded="false"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg><span>Ask AI</span></button>
   </nav>
   <div class="top"><div style="display:flex;flex-direction:column;gap:2px"><h1 id="title">VIX Term &amp; Carry</h1><span class="src" id="src"><span class="upd">Last update <b>10:41 PM ET</b></span> · VIX index (Cboe, 15-min delayed) <b>4:15 PM ET</b> · VIX futures (Cboe settle) <b>2026-10-22</b> · VIX options (Cboe, 15-min delayed) <b>4:15 PM ET</b> · page v2.9.1s</span><span class="byline">Made by Kevin Rodrigue</span></div><div class="events" id="events"></div></div>
   <div class="tabrow">
@@ -503,7 +505,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 const SHEET_ID="";
 const SHEET_URL="";
 const GS="Google Sheets", TV="Tradingview";
-const PAGE_VERSION="2.15.0s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
+const PAGE_VERSION="2.15.1s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
 const GROUPS={C:{name:"Cyclicals",c:"var(--cyc)"},T:{name:"Tech & Innovation",c:"var(--tech)"},D:{name:"Defensives",c:"var(--def)"},
   I:{name:"Indices",c:"var(--idx)"},B:{name:"Bonds",c:"var(--bnd)"},M:{name:"Commodities",c:"var(--cmd)"}};
 const SCREENS={sectors:{title:"Sector Rotation",groups:["C","T","D"]},macro:{title:"Cross-Asset Regime",groups:["I","B","M"]},vix:{title:"VIX Term & Carry"},fsv:{title:"Vol Surface Δ"},lev:{title:"3x Leverage"}};
@@ -1234,7 +1236,7 @@ function startFsv(){if(!LIVE.mcp||fsStarted)return;fsStarted=true;
 
 /* ---------- how it works ---------- */
 const GLOSS=[
-["Ask AI","Board","The ✦ button at the bottom right. An options and volatility analyst that reads the screen you have open and the glossary, checks live Cboe implied volatility for any symbol and the 3x data, and searches the web when the question is about something current.","Board marks a number from the board; a blue number is a web source, listed under the answer."],
+["Ask AI","Board","The ✦ Ask AI button in the top bar. An options and volatility analyst that reads the screen you have open and the glossary, checks live Cboe implied volatility for any symbol and the 3x data, and searches the web when the question is about something current.","Board marks a number from the board; a blue number is a web source, listed under the answer."],
 ["Online now","Board","Someone has the board open on screen and it checked in within the last two and a half minutes. The board checks in every 60 seconds while it is showing.","Owner only: seen on the Testers page with the screen each person is on."],
 ["Sign-in","Board","Opening the board after 20 minutes or more away. Each one is logged with the site it was for, so the owner sees which board a tester came in on.","Testers sign in with their email and a one-time code; sessions last two days for testers, 30 days for the owner."],
 ["Grade","3x funds","How a setup compares with buying on any day over the same hold. A: 5+ points better with an equal or better win rate and 8 or more separate signals. B: 2+ points better. C: slightly better. —: no better. thin: fewer than 4 separate signals.","Act on A and B. C is a small position at most. Ignore — and treat thin as a story, not an edge."],
@@ -1305,6 +1307,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.15.1 · Oct 24 2026</dt><dd>✦ Ask AI moved from the bottom-right corner into the top bar, next to the screen names.</dd>
    <dt>Page 2.15.0 · LedgerLine worker 3.20.0 · Oct 24 2026</dt><dd>New ✦ Ask AI button at the bottom right of every screen. Ask anything about options and volatility: definitions, formulas (vol drag, implied move, the Greeks), how to read any chart, or what today’s numbers mean. It reads the screen you have open and the board’s glossary, can check live Cboe implied volatility for any symbol and the 3x data, and searches the web for anything current. Answers show their sources.</dd>
    <dt>Page 2.14.0 · Oct 24 2026</dt><dd>New look, easier on the eyes, the same as LedgerLine: warm off-white pages in light mode and soft charcoal in dark (never pure white or pure black), about 13:1 contrast for main text and 6–7:1 for secondary text. Light | Dark switch next to the Stats, Charts and How it works tabs (icons only on a phone); it remembers your choice and until then follows your device. The whole board now has a dark mode, not just the 3x screen. Inter for reading text with figures that line up; Source Serif stays for titles. Text is larger: nothing under 13px. Accent colors toned down; VIX price bars black (off-white in dark). Fixed on phones: the three Sector Rotation σ-move charts now stack in one column instead of squeezing side by side past the screen edge. The board is now checked automatically before every update, on every screen and tab, phone and desktop, light and dark.</dd>
    <dt>Page 2.13.0 · Oct 24 2026</dt><dd>3x Leverage, Edge finder: clearer setup names (Red day, Big red day, Losing streak, Pullback, Correction, Bear market, Trough, Deep trough, Crash zone, Washout, Vol crush, Calm at the highs). Every setup gets a <b>Grade</b> against buying on any day: A strong edge, B edge, C slight edge, — none, thin when there are fewer than 4 separate signals. Live now is wider: the last 10 trading days, plus any trough setup whose zone still holds today, and it leads with the best graded setup in plain words. New <b>Add ladders</b> test scaling in: a third at the fund 20% below its high, a third more at 30% and 40%; and a third at the index 5% below its high, more at 10% and 15%. The drag label call now compares against buying on any day too, so it can say Edge on.</dd>
@@ -1978,7 +1981,6 @@ renderHow();setupScreen();refresh();boot();
  try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",sync)}catch(_){}sync()})();
 </script>
 
-<button class="kask-fab" id="kaskFab" type="button" aria-controls="kask" aria-expanded="false"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg><span>Ask AI</span></button>
 <aside class="kask" id="kask" role="dialog" aria-label="Ask AI" aria-hidden="true">
   <div class="kask-h"><div style="flex:1"><h3>Ask AI</h3><small>Options, volatility and 3x questions. It sees this screen, can check live IV for any symbol, and searches the web.</small></div><button class="kask-x" id="kaskX" type="button" aria-label="Close">×</button></div>
   <div class="kask-b" id="kaskB"></div>
@@ -1992,7 +1994,7 @@ renderHow();setupScreen();refresh();boot();
  const SAMPLES=["What is vol drag and how is it calculated?","Is TQQQ's drag heavy right now?","Explain contango in the VIX curve today","What does a 2σ move mean on this board?","IV vs HV: which is higher for QQQ now?","How do I read the skew chart?"];
  const H=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
  const items=[]; let busy=false, err=null;
- const ctxText=()=>{ const w=document.querySelector(".wrap"); let t=""; try{ const c=w.cloneNode(true); c.querySelectorAll("script,style,svg,button,nav,.kask,.kask-fab,.tabrow,.themeseg").forEach(e=>e.remove()); t=(c.innerText||c.textContent||"").replace(/[ \t]+/g," ").replace(/\n\s*\n+/g,"\n").trim(); }catch(e){}
+ const ctxText=()=>{ const w=document.querySelector(".wrap"); let t=""; try{ const c=w.cloneNode(true); c.querySelectorAll("script,style,svg,button,nav,.kask,.askbtn,.tabrow,.themeseg").forEach(e=>e.remove()); t=(c.innerText||c.textContent||"").replace(/[ \t]+/g," ").replace(/\n\s*\n+/g,"\n").trim(); }catch(e){}
    let g=""; try{ if(typeof GLOSS!=="undefined") g=GLOSS.map(x=>"- "+x[0]+": "+x[2]+(x[3]?" ("+x[3]+")":"")).join("\n"); }catch(e){}
    const scr=(document.querySelector("button.scr[aria-current=true]")||{}).textContent||"";
    return ("Screen: "+scr+"\n"+t).slice(0,30000)+(g?"\n\n## Board glossary\n"+g.slice(0,14000):""); };
