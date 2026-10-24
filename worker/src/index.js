@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.20.1';
+const WORKER_VERSION = '3.21.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -1778,7 +1778,7 @@ async function marketstack(sym, apiKey, keepDaily = 1320) {
 /* ================= 4. Subscriptions: Stripe checkout + webhook -> Cloudflare Access group ================= */
 // Secrets (Cloudflare → sec-proxy → Settings → Variables and Secrets):
 //   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, CF_API_TOKEN (Access: Organizations, Identity Providers, and Groups — Edit), MARKETSTACK_KEY
-// Plain variables: STRIPE_PRICE_MONTHLY, STRIPE_PRICE_ANNUAL, SITE_URL, CF_ACCOUNT_ID, ACCESS_GROUP_ID, STRIPE_PORTAL_URL
+// Plain variables: STRIPE_PRICE_MONTHLY, STRIPE_PRICE_ANNUAL, STRIPE_PRICE_FOUNDING_MONTHLY, STRIPE_PRICE_FOUNDING_ANNUAL, SITE_URL, CF_ACCOUNT_ID, ACCESS_GROUP_ID, STRIPE_PORTAL_URL
 const TRIAL_DAYS = 21;
 
 async function billing(req, url, env) {
@@ -1787,11 +1787,12 @@ async function billing(req, url, env) {
   try {
     if (path === '/billing/health') {
       const has = k => !!env[k];
-      return json({ ok: true, trialDays: TRIAL_DAYS, configured: Object.fromEntries(['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_MONTHLY', 'STRIPE_PRICE_ANNUAL', 'SITE_URL', 'CF_API_TOKEN', 'CF_ACCOUNT_ID', 'ACCESS_GROUP_ID', 'STRIPE_PORTAL_URL', 'MARKETSTACK_KEY'].map(k => [k, has(k)])) });
+      return json({ ok: true, trialDays: TRIAL_DAYS, configured: Object.fromEntries(['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_MONTHLY', 'STRIPE_PRICE_ANNUAL', 'STRIPE_PRICE_FOUNDING_MONTHLY', 'STRIPE_PRICE_FOUNDING_ANNUAL', 'SITE_URL', 'CF_API_TOKEN', 'CF_ACCOUNT_ID', 'ACCESS_GROUP_ID', 'STRIPE_PORTAL_URL', 'MARKETSTACK_KEY'].map(k => [k, has(k)])) });
     }
     if (path === '/billing/checkout') {
-      const plan = url.searchParams.get('plan') === 'annual' ? 'annual' : 'monthly';
-      const price = plan === 'annual' ? env.STRIPE_PRICE_ANNUAL : env.STRIPE_PRICE_MONTHLY;
+      const PLANS = { monthly: env.STRIPE_PRICE_MONTHLY, annual: env.STRIPE_PRICE_ANNUAL, 'founding-monthly': env.STRIPE_PRICE_FOUNDING_MONTHLY, 'founding-annual': env.STRIPE_PRICE_FOUNDING_ANNUAL };
+      const plan = PLANS[url.searchParams.get('plan')] !== undefined ? url.searchParams.get('plan') : 'monthly';
+      const price = PLANS[plan];
       if (!env.STRIPE_SECRET_KEY || !price) return new Response('Subscriptions are not open yet.', { status: 503 });
       const form = new URLSearchParams({
         mode: 'subscription', 'line_items[0][price]': price, 'line_items[0][quantity]': '1',
@@ -1802,6 +1803,19 @@ async function billing(req, url, env) {
       const email = url.searchParams.get('email'); if (email) form.set('customer_email', email);
       const s = await stripe(env, 'POST', '/v1/checkout/sessions', form);
       return Response.redirect(s.url, 303);
+    }
+    if (path === '/billing/status') {   // the signed-in person's subscription, for the Account page
+      if ((req.headers.get('Origin') || '') !== site) return json({ error: 'Open this from the LedgerLine site' }, 403);
+      const email = String(url.searchParams.get('email') || '').trim().toLowerCase();
+      const names = { [env.STRIPE_PRICE_MONTHLY]: 'Standard · monthly', [env.STRIPE_PRICE_ANNUAL]: 'Standard · annual', [env.STRIPE_PRICE_FOUNDING_MONTHLY]: 'Founding member · monthly', [env.STRIPE_PRICE_FOUNDING_ANNUAL]: 'Founding member · annual' };
+      const open = { monthly: !!env.STRIPE_PRICE_MONTHLY, annual: !!env.STRIPE_PRICE_ANNUAL, 'founding-monthly': !!env.STRIPE_PRICE_FOUNDING_MONTHLY, 'founding-annual': !!env.STRIPE_PRICE_FOUNDING_ANNUAL };
+      if (!env.STRIPE_SECRET_KEY) return json({ billing: false, open, trialDays: TRIAL_DAYS });
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ billing: true, open, trialDays: TRIAL_DAYS, subscription: null });
+      const cs = await stripe(env, 'GET', '/v1/customers?limit=3&email=' + encodeURIComponent(email));
+      let best = null;
+      for (const c of cs.data || []) { const ss = await stripe(env, 'GET', '/v1/subscriptions?status=all&limit=5&customer=' + c.id); for (const x of ss.data || []) if (!best || x.created > best.created) best = x; }
+      const sub = best && { status: best.status, plan: names[best.items?.data?.[0]?.price?.id] || 'LedgerLine', cancelAtPeriodEnd: !!best.cancel_at_period_end, periodEnd: best.current_period_end || best.items?.data?.[0]?.current_period_end || null, trialEnd: best.trial_end || null };
+      return json({ billing: true, open, trialDays: TRIAL_DAYS, subscription: sub });
     }
     if (path === '/billing/portal') {
       if (!env.STRIPE_PORTAL_URL) return new Response('Billing portal not set up yet.', { status: 503 });
