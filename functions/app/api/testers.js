@@ -2,7 +2,7 @@
 // Access puts the signed-in email on every request; only the owner's emails may read or change testers.
 // Changes are queued in D1 (tester_queue); the sec-proxy worker applies them with its own token within about 2 minutes
 // and keeps a copy of every site's tester list in settings.tester_cache.
-const OWNERS = ['kgrodrigue@yahoo.com', 'mammothconstructors@gmail.com'];
+const OWNERS = ['kgrodrigue@yahoo.com'];
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 export async function onRequest({ request, env }) {
   const who = (request.headers.get('cf-access-authenticated-user-email') || '').toLowerCase();

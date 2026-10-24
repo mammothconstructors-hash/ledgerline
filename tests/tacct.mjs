@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 import path from 'path'; import { fileURLToPath } from 'url'; import fs from 'fs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), OUT = ROOT + '/tests/out', HTML = fs.readFileSync(ROOT + '/site/app/index.html', 'utf8');
 const b = await chromium.launch(); const bad = [];
-for (const [w, h, mode, paid, who] of [[1280, 1000, 'light', false, 'kgrodrigue@yahoo.com'], [1280, 1000, 'dark', true, 'tester@example.com'], [390, 844, 'light', true, 'kgrodrigue@yahoo.com']]) {
+for (const [w, h, mode, paid, who] of [[1280, 1000, 'light', false, 'kgrodrigue@yahoo.com'], [1280, 1000, 'dark', true, 'tester@example.com'], [390, 844, 'dark', false, 'a.very.long.customer.name.here@example-company.com'], [390, 844, 'light', true, 'kgrodrigue@yahoo.com']]) {
   const p = await b.newPage({ viewport: { width: w, height: h }, colorScheme: mode }); p.on('pageerror', e => console.log(`${w} PAGEERR ${e.message}`));
   await p.route('https://fonts.googleapis.com/**', r => r.abort());
   await p.route('**/cdn-cgi/access/get-identity', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ email: who }) }));

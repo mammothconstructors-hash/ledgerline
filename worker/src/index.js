@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.22.2';
+const WORKER_VERSION = '3.22.3';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -1804,7 +1804,7 @@ async function billing(req, url, env) {
         mode: 'subscription', 'line_items[0][price]': price, 'line_items[0][quantity]': '1',
         'subscription_data[trial_period_days]': String(TRIAL_DAYS), payment_method_collection: 'always',
         allow_promotion_codes: 'true', billing_address_collection: 'auto',
-        success_url: site + '/welcome.html?session_id={CHECKOUT_SESSION_ID}', cancel_url: site + '/#pricing'
+        success_url: site + '/welcome.html?session_id={CHECKOUT_SESSION_ID}', cancel_url: site + '/app/?go=account'
       });
       const email = url.searchParams.get('email'); if (email) form.set('customer_email', email);
       const s = await stripe(env, 'POST', '/v1/checkout/sessions', form);
@@ -1814,7 +1814,7 @@ async function billing(req, url, env) {
       if ((req.headers.get('Origin') || '') !== site) return json({ error: 'Open this from the LedgerLine site' }, 403);
       const email = String(url.searchParams.get('email') || '').trim().toLowerCase();
       const names = { [env.STRIPE_PRICE_MONTHLY]: 'Standard · monthly', [env.STRIPE_PRICE_ANNUAL]: 'Standard · annual', [env.STRIPE_PRICE_FOUNDING_MONTHLY]: 'Founding member · monthly', [env.STRIPE_PRICE_FOUNDING_ANNUAL]: 'Founding member · annual' };
-      const open = { monthly: !!env.STRIPE_PRICE_MONTHLY, annual: !!env.STRIPE_PRICE_ANNUAL, 'founding-monthly': !!env.STRIPE_PRICE_FOUNDING_MONTHLY, 'founding-annual': !!env.STRIPE_PRICE_FOUNDING_ANNUAL };
+      const k = !!env.STRIPE_SECRET_KEY, open = { monthly: k && !!env.STRIPE_PRICE_MONTHLY, annual: k && !!env.STRIPE_PRICE_ANNUAL, 'founding-monthly': k && !!env.STRIPE_PRICE_FOUNDING_MONTHLY, 'founding-annual': k && !!env.STRIPE_PRICE_FOUNDING_ANNUAL };   // a button only opens once the key and that price are both in
       if (!env.STRIPE_SECRET_KEY) return json({ billing: false, open, trialDays: TRIAL_DAYS });
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ billing: true, open, trialDays: TRIAL_DAYS, subscription: null });
       const cs = await stripe(env, 'GET', '/v1/customers?limit=3&email=' + encodeURIComponent(email));

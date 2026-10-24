@@ -231,7 +231,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .kask-src{font-size:13.5px;color:var(--ink3);display:grid;gap:4px;border-top:1px solid var(--grid);padding-top:8px}.kask-src a{color:var(--ink)}
 .kask-item{border-bottom:1px solid var(--rule);padding-bottom:12px}
 .kask-wait{color:var(--ink3);font-size:14px}.kask-err{background:color-mix(in srgb,var(--bad) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--bad) 40%,transparent);border-radius:10px;padding:10px 12px;font-size:14px}
-.screens .brandrow{display:inline-flex;align-items:center;gap:8px;margin-right:10px;letter-spacing:normal}.brandrow b{font:800 16px var(--sans);letter-spacing:.02em;color:var(--ink);white-space:nowrap}.brandrow b em{font-style:normal;color:var(--accent)}
+.screens .brandrow{display:inline-flex;flex-wrap:wrap;align-items:center;gap:8px;margin-right:10px;letter-spacing:normal;max-width:100%}.brandrow b{font:800 16px var(--sans);letter-spacing:.02em;color:var(--ink);white-space:nowrap}.brandrow b em{font-style:normal;color:var(--accent)}
 .llhome{display:inline-flex;line-height:0}.appsw{font:600 13px var(--sans);letter-spacing:normal;text-transform:none;color:var(--ink3);text-decoration:none;border:1px solid var(--rule);border-radius:999px;padding:4px 10px;white-space:nowrap}.appsw:hover{color:var(--ink);background:var(--strip)}
 .homepill{font-weight:700;color:var(--ink)}
 @media (max-width:700px){.appsw{padding:3px 8px;font-size:12px}}
@@ -369,7 +369,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
     <button class="scr" data-scr="fsv" aria-current="false">Vol Surface Δ</button>
     <button class="scr" data-scr="vix" aria-current="true">VIX Term &amp; Carry</button>
     <button class="scr" data-scr="lev" aria-current="false">3x Leverage</button>
-    <a class="scr acctlink" href="https://ledgerline-dv0.pages.dev/app/?go=account" title="Profile, subscription and plans (one subscription covers LedgerLine and the KGR Vol Board)">Account</a>
+    <a class="scr acctlink" href="https://ledgerline-dv0.pages.dev/app/?go=account" title="Profile, subscription and plans (one subscription covers Research and Regime)">Account</a>
     <button class="askbtn" id="kaskFab" type="button" aria-controls="kask" aria-expanded="false"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg><span>Ask AI</span></button>
   </nav>
   <div class="top"><div style="display:flex;flex-direction:column;gap:2px"><h1 id="title">VIX Term &amp; Carry</h1><span class="src" id="src"><span class="upd">Last update <b>10:41 PM ET</b></span> · VIX index (Cboe, 15-min delayed) <b>4:15 PM ET</b> · VIX futures (Cboe settle) <b>2026-10-22</b> · VIX options (Cboe, 15-min delayed) <b>4:15 PM ET</b> · page v2.9.1s</span><span class="byline">© 2026 KGR · LedgerLine Regime™</span></div><div class="events" id="events"></div></div>
