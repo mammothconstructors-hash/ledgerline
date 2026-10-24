@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.14.0';
+const WORKER_VERSION = '3.15.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -230,6 +230,82 @@ async function msHoldings(sym, env, day) {
   const top10 = rows.slice(0, 10).reduce((a, h) => a + h.weight, 0), b = j.basics || (j.data && j.data.basics) || {}, at = (j.output && j.output.attributes) || {};
   return { symbol: sym, fund: pickStr(at, ['series_name']) || pickStr(b, ['fund_name']) || sym, day, asOf: pickStr(at, ['rep_pd_date', 'report_date', 'date']) || null, count: rows.length,
     top10Weight: Math.round(top10 * 100) / 100, cashWeight: Math.round(cashW * 100) / 100, sectors: [], holdings: rows.slice(0, 500), source: 'Marketstack ETF holdings (SEC N-PORT)' };
+}
+/* ================= 3x leverage board (3.15.0) =================
+   Each 3x fund next to the ETF that holds its index: price and returns (Marketstack end of day), 30-day implied vol (Cboe),
+   realized vol, realized leverage and beta, expected drag at implied and realized vol, and last year's decay split from costs.
+   IV30 is stored once a day per symbol (D1 iv_hist) so IV rank and percentile build up from today. Cached 15 minutes. */
+const LEV_PAIRS = [['QQQ', 'Nasdaq-100', [['TQQQ', 3]]], ['SPY', 'S&P 500', [['UPRO', 3]]], ['DIA', 'Dow 30', [['UDOW', 3]]], ['IWM', 'Russell 2000', [['TNA', 3], ['URTY', 3]]], ['SOXX', 'NYSE Semiconductor (SOXL’s index)', [['SOXL', 3]]], ['XLK', 'Technology Select Sector', [['TECL', 3]]]];
+const lvRet = (c, k) => c && c.length > k && c[c.length - 1 - k] > 0 ? (c[c.length - 1] / c[c.length - 1 - k] - 1) * 100 : null;
+const lvLogs = c => { const r = []; for (let i = 1; i < c.length; i++) if (c[i] > 0 && c[i - 1] > 0) r.push(Math.log(c[i] / c[i - 1])); return r; };
+const lvSd = r => { if (r.length < 5) return null; const m = r.reduce((a, v) => a + v, 0) / r.length; return Math.sqrt(r.reduce((a, v) => a + (v - m) ** 2, 0) / (r.length - 1)); };
+const lvHv = (c, n) => c && c.length > n + 1 ? (lvSd(lvLogs(c.slice(-n - 1))) || 0) * Math.sqrt(252) * 100 : null;
+const lvDrag = (L, vol) => vol == null ? null : (L * L - L) / 2 * (vol / 100) ** 2 * 100;
+const lvR = (v, d = 2) => v == null || !isFinite(v) ? null : Math.round(v * 10 ** d) / 10 ** d;
+function lvStats(d) {
+  const c = d.c, n = c.length, last = c[n - 1], t = d.t, yr = new Date(t[n - 1] * 1000).getUTCFullYear();
+  const y0 = t.findIndex(x => new Date(x * 1000).getUTCFullYear() === yr), ytd = y0 > 0 ? (last / c[y0 - 1] - 1) * 100 : null;
+  const st5 = t[n - 1] - 5 * 365.25 * 86400; let i5 = t.findIndex(x => x >= st5); if (i5 < 0) i5 = 0;
+  let pk = c[i5], pkAt = i5, worst = 0; for (let i = i5; i < n; i++) { if (c[i] >= pk) { pk = c[i]; pkAt = i; } worst = Math.min(worst, (c[i] / pk - 1) * 100); }
+  return { price: last, d1: lvRet(c, 1), w1: lvRet(c, 5), m1: lvRet(c, 21), m3: lvRet(c, 63), ytd, y1: lvRet(c, 252), hv20: lvHv(c, 20), hv60: lvHv(c, 60), hv252: lvHv(c, 252),
+    below: (last / Math.max(...c.slice(i5)) - 1) * 100, highAt: new Date(t[c.slice(i5).indexOf(Math.max(...c.slice(i5))) + i5] * 1000).toISOString().slice(0, 10), worst5: worst };
+}
+function lvPair(fd, ud, L) {   // matched days: realized leverage, beta, and last year's decay vs costs
+  const key = x => new Date(x * 1000).toISOString().slice(0, 10), U = {}; ud.t.forEach((x, i) => { U[key(x)] = ud.c[i]; });
+  const rows = []; fd.t.forEach((x, i) => { const u = U[key(x)]; if (u) rows.push([fd.c[i], u, x]); });
+  const tail = (k) => rows.slice(-k - 1), rr = a => { const f = [], u = []; for (let i = 1; i < a.length; i++) { f.push(a[i][0] / a[i - 1][0] - 1); u.push(a[i][1] / a[i - 1][1] - 1); } return [f, u]; };
+  const [f60, u60] = rr(tail(60)), mu = u60.reduce((a, v) => a + v, 0) / (u60.length || 1), mf = f60.reduce((a, v) => a + v, 0) / (f60.length || 1);
+  let cov = 0, vu = 0; for (let i = 0; i < u60.length; i++) { cov += (f60[i] - mf) * (u60[i] - mu); vu += (u60[i] - mu) ** 2; }
+  const beta = vu ? cov / vu : null, sdU = lvSd(u60), sdF = lvSd(f60);
+  const end = rows.length ? rows[rows.length - 1][2] : 0, yr = rows.filter(r => r[2] >= end - 365.25 * 86400);
+  let y = null;
+  if (yr.length > 200) { let comp = 1; for (let i = 1; i < yr.length; i++) comp *= 1 + L * (yr[i][1] / yr[i - 1][1] - 1);
+    const uR = (yr[yr.length - 1][1] / yr[0][1] - 1) * 100, fR = (yr[yr.length - 1][0] / yr[0][0] - 1) * 100, cR = (comp - 1) * 100;
+    y = { under: uR, simple: L * uR, compounded: cR, fund: fR, decay: cR - L * uR, costs: fR - cR, days: yr.length }; }
+  // the same split month to date and over 3 months
+  const win = k => { const a = tail(k); if (a.length < k * 0.8) return null; let comp = 1; for (let i = 1; i < a.length; i++) comp *= 1 + L * (a[i][1] / a[i - 1][1] - 1); const uR = (a[a.length - 1][1] / a[0][1] - 1) * 100; return { decay: (comp - 1) * 100 - L * uR, fund: (a[a.length - 1][0] / a[0][0] - 1) * 100, simple: L * uR }; };
+  return { beta: lvR(beta, 2), realizedLev: sdU && sdF ? lvR(sdF / sdU, 2) : null, y1: y, m1: win(21), m3: win(63) };
+}
+async function ivRank(env, sym, iv) {   // store today's IV30, then where it sits in the stored history
+  if (!env.DB || iv == null) return { n: 0 };
+  try {
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS iv_hist (sym TEXT, day TEXT, iv REAL, PRIMARY KEY (sym, day))').run();
+    await env.DB.prepare('INSERT OR REPLACE INTO iv_hist (sym, day, iv) VALUES (?, ?, ?)').bind(sym, etDay(), iv).run();
+    const h = ((await env.DB.prepare('SELECT iv FROM iv_hist WHERE sym = ? AND day >= ? ORDER BY day').bind(sym, new Date(Date.now() - 366 * 864e5).toISOString().slice(0, 10)).all()).results || []).map(r => r.iv);
+    if (h.length < 5) return { n: h.length };
+    const lo = Math.min(...h), hi = Math.max(...h);
+    return { n: h.length, rank: hi > lo ? lvR((iv - lo) / (hi - lo) * 100, 0) : null, pctile: lvR(h.filter(v => v <= iv).length / h.length * 100, 0), lo: lvR(lo, 1), hi: lvR(hi, 1) };
+  } catch (e) { return { n: 0 }; }
+}
+async function levBoard(env, ctx) {
+  const key = new Request(`https://ledgerline-cache.internal/levboard/v1/${Math.floor(Date.now() / 900e3)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
+  if (cache) { const hit = await cache.match(key); if (hit) return hit.json(); }
+  const syms = [...new Set(LEV_PAIRS.flatMap(([u, , fs]) => [u, ...fs.map(f => f[0])]))];
+  const mk = {}, iv = {};
+  await Promise.all(syms.map(async s => {
+    try { mk[s] = await market(s, env, ctx); } catch (e) { mk[s] = null; }
+    try { iv[s] = await impliedVol(s); } catch (e) { iv[s] = null; }
+  }));
+  const one = async (s) => { const m = mk[s], d = m && m.daily && m.daily.c && m.daily.c.length > 60 ? m.daily : null, q = iv[s] || {};
+    const st = d ? lvStats(d) : null, ivv = q.iv30 != null ? q.iv30 : null;
+    return { symbol: s, ...(st ? Object.fromEntries(Object.entries(st).map(([k, v]) => [k, typeof v === 'number' ? lvR(v, 2) : v])) : {}), price: q.price || (st && st.price) || null,
+      iv30: lvR(ivv, 2), ivChg: lvR(q.iv30Change, 2), ivMinusHv: ivv != null && st && st.hv20 != null ? lvR(ivv - st.hv20, 2) : null, ivRank: await ivRank(env, s, ivv), ivStamp: q.stamp || null }; };
+  const groups = [];
+  for (const [u, name, fs] of LEV_PAIRS) {
+    const U = await one(u), ud = mk[u] && mk[u].daily;
+    const funds = [];
+    for (const [f, L] of fs) {
+      const F = await one(f), fd = mk[f] && mk[f].daily, p = fd && ud && fd.c && ud.c ? lvPair(fd, ud, L) : {};
+      funds.push({ ...F, lev: L, ...p,
+        dragIV: lvR(lvDrag(L, U.iv30), 2), dragHV20: lvR(lvDrag(L, U.hv20), 2), dragHV60: lvR(lvDrag(L, U.hv60), 2), dragHV1y: lvR(lvDrag(L, U.hv252), 2),
+        dragIVmonth: U.iv30 != null ? lvR(lvDrag(L, U.iv30) / 12, 2) : null,
+        ivVs3x: F.iv30 != null && U.iv30 ? lvR(F.iv30 / (L * U.iv30), 2) : null });
+    }
+    groups.push({ index: name, underlying: U, funds });
+  }
+  const out = { asOf: new Date().toISOString(), checkedAt: Date.now(), worker: WORKER_VERSION, method: 'drag = (L^2 - L)/2 x vol^2; decay = L-times-daily compounded minus L x period return; costs = fund minus L-times-daily compounded', groups };
+  if (cache) { const put = cache.put(key, new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=900' } })); if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put; }
+  return out;
 }
 // 3.14.0: implied volatility (IV30) and the day's quote from Cboe's free delayed quotes, cached 15 minutes per symbol
 async function impliedVol(symbol) {
@@ -1167,6 +1243,7 @@ async function api(req, url, env, ctx) {
     if (path === '/api/section') return out(await secSection({ ticker: q.get('ticker'), section: q.get('section'), form: q.get('form'), maxChars: q.get('maxChars') }), 200, 3600);
     if (path === '/api/market') { rankNudge(env, ctx); return out(await market(q.get('symbol') || '', env, ctx), 200, 900); }
     if (path === '/api/ranks') { rankNudge(env, ctx); return out(await sectorRank(q.get('ticker') || '', env), 200, 600); }
+    if (path === '/api/levboard') return out(await levBoard(env, ctx), 200, 900);
     if (path === '/api/iv') return out(await impliedVol(q.get('symbol') || q.get('ticker') || ''), 200, 600);
     if (path === '/api/etf-holdings') return out(await etfHoldings(q.get('symbol') || q.get('ticker') || '', env), 200, 3600);
     if (path === '/api/usage') return out(await usageData(), 200, 0);
