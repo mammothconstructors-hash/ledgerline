@@ -17,7 +17,7 @@ import UNIVERSE from './universe.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.9.2';
+const WORKER_VERSION = '3.12.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -49,8 +49,12 @@ export default {
   }
 };
 
-/* ================= sector ranks: S&P 500 total returns over a week, month, quarter and year, ranked within each GICS sector ================= */
-const RANK_WINS = [['d0', 0], ['w', 7], ['m', 30], ['q', 91], ['y', 365]], RANK_BATCH = 80;
+/* ================= sector ranks: S&P 500 total returns over a week, month, quarter and year, ranked within each GICS sector =================
+   3.10.0: closes are stored in D1 (rank_hist) and returns are worked out from that history, so each stock costs one
+   Marketstack lookup a night instead of five. Marketstack bills a many-symbol request once per symbol, so that is what we count.
+     backfill (once, and again for any stock more than 12 days behind): one symbol per request, ~13 months of daily closes
+     nightly: 80 symbols per request, last 10 sessions; if a dividend or split re-based adj_close, the stored history is rescaled to match */
+const RANK_WINS = [['w', 7], ['m', 30], ['q', 91], ['y', 365]], RANK_BATCH = 80, RANK_KEEP_DAYS = 400, RANK_BACKFILL_DAYS = 380;
 async function rankLog(env, kind, msg) { try { await env.DB.prepare('CREATE TABLE IF NOT EXISTS worker_log (ts INTEGER, kind TEXT, msg TEXT)').run(); await env.DB.batch([env.DB.prepare('INSERT INTO worker_log (ts, kind, msg) VALUES (?, ?, ?)').bind(Date.now(), kind, String(msg).slice(0, 300)), env.DB.prepare('DELETE FROM worker_log WHERE ts < ?').bind(Date.now() - 3 * 864e5)]); } catch (e) { } }
 // a page view also nudges the build along (at most once a minute per instance), so ranks fill in even before the schedule fires
 let RANK_NUDGE = 0;
@@ -58,53 +62,186 @@ function rankNudge(env, ctx) { if (!env.DB || !env.MARKETSTACK_KEY || !ctx || !c
 async function rankSchema(DB) {
   await DB.batch([
     DB.prepare('CREATE TABLE IF NOT EXISTS universe (ticker TEXT PRIMARY KEY, sector TEXT, sub TEXT)'),
-    DB.prepare('CREATE TABLE IF NOT EXISTS rank_px (session TEXT, ticker TEXT, win TEXT, date TEXT, adj REAL, PRIMARY KEY (session, ticker, win))'),
+    DB.prepare('CREATE TABLE IF NOT EXISTS rank_hist (ticker TEXT, date TEXT, adj REAL, PRIMARY KEY (ticker, date))'),
+    DB.prepare('CREATE TABLE IF NOT EXISTS rank_tk (ticker TEXT PRIMARY KEY, last TEXT)'),   // latest close stored per stock
     DB.prepare('CREATE TABLE IF NOT EXISTS rank_job (session TEXT PRIMARY KEY, step INTEGER NOT NULL DEFAULT 0, done INTEGER NOT NULL DEFAULT 0, updated INTEGER)'),
-    DB.prepare('CREATE TABLE IF NOT EXISTS ranks (ticker TEXT PRIMARY KEY, sector TEXT, sub TEXT, session TEXT, w REAL, m REAL, q REAL, y REAL)')
-  ]);  const has = await DB.prepare('SELECT COUNT(*) AS n FROM universe').first();
+    DB.prepare('CREATE TABLE IF NOT EXISTS ranks (ticker TEXT PRIMARY KEY, sector TEXT, sub TEXT, session TEXT, w REAL, m REAL, q REAL, y REAL)'),
+    DB.prepare('CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT)'),
+    DB.prepare('DROP TABLE IF EXISTS rank_px')   // the old five-lookups-per-stock scratch table
+  ]);
+  const has = await DB.prepare('SELECT COUNT(*) AS n FROM universe').first();
   if (!has || !has.n) { const st = DB.prepare('INSERT OR REPLACE INTO universe (ticker, sector, sub) VALUES (?, ?, ?)'); for (let i = 0; i < UNIVERSE.length; i += 100) await DB.batch(UNIVERSE.slice(i, i + 100).map(r => st.bind(r[0], r[1], r[2]))); }
 }
 const dayShift = (iso, d) => new Date(Date.parse(iso + 'T12:00:00Z') - d * 864e5).toISOString().slice(0, 10);
+const msSym = t => t.replace('-', '.');
+// one build at a time: the 2-minute schedule and page-view nudges can overlap, and an overlap would pay for the same stocks twice
+async function rankLock(DB, take) {
+  const now = Date.now();
+  if (!take) { await DB.prepare("DELETE FROM settings WHERE k = 'rank_lock'").run(); return true; }
+  await DB.prepare("INSERT OR IGNORE INTO settings (k, v) VALUES ('rank_lock', '0')").run();
+  const r = await DB.prepare("UPDATE settings SET v = ? WHERE k = 'rank_lock' AND CAST(v AS INTEGER) < ?").bind(String(now), now - 100e3).run();
+  return !!(r.meta && r.meta.changes);
+}
+async function rankPull(env, symbols, from, to, limit) {
+  const u = `https://api.marketstack.com/v2/eod?access_key=${encodeURIComponent(env.MARKETSTACK_KEY)}&symbols=${encodeURIComponent(symbols.map(msSym).join(','))}&date_from=${from}&date_to=${to}&limit=${limit}`;
+  const r = await msFetch(u, { headers: { Accept: 'application/json' } }, 'ranks', symbols.length);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new Error('Marketstack: ' + ((j.error && (j.error.message || j.error.code)) || r.status));
+  const back = Object.fromEntries(symbols.map(t => [msSym(t), t])), out = {};
+  for (const row of j.data || []) {
+    const t = back[row.symbol] || row.symbol, d = String(row.date).slice(0, 10), v = Number(row.adj_close ?? row.close);
+    if (!isFinite(v) || v <= 0 || d > to) continue;
+    (out[t] = out[t] || {})[d] = v;
+  }
+  return out;
+}
+// store one stock's closes; if the overlap with what is stored shows adj_close was re-based, rescale the old rows first
+async function rankStore(DB, t, px, session) {
+  const dates = Object.keys(px).sort(); if (!dates.length) return null;
+  const ops = [], first = dates[0];
+  const prev = await DB.prepare('SELECT date, adj FROM rank_hist WHERE ticker = ? AND date >= ? ORDER BY date DESC LIMIT 1').bind(t, first).first();
+  if (prev && px[prev.date] && prev.adj > 0) {
+    const k = px[prev.date] / prev.adj;
+    if (Math.abs(k - 1) > 1e-6) ops.push(DB.prepare('UPDATE rank_hist SET adj = adj * ? WHERE ticker = ? AND date < ?').bind(k, t, first));
+  }
+  const st = DB.prepare('INSERT OR REPLACE INTO rank_hist (ticker, date, adj) VALUES (?, ?, ?)');
+  for (const d of dates) ops.push(st.bind(t, d, px[d]));
+  ops.push(DB.prepare('INSERT INTO rank_tk (ticker, last) VALUES (?, ?) ON CONFLICT (ticker) DO UPDATE SET last = excluded.last').bind(t, dates[dates.length - 1]));
+  ops.push(DB.prepare('DELETE FROM rank_hist WHERE ticker = ? AND date < ?').bind(t, dayShift(session, RANK_KEEP_DAYS)));
+  for (let i = 0; i < ops.length; i += 400) await DB.batch(ops.slice(i, i + 400));
+  return dates[dates.length - 1];
+}
 async function rankStep(env, calls = 3) {
   const DB = env.DB; await rankSchema(DB);
   const session = expectedSession();
-  const job = await DB.prepare('SELECT step, done FROM rank_job WHERE session = ?').bind(session).first();
+  const job = await DB.prepare('SELECT done FROM rank_job WHERE session = ?').bind(session).first();
   if (job && job.done) return { session, done: true };
-  const tickers = ((await DB.prepare('SELECT ticker FROM universe ORDER BY ticker').all()).results || []).map(r => r.ticker);
-  if (!tickers.length) return { session, error: 'universe is empty' };
-  const nb = Math.ceil(tickers.length / RANK_BATCH), total = RANK_WINS.length * nb;
-  let step = job ? job.step : 0;
-  if (!job) await DB.prepare('INSERT INTO rank_job (session, step, done, updated) VALUES (?, 0, 0, ?)').bind(session, Date.now()).run();
-  for (let c = 0; c < calls && step < total; c++, step++) {
-    const [win, back] = RANK_WINS[Math.floor(step / nb)], batch = tickers.slice((step % nb) * RANK_BATCH, (step % nb + 1) * RANK_BATCH);
-    const target = dayShift(session, back), from = dayShift(target, 9), msSym = t => t.replace('-', '.');
-    const back2 = Object.fromEntries(batch.map(t => [msSym(t), t]));
-    const u = `https://api.marketstack.com/v2/eod?access_key=${encodeURIComponent(env.MARKETSTACK_KEY)}&symbols=${encodeURIComponent(batch.map(msSym).join(','))}&date_from=${from}&date_to=${target}&limit=1000`;
-    const r = await msFetch(u, { headers: { Accept: 'application/json' } }, 'ranks'); const j = await r.json().catch(() => ({}));
-    if (!r.ok || j.error) { await DB.prepare('UPDATE rank_job SET updated = ? WHERE session = ?').bind(Date.now(), session).run(); return { session, error: (j.error && (j.error.message || j.error.code)) || r.status }; }
-    const best = {};
-    for (const row of j.data || []) { const t = back2[row.symbol] || row.symbol, d = String(row.date).slice(0, 10), v = Number(row.adj_close ?? row.close); if (!isFinite(v) || v <= 0 || d > target) continue; if (!best[t] || d > best[t].d) best[t] = { d, v }; }
-    const st = DB.prepare('INSERT OR REPLACE INTO rank_px (session, ticker, win, date, adj) VALUES (?, ?, ?, ?, ?)');
-    const ops = Object.entries(best).map(([t, o]) => st.bind(session, t, win, o.d, o.v));
-    ops.push(DB.prepare('UPDATE rank_job SET step = ?, updated = ? WHERE session = ?').bind(step + 1, Date.now(), session));
-    await DB.batch(ops);
-  }
-  if (step >= total) {   // every window pulled: turn closes into returns, keep only this session
+  if (!job) await DB.prepare('INSERT OR IGNORE INTO rank_job (session, step, done, updated) VALUES (?, 0, 0, ?)').bind(session, Date.now()).run();
+  if (!(await rankLock(DB, true))) return { session, busy: true };
+  try {
+    const rows = (await DB.prepare('SELECT u.ticker, t.last FROM universe u LEFT JOIN rank_tk t ON t.ticker = u.ticker ORDER BY u.ticker').all()).results || [];
+    if (!rows.length) return { session, error: 'universe is empty' };
+    const stale = dayShift(session, 12);
+    const backfill = rows.filter(r => !r.last || r.last < stale).map(r => r.ticker);
+    const nightly = rows.filter(r => r.last && r.last >= stale && r.last < session).map(r => r.ticker);
+    let used = 0;
+    // 1. backfill: one symbol per request so a year of closes fits in a single 1,000-row page (one billed call per stock)
+    for (const t of backfill) {
+      if (used >= calls * 8) break;
+      used++;
+      const got = await rankPull(env, [t], dayShift(session, RANK_BACKFILL_DAYS), session, 1000);
+      if (!(await rankStore(DB, t, got[t] || {}, session))) await DB.prepare('INSERT INTO rank_tk (ticker, last) VALUES (?, ?) ON CONFLICT (ticker) DO UPDATE SET last = excluded.last').bind(t, session).run();   // no data (halted or delisted): don't retry nightly
+    }
+    // 2. nightly: the last 10 sessions for up to 80 stocks per request
+    for (let i = 0; i < nightly.length && used < calls; i += RANK_BATCH, used++) {
+      const batch = nightly.slice(i, i + RANK_BATCH), got = await rankPull(env, batch, dayShift(session, 14), session, 1000);
+      for (const t of batch) { if (!(await rankStore(DB, t, got[t] || {}, session))) await DB.prepare('UPDATE rank_tk SET last = ? WHERE ticker = ?').bind(session, t).run(); }
+    }
+    await DB.prepare('UPDATE rank_job SET updated = ? WHERE session = ?').bind(Date.now(), session).run();
+    const left = await DB.prepare('SELECT COUNT(*) AS n FROM universe u LEFT JOIN rank_tk t ON t.ticker = u.ticker WHERE t.last IS NULL OR t.last < ?').bind(session).first();
+    if (left && left.n) return { session, left: left.n };
+    // 3. everything is current: returns from stored closes (latest close on or before each target date, within 9 days)
+    const at = col => `(SELECT h.adj FROM rank_hist h WHERE h.ticker = u.ticker AND h.date <= ${col} AND h.date >= date(${col}, '-9 days') ORDER BY h.date DESC LIMIT 1)`;
+    const tg = Object.fromEntries(RANK_WINS.map(([k, back]) => [k, dayShift(session, back)]));
     await DB.batch([
       DB.prepare(`INSERT OR REPLACE INTO ranks (ticker, sector, sub, session, w, m, q, y)
-        SELECT u.ticker, u.sector, u.sub, ?1,
-          (SELECT p0.adj / pw.adj - 1 FROM rank_px pw WHERE pw.session = ?1 AND pw.ticker = u.ticker AND pw.win = 'w'),
-          (SELECT p0.adj / pm.adj - 1 FROM rank_px pm WHERE pm.session = ?1 AND pm.ticker = u.ticker AND pm.win = 'm'),
-          (SELECT p0.adj / pq.adj - 1 FROM rank_px pq WHERE pq.session = ?1 AND pq.ticker = u.ticker AND pq.win = 'q'),
-          (SELECT p0.adj / py.adj - 1 FROM rank_px py WHERE py.session = ?1 AND py.ticker = u.ticker AND py.win = 'y')
-        FROM universe u JOIN rank_px p0 ON p0.session = ?1 AND p0.ticker = u.ticker AND p0.win = 'd0'`).bind(session),
-      DB.prepare('DELETE FROM rank_px WHERE session <> ?').bind(session),
-      DB.prepare('UPDATE rank_job SET done = 1, updated = ? WHERE session = ?').bind(Date.now(), session)
+        SELECT ticker, sector, sub, ?1, p0 / pw - 1, p0 / pm - 1, p0 / pq - 1, p0 / py - 1 FROM (
+          SELECT u.ticker, u.sector, u.sub, ${at('?1')} AS p0, ${at('?2')} AS pw, ${at('?3')} AS pm, ${at('?4')} AS pq, ${at('?5')} AS py FROM universe u
+        ) WHERE p0 IS NOT NULL`).bind(session, tg.w, tg.m, tg.q, tg.y),
+      DB.prepare('DELETE FROM ranks WHERE session <> ?').bind(session),
+      DB.prepare('UPDATE rank_job SET done = 1, updated = ? WHERE session = ?').bind(Date.now(), session),
+      DB.prepare('DELETE FROM rank_job WHERE session < ?').bind(dayShift(session, 30))
     ]);
     return { session, done: true };
-  }
-  return { session, step, total };
+  } finally { await rankLock(DB, false); }
 }
+/* ================= ETF holdings from SEC Form N-PORT (3.12.0) =================
+   Marketstack's ETF holdings are N-PORT data resold at 20x the call count, so we read N-PORT from EDGAR directly: free.
+   ticker -> fund series (company_tickers_mf.json) -> latest public NPORT-P for that series -> primary_doc.xml -> holdings.
+   Public N-PORT is the third month of each quarter, released about 60 days later, so lists run 2-3 months behind.
+   Funds missing from the SEC fund list (unit trusts such as SPY, QQQ, DIA) are found by their company CIK instead. Kept in D1 for a day per ETF. */
+const xTag = (x, tag) => { const m = x.match(new RegExp('<(?:\\w+:)?' + tag + '\\b[^>]*>([\\s\\S]*?)</(?:\\w+:)?' + tag + '>')); return m ? m[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&apos;|&#39;/g, "'").replace(/&quot;/g, '"').trim() : null; };
+const xAttr = (x, tag, attr) => { const m = x.match(new RegExp('<(?:\\w+:)?' + tag + '\\b[^>]*\\b' + attr + '="([^"]*)"')); return m ? m[1].trim() : null; };
+async function fundSeries(ticker) {
+  const r = await secGet('https://www.sec.gov/files/company_tickers_mf.json', 86400);
+  if (!r) throw new Error('SEC fund ticker list unavailable');
+  const j = await r.json(), f = j.fields || ['cik', 'seriesId', 'classId', 'symbol'], iS = f.indexOf('symbol'), iC = f.indexOf('cik'), iSe = f.indexOf('seriesId');
+  const row = (j.data || []).find(d => String(d[iS]).toUpperCase() === ticker);
+  if (row) return { cik: String(row[iC]), series: String(row[iSe]) };
+  // unit trusts have no series: use the trust's own CIK from the company ticker list
+  try { const co = await cikFor(ticker); return { cik: co.cikInt, series: co.cik }; } catch (e) { return null; }
+}
+async function latestNport(fs) {
+  // EDGAR's company browser takes a series id in place of a CIK
+  const r = await secGet(`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${fs.series}&type=NPORT-P&dateb=&owner=include&count=10&output=atom`, 21600);
+  if (!r) return null;
+  const atom = await r.text();
+  for (const e of atom.split(/<entry>/).slice(1)) {
+    const form = xTag(e, 'filing-type') || xAttr(e, 'category', 'term');
+    if (form && !/^NPORT-P$/i.test(form)) continue;   // skip NPORT-P/A amendments only when an original exists further down; take the first original
+    const acc = xTag(e, 'accession-number') || ((e.match(/\d{10}-\d{2}-\d{6}/) || [])[0]);
+    if (!acc) continue;
+    return { acc, filed: xTag(e, 'filing-date'), href: xTag(e, 'filing-href') };
+  }
+  return null;
+}
+async function etfHoldings(symbol, env) {
+  const sym = String(symbol || '').trim().toUpperCase().replace('.', '-');
+  if (!/^[A-Z][A-Z0-9-]{0,9}$/.test(sym)) throw new Error('symbol is required');
+  const DB = env.DB, day = etDay();
+  if (DB) {
+    await DB.prepare('CREATE TABLE IF NOT EXISTS etf_hold (symbol TEXT PRIMARY KEY, day TEXT, body TEXT)').run();
+    const hit = await DB.prepare('SELECT day, body FROM etf_hold WHERE symbol = ?').bind(sym).first();
+    if (hit && hit.day === day && !/"count":0,/.test(hit.body)) return JSON.parse(hit.body);
+  }
+  const none = reason => ({ symbol: sym, day, count: 0, holdings: [], sectors: [], unavailable: true, reason, source: 'SEC Form N-PORT' });
+  const fs = await fundSeries(sym);
+  if (!fs) return none(`${sym} isn't in the SEC's fund list, so it has no N-PORT holdings filing.`);
+  const f = await latestNport(fs);
+  if (!f) return none(`No public N-PORT filing found yet for ${sym}.`);
+  const folder = `https://www.sec.gov/Archives/edgar/data/${Number(fs.cik)}/${f.acc.replace(/-/g, '')}/`;
+  const xr = await secGet(folder + 'primary_doc.xml', 604800);
+  if (!xr) return none('The N-PORT filing has no readable holdings file.');
+  const x = await xr.text();
+  const fund = xTag(x, 'seriesName') || xTag(x, 'regName') || sym, asOf = xTag(x, 'repPdDate'), net = Number(xTag(x, 'netAssets')) || null;
+  let rows = [];
+  for (const blk of x.split(/<(?:\w+:)?invstOrSec>/).slice(1)) {
+    const b = blk.split(/<\/(?:\w+:)?invstOrSec>/)[0];
+    const pct = Number(xTag(b, 'pctVal')), val = Number(xTag(b, 'valUSD')), bal = Number(xTag(b, 'balance'));
+    rows.push({
+      symbol: xAttr(b, 'ticker', 'value') || null, name: xTag(b, 'name') || xTag(b, 'title') || '', cusip: xTag(b, 'cusip'),
+      weight: isFinite(pct) ? pct : null, value: isFinite(val) ? val : null, shares: isFinite(bal) ? bal : null,
+      type: xTag(b, 'assetCat') || '', long: (xTag(b, 'payoffProfile') || 'Long') !== 'Short'
+    });
+  }
+  rows = rows.filter(h => h.name && h.weight != null).sort((a, b) => (b.weight || 0) - (a.weight || 0));
+  // tickers: filings often give only CUSIP and name; match names to SEC's company list so the page can link and group by sector
+  try {
+    const tr = await secGet('https://www.sec.gov/files/company_tickers.json', 86400), tj = tr ? await tr.json() : {};
+    const norm = s => String(s || '').toUpperCase().replace(/&AMP;/g, '&').replace(/[.,'()]/g, ' ').replace(/\b(THE|INC|INCORPORATED|CORP|CORPORATION|CO|COMPANY|LTD|PLC|LLC|HOLDINGS?|GROUP|CLASS [A-C]|CL [A-C]|COM|NEW|SA|NV|AG|SE)\b/g, ' ').replace(/\s+/g, ' ').trim();
+    const byName = {}; for (const o of Object.values(tj)) { const k = norm(o.title); if (k && !byName[k]) byName[k] = o.ticker; }
+    for (const h of rows) if (!h.symbol) h.symbol = byName[norm(h.name)] || null;
+  } catch (e) { }
+  let sectors = [], coverage = null;
+  if (DB) {
+    try {
+      const uni = Object.fromEntries((((await DB.prepare('SELECT ticker, sector FROM universe').all()).results) || []).map(u => [u.ticker, u.sector]));
+      const m = {}; let covered = 0;
+      for (const h of rows) { const s = h.symbol && uni[String(h.symbol).replace('.', '-')]; if (s && h.weight > 0) { m[s] = (m[s] || 0) + h.weight; covered += h.weight; } }
+      sectors = Object.entries(m).map(([sector, weight]) => ({ sector, weight: Math.round(weight * 100) / 100 })).sort((a, b) => b.weight - a.weight);
+      coverage = sectors.length ? Math.round(covered * 10) / 10 : null;
+    } catch (e) { }
+  }
+  const sumW = rows.reduce((a, h) => a + (h.weight || 0), 0), top10 = rows.slice(0, 10).reduce((a, h) => a + (h.weight || 0), 0);
+  const body = {
+    symbol: sym, fund, day, asOf, filed: f.filed, netAssets: net, count: rows.length,
+    top10Weight: Math.round(top10 * 100) / 100, totalWeight: Math.round(sumW * 10) / 10, sectors, sectorCoverage: coverage,
+    holdings: rows.slice(0, 500), source: 'SEC Form N-PORT', filing: folder
+  };
+  if (DB && rows.length) await DB.prepare('INSERT INTO etf_hold (symbol, day, body) VALUES (?, ?, ?) ON CONFLICT (symbol) DO UPDATE SET day = excluded.day, body = excluded.body').bind(sym, day, JSON.stringify(body)).run();
+  return rows.length ? body : none('The latest N-PORT filing listed no holdings.');
+}
+
 async function sectorRank(ticker, env) {
   const DB = env.DB; if (!DB) throw new Error('No database');
   const t = String(ticker).trim().toUpperCase().replace('.', '-');
@@ -125,9 +262,9 @@ async function sectorRank(ticker, env) {
 /* ================= Marketstack usage counter (D1 database bound as DB) ================= */
 let USAGE_DB = null, MS_LIMIT = 10000, MONTH_CACHE = { t: 0, n: 0 };
 const etDay = (d = new Date()) => d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });   // YYYY-MM-DD, New York time
-async function msFetch(u, init, kind) {   // every Marketstack call goes through here and is counted
+async function msFetch(u, init, kind, n = 1) {   // every Marketstack call goes through here and is counted; n = symbols in the request (Marketstack bills each one)
   const r = await fetch(u, init);
-  if (USAGE_DB) { try { await USAGE_DB.prepare('INSERT INTO usage (day, kind, n) VALUES (?, ?, 1) ON CONFLICT (day, kind) DO UPDATE SET n = n + 1').bind(etDay(), kind).run(); MONTH_CACHE.n++; } catch (e) { } }
+  if (USAGE_DB) { try { await USAGE_DB.prepare('INSERT INTO usage (day, kind, n) VALUES (?, ?, ?) ON CONFLICT (day, kind) DO UPDATE SET n = n + excluded.n').bind(etDay(), kind, n).run(); MONTH_CACHE.n += n; } catch (e) { } }
   return r;
 }
 async function usageRows() {
@@ -953,6 +1090,7 @@ async function api(req, url, env, ctx) {
     if (path === '/api/section') return out(await secSection({ ticker: q.get('ticker'), section: q.get('section'), form: q.get('form'), maxChars: q.get('maxChars') }), 200, 3600);
     if (path === '/api/market') { rankNudge(env, ctx); return out(await market(q.get('symbol') || '', env, ctx), 200, 900); }
     if (path === '/api/ranks') { rankNudge(env, ctx); return out(await sectorRank(q.get('ticker') || '', env), 200, 600); }
+    if (path === '/api/etf-holdings') return out(await etfHoldings(q.get('symbol') || q.get('ticker') || '', env), 200, 3600);
     if (path === '/api/usage') return out(await usageData(), 200, 0);
     if (path === '/api/hit' && req.method === 'POST') return out(await recordVisit(req, env), 200, 0);
     if (path === '/api/activity') return (await keyOk(q.get('key'), env)) ? out(await activityData(), 200, 0) : out({ error: 'Private: add ?key= with your USAGE_KEY' }, 403, 0);

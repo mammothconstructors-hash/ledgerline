@@ -299,6 +299,11 @@ dl.help{display:grid;margin:0}
 .ghint{display:block;margin-top:4px;font-size:14px;color:var(--muted)}
 .cols>*{min-width:0}td:has(.wtx){white-space:normal;text-align:left;min-width:160px}
 .hbar{display:inline-block;height:10px;background:var(--ink2);opacity:.75;vertical-align:middle}.hold td{padding:6px 10px}
+.etfgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.etfcard{display:grid;gap:2px;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:transparent;min-width:0}
+.etfcard:hover{border-color:var(--teal)}
+.etfcard b{font-size:16px}.etfn{font-size:13.5px;font-weight:600;overflow-wrap:anywhere}.etfd{font-size:12.5px}
+.etfsearch{display:flex;gap:8px;max-width:420px}.etfsearch input{flex:1;min-width:0;padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink);font-size:14px}
 .mix{display:grid;gap:6px;margin-top:8px}.mixrow{display:grid;grid-template-columns:minmax(120px,190px) 1fr 56px;gap:10px;align-items:center;font-size:14px}.mixv{text-align:right}
 .firsthint{display:flex;gap:14px;align-items:center;justify-content:space-between;padding:12px 14px;margin:0 0 14px;border:1px solid var(--line);border-left:4px solid var(--teal,#0D7680);background:var(--paper2);font-size:14.5px;line-height:1.5}.firsthint .btn{flex:none}@media (max-width:600px){.firsthint{flex-direction:column;align-items:flex-start}}
 .ffacts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.ffacts>div{padding:12px 16px 12px 0;display:flex;flex-direction:column;gap:3px}.ffacts>div+div{padding-left:16px;border-left:1px solid var(--line)}.ffacts .k{font:600 11px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.ffacts b{font-family:var(--serif);font-size:20px;font-weight:600}.ffacts .sub{font:13px var(--sans);color:var(--muted)}.ffacts a{color:var(--teal)}@media (max-width:640px){.ffacts{grid-template-columns:1fr}.ffacts>div+div{padding-left:0;border-left:0;border-top:1px solid var(--line)}}
@@ -631,7 +636,7 @@ a{color:var(--oxford)} a:hover{color:var(--teal)}
       <button type="submit">Search</button>
     </form>
     <div id="resDrop" class="resdrop" hidden><button type="button" data-res="guide"><b>How to use LedgerLine</b><span>The step-by-step guide</span></button><button type="button" data-res="glossary"><b>Glossary A–Z</b><span>Every term in plain English</span></button><button type="button" data-res="explore" id="exploreBtn"><b>Prebuilt screens</b><span>Stock explorer: lists the numbers pick</span></button><button type="button" data-res="samples"><b>Sample companies</b><span>Learn on six real stocks</span></button><button type="button" data-res="method" id="methodBtn"><b>Formulas &amp; method</b><span>How every score is worked out</span></button><button type="button" data-res="news" id="newsBtn"><b>What’s new</b><span>Every change, by version</span></button><a class="resfeat" href="/features.html"><b>All features ↗</b><span>The tour of everything LedgerLine does</span></a></div>
-    <div class="toplinks"><span id="bugSlot"></span><button id="startBtn" class="startbtn" type="button">Start here</button><button id="resBtn" type="button" aria-haspopup="true" aria-expanded="false">Library ▾</button><button id="listBtn" type="button">My list</button><button id="tipsBtn" type="button" class="tipsbtn" aria-pressed="true" title="Show or hide definitions on every line item and metric">ⓘ Tips</button><a class="toplink" href="https://sec-proxy.mammothconstructors.workers.dev/billing/portal">Account</a><a class="toplink" href="/cdn-cgi/access/logout">Log out</a></div>
+    <div class="toplinks"><span id="bugSlot"></span><button id="startBtn" class="startbtn" type="button">Start here</button><button id="resBtn" type="button" aria-haspopup="true" aria-expanded="false">Library ▾</button><button id="etfBtn" type="button">ETFs</button><button id="listBtn" type="button">My list</button><button id="tipsBtn" type="button" class="tipsbtn" aria-pressed="true" title="Show or hide definitions on every line item and metric">ⓘ Tips</button><a class="toplink" href="https://sec-proxy.mammothconstructors.workers.dev/billing/portal">Account</a><a class="toplink" href="/cdn-cgi/access/logout">Log out</a></div>
   </div>
 </header>
 
@@ -1323,7 +1328,7 @@ const IDX_SEC_EXTRA={WBD:0,CTVA:8,EA:0,AVB:9,BLDR:6,TTD:7,TAP:2,PSKY:0,ASML:7,AR
 function holdingSector(t){ const g=GICS[t]||GICS[IDX_SEC_ALIAS[t]]||GICS[String(t).replace('-','.')]; if(g) return g.sector; return IDX_SEC_EXTRA[t]!=null?GICS_SEC[IDX_SEC_EXTRA[t]]:null; }
 function sectorMix(f){ const W=idxW()[f]; if(!W) return null; const by={}; let tot=0, un=0; for(const [t,{w}] of W){ const s=holdingSector(t); tot+=w; if(s) by[s]=(by[s]||0)+w; else un+=w; } if(un>tot*0.25) return null; const rows=Object.entries(by).map(([s,w])=>[s,w/tot*100]).sort((a,b)=>b[1]-a[1]); if(un>0.005) rows.push(['Not classified',un/tot*100]); return rows; }
 function holdingsHtml(f){
-  if(!IDX.top[f]) return '';
+  if(!IDX.top[f]) return SITE ? liveHoldHtml(f) : '';
   const top=IDX.top[f], t10=top.reduce((a,r)=>a+r[2],0), max=top[0][2], mix=sectorMix(f), W=idxW()[f];
   const stats=statCells([['Holdings',IDX.n[f].toLocaleString()],['Net assets',big(IDX.net[f]*1e6)],['Top 10 share',pct(t10,1)],['As of',idxDate(IDX.asOf[f])]]);
   const rows=top.map(([t,n,w],i)=>`<tr><td class="num">${i+1}</td><td style="text-align:left"><button type="button" class="linkbtn" data-pick="${esc(t)}">${esc(t)}</button> <span class="muted">${esc(n.replace(/\/The$/,''))}</span></td><td class="num"><b>${pct(w,2)}</b></td><td style="width:40%"><span class="hbar" style="width:${Math.max(2,w/max*100)}%"></span></td></tr>`).join('');
@@ -2533,9 +2538,10 @@ function checkHtml(){
 }
 
 /* ---- Versions and what's new ---- */
-const APP_VERSION='8.4', WORKER_NEEDED='3.9.2', BUG_EMAIL='kgrodrigue@yahoo.com';
+const APP_VERSION='8.5', WORKER_NEEDED='3.12.0', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
   ['App 7.1','Oct 22, 2026',['Valuation uses core EPS when non-operating gains are more than a quarter of pretax profit (Amazon’s 2025–26 investment mark-ups had pushed its trailing EPS to $12.43 against about $7 from the business, and its fair value to $1,033); the Valuation tab says when this applies','Risk on / off now uses the 50-day vs 200-day EMA (10 vs 40 weeks); 200 EMA added to the Overview chart','Fixed: the return line above the Overview chart now matches the period boxes (both measured from the close before the period starts)']],
+  ['App 8.5','Oct 23, 2026',['ETFs in the top bar: every fund LedgerLine knows, grouped (market indexes, whole market and world, dividends, sectors, themes), plus a box for any ETF ticker','Every ETF page now shows what it holds: top 25 holdings, top-10 share, net assets and sector mix, read from the fund’s latest SEC N-PORT filing (before, only SPY, QQQ, DIA and IWM had holdings)','Worker 3.12: sector ranks cost one price lookup per stock a night instead of five, and the Marketstack usage counter now counts every stock in a request, the way Marketstack bills']],
   ['App 8.4','Oct 23, 2026',['Owner: 👥 Testers in the top bar (only for the owner’s sign-in) to add, name and remove testers on LedgerLine and the Vol Board, no Cloudflare screens needed']],
   ['App 8.3','Oct 23, 2026',['Ask AI stands out: highlighted ✦ tab and a full-width question box; Ask AI and plain-English screens are switched on']],
   ['App 8.2','Oct 23, 2026',['Ask AI: ask anything about a company and get a short answer from its latest 10-K and 10-Q, every claim numbered to the exact passage (switches on with the Anthropic key)','Financials → What changed: new, rewritten and dropped paragraphs in MD&A and Risk factors versus the previous filing, plus the numbers that moved most','Management & capital: insider buying and selling from Form 4 filings, with 3, 6 and 12-month net totals and cluster-buying flag','Alerts: 🔔 Alert on any stock (price above or below, 200-day MA cross, new earnings release, below fair value); the bell in the top bar lists them; optional phone and desktop notifications','Library screens: describe a screen in plain English and the AI builds the filters','Installable: add LedgerLine to your home screen like an app']],
@@ -3015,12 +3021,12 @@ if(onSite()) fetch('/cdn-cgi/access/get-identity',{credentials:'same-origin'}).t
 function render(){
   renderCo(); renderRail(); { const b=document.getElementById('bugSlot'); if(b) b.innerHTML=bugLink('Report a problem'); }
   const m=$('#main');
-  m.innerHTML = view==='empty'?emptyHtml() : view==='loading'?loadingHtml() : view==='error'?errorHtml() : view==='list'?listHtml() : view==='method'?helpHtml()+methodHtml() : view==='news'?newsHtml() : view==='guide'?guideHtml() : view==='fund'?fundHtml() : view==='explore'?explorerHtml() : view==='glossary'?glossaryHtml() : view==='samples'?samplesHtml() : view==='alerts'?alertsViewHtml() : view==='testers'?testersViewHtml() : stepHtml();
+  m.innerHTML = view==='empty'?emptyHtml() : view==='loading'?loadingHtml() : view==='error'?errorHtml() : view==='list'?listHtml() : view==='method'?helpHtml()+methodHtml() : view==='news'?newsHtml() : view==='guide'?guideHtml() : view==='fund'?fundHtml() : view==='etfs'?etfsHtml() : view==='explore'?explorerHtml() : view==='glossary'?glossaryHtml() : view==='samples'?samplesHtml() : view==='alerts'?alertsViewHtml() : view==='testers'?testersViewHtml() : stepHtml();
   afterRender(); decorateTips();
 }
 function renderCo(){
   const el=$('#coBar');
-  if(!S||view==='empty'||view==='explore'||view==='list'||view==='method'||view==='news'||view==='guide'||view==='alerts'||view==='testers'||(view==='error'&&!S.sd)){ el.innerHTML=''; return; }
+  if(!S||view==='empty'||view==='etfs'||view==='explore'||view==='list'||view==='method'||view==='news'||view==='guide'||view==='alerts'||view==='testers'||(view==='error'&&!S.sd)){ el.innerHTML=''; return; }
   const sd=S.sd||{}, ch=sd.change, up=isNum(ch)&&ch>=0;
   el.innerHTML=`<div class="co"><div style="min-width:0"><div class="kicker">${esc(sd.sector||S.exch||'')}${sd.industry?' · '+esc(sd.industry):''}</div><h1>${esc(S.name||S.sym)}</h1><div class="tk">${esc(S.sym)}${view==='company'?erChip():''}${view==='company'&&S.M?` <button type="button" id="saveTop" class="savetop ${S.saved?'on':''}" title="${S.saved?'Saved to My list. Tap to save again with today’s price and scores':'Save this stock, its scores and today’s price to My list'}">${S.saved?'★ Saved':'☆ Save'}</button><button type="button" class="savetop" data-alertnew="1" title="Get an alert for this stock">🔔 Alert${ALERTS.filter(a=>a.t===S.ticker&&!a.fired).length?' · '+ALERTS.filter(a=>a.t===S.ticker&&!a.fired).length:''}</button>`:''}</div>
     ${view==='company'?`<div class="src">${SITE?`Fundamentals: <b>SEC EDGAR, XBRL-tagged 10-K and 10-Q filings</b> · Prices: <b>${S.quoteTime?(+new Date().toLocaleString('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false})>=16?`last trade ${(()=>{ const d=new Date(Math.min(S.quoteTime+900,Math.floor(Date.now()/1000))*1000), hm=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:false,timeZone:'America/New_York'}).split(':').map(Number); return hm[0]*60+hm[1]>=960?'4:00 PM':d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}); })()} ET</b> (official close posts this evening)<b>`:`15-min delayed as of ${new Date(S.quoteTime*1000).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET`):`closing price${S.asOf?' on '+new Date(S.asOf*1000).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}):''}`}</b>${S.quoteTime?'':' (end of day: updates after each market close)'} · Every score computed from the numbers`:`Fundamentals: <b>${S.src==='SEC'?'SEC EDGAR, XBRL-tagged 10-K and 10-Q filings':'TradingView'}</b> · Prices: <b>TradingView</b> · Judgment calls: <b>${S.ai.state==='done'?'Claude':S.ai.state==='busy'?'Claude (reading…)':'unavailable'}</b>`}</div>`:''}</div>
@@ -3053,6 +3059,38 @@ function fundHtml(){
     ${marketsHtml()}
     ${techHtml()}</div>`;
 }
+/* ============ ETFs: directory (top bar) and live holdings from the fund's SEC N-PORT filing ============ */
+const ETF_GROUPS=[['Market indexes',['SPY','QQQ','DIA','IWM','VOO','IVV','RSP','MDY','IJH','IJR']],['Whole market and world',['VTI','VT','VXUS','VEA','VWO']],['Dividends',['SCHD','VIG','VYM']],['Sectors',['XLK','XLF','XLE','XLV','XLI','XLY','XLP','XLU','XLB','XLRE','XLC','VNQ']]];
+function etfsHtml(){
+  const seen=new Set(ETF_GROUPS.flatMap(g=>g[1])), rest=Object.keys(FUNDS).filter(t=>!seen.has(t));
+  const groups=ETF_GROUPS.map(([n,ts])=>[n,ts.filter(t=>FUNDS[t])]).concat(rest.length?[['Themes and more',rest]]:[]);
+  const card=t=>`<button type="button" class="etfcard" data-pick="${esc(t)}"><b>${esc(t)}</b><span class="etfn">${esc(FUNDS[t][0])}</span><span class="muted etfd">${esc(FUNDS[t][1])}</span></button>`;
+  return `<div class="sheet"><div class="hero" style="grid-template-columns:1fr"><div><div class="kicker">ETFs</div><h2>Exchange-traded funds</h2>
+    <p class="stand">Price, performance against SPY, QQQ, DIA or IWM, technicals and what each fund holds, from its latest SEC N-PORT filing. Tap a fund, or type any ETF ticker.</p></div></div>
+    <div class="sec"><form id="etfForm" class="etfsearch" autocomplete="off"><input id="etfQ" type="text" inputmode="text" placeholder="Any ETF ticker, e.g. SOXX" aria-label="ETF ticker" maxlength="10"><button class="btn primary" type="submit">Open</button></form></div>
+    ${groups.map(([n,ts])=>`<div class="sec"><h3>${esc(n)} <small>${ts.length} funds</small></h3><div class="etfgrid">${ts.map(card).join('')}</div></div>`).join('')}
+    <p class="fine">Holdings come from Form N-PORT, which funds file monthly and the SEC makes public each quarter about 60 days later, so weights trail today’s prices.</p></div>`;
+}
+const HOLD={};
+function liveHoldHtml(f){ return `<div class="sec" id="liveHold" data-hold="${esc(f)}"><h3>What it holds</h3>${holdBody(f)}</div>`; }
+function holdBody(f){
+  const h=HOLD[f];
+  if(!h) return '<p class="fine"><span class="skel"></span> Reading the fund’s latest N-PORT filing…</p>';
+  if(h.err||!h.count) return `<p class="fine">${esc(h.err||h.reason||'No holdings filing found for this fund.')}</p>`;
+  const top=h.holdings.slice(0,25), max=top[0].weight||1, t10=h.top10Weight;
+  const stats=statCells([['Holdings',h.count.toLocaleString()],['Net assets',isNum(h.netAssets)?big(h.netAssets):'—'],['Top 10 share',pct(t10,1)],['As of',h.asOf?idxDate(h.asOf):'—']]);
+  const rows=top.map((r,i)=>`<tr><td class="num">${i+1}</td><td style="text-align:left">${r.symbol?`<button type="button" class="linkbtn" data-pick="${esc(r.symbol)}">${esc(r.symbol)}</button> `:''}<span class="muted">${esc(r.name)}</span></td><td class="num"><b>${pct(r.weight,2)}</b></td><td style="width:40%"><span class="hbar" style="width:${Math.max(2,(r.weight||0)/max*100)}%"></span></td></tr>`).join('');
+  const mix=(h.sectors||[]).filter(x=>x.weight>0), mixHtml = mix.length ? `<h3 style="margin-top:18px">Sector mix <small>S&amp;P 500 members only: ${pct(h.sectorCoverage,0)} of the fund</small></h3><div class="mix">${mix.map(x=>`<div class="mixrow"><span class="mixl">${esc(x.sector)}</span><span class="mixb"><span class="hbar" style="width:${Math.max(1,x.weight/mix[0].weight*100)}%"></span></span><span class="num mixv">${pct(x.weight,1)}</span></div>`).join('')}</div>` : '';
+  return `${h.fund?`<p class="fine" style="margin:-4px 0 10px">${esc(h.fund)}</p>`:''}${stats}
+    <div class="tblwrap" style="margin-top:12px"><table class="hold"><thead><tr><th>#</th><th style="text-align:left">Top ${top.length} holdings</th><th>Weight</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${mixHtml}
+    <p class="fine" style="margin-top:8px">From the fund’s SEC N-PORT filing for the period ended ${h.asOf?idxDate(h.asOf):'—'}${h.filed?', filed '+esc(h.filed):''}. Weights have drifted with prices since then. ${h.filing?`<a href="${esc(h.filing)}" target="_blank" rel="noopener">The filing</a>.`:''}</p>`;
+}
+async function fillHold(){
+  const el=document.getElementById('liveHold'); if(!el) return; const f=el.dataset.hold;
+  if(!HOLD[f]){ try{ HOLD[f]=await getJSON('/api/etf-holdings?symbol='+encodeURIComponent(f)); }catch(e){ HOLD[f]={err:(e&&e.message)||'Holdings couldn’t be loaded right now.'}; } }
+  const now=document.getElementById('liveHold'); if(now&&now.dataset.hold===f){ now.innerHTML='<h3>What it holds</h3>'+holdBody(f); decorateTips(); }
+}
+function openEtfs(){ view='etfs'; render(); window.scrollTo({top:0}); }
 function noteRecent(t){ t=String(t||'').split(':').pop().toUpperCase(); if(!t) return; const r=(LS.get('recent')||[]).filter(x=>x!==t); r.unshift(t); LS.set('recent', r.slice(0,12)); }
 function isSavedT(t){ try{ if(SITE) return Object.values(LS.get('list')||{}).some(d=>d.ticker===t); return (listDocs||[]).some(d=>d.ticker===t); }catch(e){ return false; } }
 function guideHtml(){
@@ -3099,6 +3137,7 @@ function guideHtml(){
   <div class="sec"><h3>4 · Finding ideas</h3><ul class="gbul">
     <li><b>Stock explorer</b> (top bar): screens of the S&amp;P 500 run on the filing data: cash machines, shrinking share count, dividend raisers, net cash fortresses, compounders and fast growers. Sort on any column. <button type="button" class="linkbtn" data-go="explore">Open Stock explorer</button></li>
     <li><b>Lists</b> on the home page: by size, industry, income and theme, including <b>Superinvestors</b>: stocks held by well-known investors, from their quarterly 13F filings.</li>
+    <li><b>ETFs</b> (top bar): every fund LedgerLine knows, by group, plus any ETF ticker. Each opens with its chart, technicals and what it holds from its latest SEC N-PORT filing.</li>
     <li><b>Market index ETFs</b> on the home page: SPY, QQQ, DIA and IWM over every period. Tap a row for its chart, top 10 holdings and sector mix.</li>
     <li><b>Index weights</b> in each stock’s company profile show whether it’s in the S&amp;P 500, Nasdaq-100, Dow or Russell 2000, its weight and its rank.</li>
     <li><b>My list</b> keeps the stocks you saved; <b>Recently viewed</b> keeps the last 12 you opened.</li>
@@ -3813,7 +3852,8 @@ function valuationCharts(){
 }
 function afterRender(){
   for(const k in charts) delete charts[k];
-  if(view==='fund'){ overviewChart(); techCharts(); return; }
+  if(view==='fund'){ overviewChart(); techCharts(); fillHold(); return; }
+  if(view==='etfs'){ const fm=document.getElementById('etfForm'); if(fm) fm.addEventListener('submit',e=>{ e.preventDefault(); const q=($('#etfQ').value||'').trim(); if(q){ step='overview'; loadCompany(q); } }); return; }
   if(view!=='company') return;
   if(step==='overview') overviewChart();
   if(step==='valuation') valuationCharts();
@@ -3829,6 +3869,7 @@ new MutationObserver(()=>{ for(const k in charts) drawChart(charts[k].c,charts[k
 /* ============ EVENTS ============ */
 $('#searchForm').addEventListener('submit',e=>{ e.preventDefault(); const q=$('#q').value.trim(); if(q){ step='overview'; finTab='income'; loadCompany(q); $('#q').blur(); } });
 $('#listBtn').addEventListener('click',openList);
+$('#etfBtn').addEventListener('click',openEtfs);
 // definition tips: every line item and metric label gets its glossary definition on hover or tap
 let tipsOn=LS.get('tips')!==0, GLMAP=null;
 const GL_ALIAS={'interest coverage':'interest cover','return on equity':'roe','return on assets':'roa','return on invested capital':'roic','return on capital employed':'roce','net income':'net income to common','cash & short-term investments':'cash & investments','equity':'shareholders’ equity','operating margin':'operating margin','profit margin':'net margin','dividend per share':'dividends per share','dividend growth, 1 year':'dividend per share growth','buyback yield':'buyback yield / dilution','shareholder yield':'total shareholder yield','accruals':'accruals ratio','50-day average':'moving average','200-day average':'moving average','rsi':'rsi','average volume':'average volume','net cash':'net debt','net cash per share':'net debt','fcf payout ratio':'payout ratio','weighted cost of capital':'wacc','atr':'atr','bollinger %b':'bollinger %b','williams %r':'williams %r','forward p/e':'forward p/e','shares change, 1 year':'diluted share change','shares change, last quarter':'diluted share change','float, insiders, institutions':'float','lynch upside':'lynch fair value','graham upside':'graham number','ledgerline model fair value':'fair value','outlook buy price, 70% odds':'margin of safety','operating (ebit) margin':'operating margin','alpha vs s&p 500':'alpha','value at risk (var), 95%':'value at risk','value at risk (var), 99%':'value at risk','expected shortfall (cvar), 95%':'expected shortfall','standard deviation, weekly':'standard deviation','volatility, a year':'volatility','downside volatility':'downside volatility','beta vs s&p 500':'beta','correlation with s&p 500':'correlation','max drawdown':'max drawdown','free cash flow':'free cash flow'};
