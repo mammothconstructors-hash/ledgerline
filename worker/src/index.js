@@ -17,7 +17,7 @@ import UNIVERSE from './universe.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.12.1';
+const WORKER_VERSION = '3.12.2';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -185,6 +185,8 @@ async function latestNport(fs) {
   }
   return null;
 }
+// 3.12.2: SEC first (free); if the SEC has nothing, Marketstack's ETF endpoint once (it bills 20 calls). Either answer,
+// found or not, is kept for the day, so a fund costs at most one Marketstack lookup a day.
 async function etfHoldings(symbol, env) {
   const sym = String(symbol || '').trim().toUpperCase().replace('.', '-');
   if (!/^[A-Z][A-Z0-9-]{0,9}$/.test(sym)) throw new Error('symbol is required');
@@ -192,8 +194,40 @@ async function etfHoldings(symbol, env) {
   if (DB) {
     await DB.prepare('CREATE TABLE IF NOT EXISTS etf_hold (symbol TEXT PRIMARY KEY, day TEXT, body TEXT)').run();
     const hit = await DB.prepare('SELECT day, body FROM etf_hold WHERE symbol = ?').bind(sym).first();
-    if (hit && hit.day === day && !/"count":0,/.test(hit.body)) return JSON.parse(hit.body);
+    if (hit && hit.day === day && (!/"count":0,/.test(hit.body) || /"checked":true/.test(hit.body))) return JSON.parse(hit.body);
   }
+  let out = await secHoldings(sym, env, day);
+  if (!out.count && env.MARKETSTACK_KEY) {
+    const ms = await msHoldings(sym, env, day).catch(e => ({ count: 0, reason: String(e && e.message || e) }));
+    if (ms.count) out = ms; else out = { ...out, reason: out.reason + ' Marketstack has no holdings for it either.' };
+  }
+  if (DB) await DB.prepare('INSERT INTO etf_hold (symbol, day, body) VALUES (?, ?, ?) ON CONFLICT (symbol) DO UPDATE SET day = excluded.day, body = excluded.body').bind(sym, day, JSON.stringify({ ...out, checked: true })).run();
+  return out;
+}
+async function msHoldings(sym, env, day) {
+  const r = await msFetch(`https://api.marketstack.com/v2/etfholdings?access_key=${encodeURIComponent(env.MARKETSTACK_KEY)}&ticker=${encodeURIComponent(sym.replace('-', '.'))}&limit=1000`, { headers: { Accept: 'application/json' } }, 'etf', 20);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error || (j.code && Number(j.code) >= 400)) return { count: 0 };
+  const pickNum = (o, ks) => { for (const k of ks) { const v = o && o[k]; if (v !== undefined && v !== null && v !== '' && isFinite(Number(v))) return Number(v); } return null; };
+  const pickStr = (o, ks) => { for (const k of ks) { const v = o && o[k]; if (v && typeof v === 'string') return v.trim(); } return null; };
+  const WK = ['pct_val', 'pctVal', 'weight', 'weight_percentage', 'percentage', 'pct_of_net_assets'];
+  let list = [], seen = new Set(), stack = [j];
+  while (stack.length) { const o = stack.shift(); if (!o || typeof o !== 'object' || seen.has(o)) continue; seen.add(o);
+    if (Array.isArray(o) && o.length && typeof o[0] === 'object' && o.some(h => pickNum(h, WK) != null)) { list = o; break; }
+    for (const v of Array.isArray(o) ? o : Object.values(o)) if (v && typeof v === 'object') stack.push(v); }
+  let rows = list.map(h => ({ symbol: pickStr(h, ['ticker', 'symbol']), name: pickStr(h, ['name', 'title', 'holding_name']) || '', cusip: pickStr(h, ['cusip']),
+    weight: pickNum(h, WK), value: pickNum(h, ['val_usd', 'valUSD', 'value', 'market_value']), shares: pickNum(h, ['balance', 'shares']), type: pickStr(h, ['asset_cat', 'assetCat', 'asset_type']) || '' })).filter(h => h.name && h.weight != null);
+  const tot = rows.reduce((a, h) => a + h.weight, 0); if (tot > 0 && tot < 1.5) rows.forEach(h => { h.weight *= 100; });
+  const isCash = h => h.type === 'STIV' || /money market|cash collateral|liquidity fund|government (money|cash)|cash management/i.test(h.name);
+  const cashW = rows.filter(isCash).reduce((a, h) => a + h.weight, 0);
+  rows = rows.filter(h => !isCash(h)).sort((a, b) => b.weight - a.weight);
+  if (!rows.length) return { count: 0 };
+  const top10 = rows.slice(0, 10).reduce((a, h) => a + h.weight, 0), b = j.basics || (j.data && j.data.basics) || {}, at = (j.output && j.output.attributes) || {};
+  return { symbol: sym, fund: pickStr(at, ['series_name']) || pickStr(b, ['fund_name']) || sym, day, asOf: pickStr(at, ['rep_pd_date', 'report_date', 'date']) || null, count: rows.length,
+    top10Weight: Math.round(top10 * 100) / 100, cashWeight: Math.round(cashW * 100) / 100, sectors: [], holdings: rows.slice(0, 500), source: 'Marketstack ETF holdings (SEC N-PORT)' };
+}
+async function secHoldings(sym, env, day) {
+  const DB = env.DB;
   const none = reason => ({ symbol: sym, day, count: 0, holdings: [], sectors: [], unavailable: true, reason, source: 'SEC Form N-PORT' });
   const fs = await fundSeries(sym);
   if (!fs) return none(`${sym} isn't in the SEC's fund list, so it has no N-PORT holdings filing.`);
@@ -242,7 +276,6 @@ async function etfHoldings(symbol, env) {
     top10Weight: Math.round(top10 * 100) / 100, totalWeight: Math.round(sumW * 10) / 10, cashWeight: Math.round(cashW * 100) / 100, sectors, sectorCoverage: coverage,
     holdings: rows.slice(0, 500), source: 'SEC Form N-PORT', filing: folder
   };
-  if (DB && rows.length) await DB.prepare('INSERT INTO etf_hold (symbol, day, body) VALUES (?, ?, ?) ON CONFLICT (symbol) DO UPDATE SET day = excluded.day, body = excluded.body').bind(sym, day, JSON.stringify(body)).run();
   return rows.length ? body : none('The latest N-PORT filing listed no holdings.');
 }
 
