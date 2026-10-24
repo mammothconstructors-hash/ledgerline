@@ -459,7 +459,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 const SHEET_ID="";
 const SHEET_URL="";
 const GS="Google Sheets", TV="Tradingview";
-const PAGE_VERSION="2.11.2s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
+const PAGE_VERSION="2.11.3s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
 const GROUPS={C:{name:"Cyclicals",c:"var(--cyc)"},T:{name:"Tech & Innovation",c:"var(--tech)"},D:{name:"Defensives",c:"var(--def)"},
   I:{name:"Indices",c:"var(--idx)"},B:{name:"Bonds",c:"var(--bnd)"},M:{name:"Commodities",c:"var(--cmd)"}};
 const SCREENS={sectors:{title:"Sector Rotation",groups:["C","T","D"]},macro:{title:"Cross-Asset Regime",groups:["I","B","M"]},vix:{title:"VIX Term & Carry"},fsv:{title:"Vol Surface Δ"},lev:{title:"3x Leverage"}};
@@ -1250,6 +1250,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.11.3 · LedgerLine worker 3.16.2 · Oct 24 2026</dt><dd>3x Leverage: the page number now shows at the top right of the screen so you can tell at a glance which version is live. Each chart draws on its own, so one bad number can no longer blank the whole screen. The data service also keeps serving older copies of the page, so the backtest charts show even before a new upload.</dd>
    <dt>Page 2.11.2 · Oct 24 2026</dt><dd>3x Leverage charts sharper: larger labels and tick numbers on the compass, Carry, backtest distributions, drag bars and σ bars; crisp grid lines; solid fills (no see-through bars that looked soft); the compass is bigger, full width with its reads table under it, dots with labels that no longer overlap, and a wider vertical scale (outer ring now IV at about 1.6× realized) so the funds spread out.</dd>
    <dt>Page 2.11.1 · LedgerLine worker 3.16.1 · Oct 23 2026</dt><dd>3x Leverage: the Stats and Charts tabs now work on this screen. Charts shows the backtest, compass, carry, drag and σ-move charts; Stats shows the full table of every fund and the options table. The backtest hold period now runs 1M, 3M, 6M, 1Y, 2Y and 3Y (was 1M and 3M only), and Today’s call says when a label has too few separate stretches to trust.</dd>
    <dt>Page 2.11.0 · LedgerLine worker 3.16.0 · Oct 23 2026</dt><dd>3x Leverage screen: new Drag regime backtest. Pick TQQQ, UPRO, UDOW, TNA, URTY, SOXL or TECL and see up to 10 years of what happened after days labelled Light, Moderate or Heavy drag: forward 1- and 3-month returns, up and down days, two distributions (the fund against 3× its index, and 1/3 fund + T-bills against 100% of the index), return per point of dip, and a Today’s call line (Edge on, Thin edge, No edge). Each card’s drag pill now opens the backtest for that fund. Also new: a 3x compass with a read per fund, a Carry chart (IV against 20-day and 1-year realized, IV RICH and IV CHEAP corners), σ-move bars with a 1D / 1W switch, a help box at the top of the screen and a 3x Leverage section in How it works. Glossary terms added for each.</dd>
@@ -1446,6 +1447,7 @@ async function boot(){
 (function(){
 const API='https://sec-proxy.mammothconstructors.workers.dev/api/levboard';
 const N=v=>typeof v==='number'&&isFinite(v);
+const safe=(fn,...a)=>{try{return fn(...a)}catch(e){console.error(e);return `<p class="lv-sub">This part didn’t draw (${String(e&&e.message||e).replace(/[<>&]/g,'')}). The rest of the screen is fine.</p>`}};
 const f=(v,d=1)=>N(v)?v.toFixed(d):'—';
 const pc=(v,d=1,sg=true)=>N(v)?(sg&&v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(d)+'%':'—';
 const cls=v=>N(v)?(v>0?'lv-up':v<0?'lv-dn':''):'';
@@ -1624,20 +1626,20 @@ function btPanel(G){
   const funds=G.flatMap(g=>g.funds.map(x=>x.symbol)),R=BT.cache[BT.fund];
   return `<div class="lv-bth"><div class="lv-seg" role="group" aria-label="Fund">${funds.map(s=>`<button type="button" data-fund="${s}" aria-pressed="${s===BT.fund}">${s}</button>`).join('')}</div>
     <div class="lv-seg" role="group" aria-label="Window"><span class="lv-segl">Hold for</span>${HZ.map(([h,l])=>`<button type="button" data-h="${h}" aria-pressed="${h===BT.h}">${l}</button>`).join('')}</div></div>
-    ${R?`<p class="lv-asof" style="text-align:left;margin:0 0 10px">${esc(R.fund)} · 3× ${esc(R.index)} · ${esc(R.index)} HV20 today <b>${f(R.todayHv20)}</b> → <b>${REGN[R.todayReg]}</b> on realized vol · Last checked <b>${when(R.checkedAt)}</b></p><div data-btbody>${btBody(R)}</div>`
+    ${R?`<p class="lv-asof" style="text-align:left;margin:0 0 10px">${esc(R.fund)} · 3× ${esc(R.index)} · ${esc(R.index)} HV20 today <b>${f(R.todayHv20)}</b> → <b>${REGN[R.todayReg]}</b> on realized vol · Last checked <b>${when(R.checkedAt)}</b></p><div data-btbody>${safe(btBody,R)}</div>`
       :BT.err[BT.fund]?`<p class="lv-sub">The history for ${esc(BT.fund)} didn’t load (${esc(BT.err[BT.fund])}). Try again shortly.</p>`:`<p class="lv-sub">Loading the history of ${esc(BT.fund)} and its index…</p>`}`;
 }
 async function btLoad(G,box){
   const s=BT.fund; if(BT.cache[s]||BT.busy[s]) return; BT.busy[s]=true; delete BT.err[s];
   try{ const r=await fetch(API_R+encodeURIComponent(s)); const j=await r.json(); if(!r.ok||j.error) throw new Error(j.error||('status '+r.status)); BT.cache[s]=j; }
   catch(e){ BT.err[s]=e.message||String(e); }
-  BT.busy[s]=false; if(BT.fund===s&&box.isConnected) box.innerHTML=btPanel(G);
+  BT.busy[s]=false; if(BT.fund===s&&box.isConnected) box.innerHTML=safe(btPanel,G);
 }
 function btWire(G,box){
   box.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||!box.contains(b)) return;
-    if(b.dataset.fund){ BT.fund=b.dataset.fund; BT.reg=null; box.innerHTML=btPanel(G); btLoad(G,box); }
-    else if(b.dataset.h){ BT.h=+b.dataset.h; box.innerHTML=btPanel(G); }
-    else if(b.dataset.reg!=null){ BT.reg=+b.dataset.reg; box.innerHTML=btPanel(G); } });
+    if(b.dataset.fund){ BT.fund=b.dataset.fund; BT.reg=null; box.innerHTML=safe(btPanel,G); btLoad(G,box); }
+    else if(b.dataset.h){ BT.h=+b.dataset.h; box.innerHTML=safe(btPanel,G); }
+    else if(b.dataset.reg!=null){ BT.reg=+b.dataset.reg; box.innerHTML=safe(btPanel,G); } });
   btLoad(G,box);
 }
 function compassReads(groups){
@@ -1683,37 +1685,37 @@ window.levRender=function(el,data,mode){
   el.innerHTML=`<div class="lv">
     <div class="lv-head"><div><div class="lv-kick">3x Leverage</div><h2>Leveraged funds against their index</h2>
       <p class="lv-sub">Decay, realized against implied, drawdown and costs for every 3x fund next to the ETF that holds its index.</p></div>
-      <p class="lv-asof">Prices end of day · IV from Cboe, 15 minutes delayed<br>Last checked <b>${when(data.checkedAt)}</b></p></div>
+      <p class="lv-asof">Prices end of day · IV from Cboe, 15 minutes delayed<br>Last checked <b>${when(data.checkedAt)}</b>${typeof PAGE_VERSION!=='undefined'?' · Page <b>'+PAGE_VERSION+'</b>':''}</p></div>
     <div class="lv-cards">${G.map(card).join('')}</div>
     <section class="lv-sec" id="lvbt" data-v="c"><h3>Drag regime backtest <small>up to 10 years: what happened after days with each drag label</small></h3>
       <p class="lv-note">Pick a fund. Every day of up to 10 years gets the label its card would have shown (Light, Moderate or Heavy drag), then the next month or three are measured. Click a label to see its distribution.</p>
-      <div data-bt>${btPanel(G)}</div></section>
+      <div data-bt>${safe(btPanel,G)}</div></section>
     <section class="lv-sec" data-v="c"><h3>3x compass <small>implied vol against realized, by drawdown depth</small></h3>
-      <div class="lv-cmp1"><div class="lv-chart lv-cw">${compass(G)}</div>
-      <div class="lv-tw"><table class="lv-t"><thead><tr><th scope="col">Fund</th><th>Read</th><th>Depth %ile</th><th>Below high</th><th>Avg 10%+ drop</th><th>IV ÷ HV20</th><th style="text-align:left">Why</th></tr></thead><tbody>${compassReads(G)}</tbody></table></div></div>
+      <div class="lv-cmp1"><div class="lv-chart lv-cw">${safe(compass,G)}</div>
+      <div class="lv-tw"><table class="lv-t"><thead><tr><th scope="col">Fund</th><th>Read</th><th>Depth %ile</th><th>Below high</th><th>Avg 10%+ drop</th><th>IV ÷ HV20</th><th style="text-align:left">Why</th></tr></thead><tbody>${safe(compassReads,G)}</tbody></table></div></div>
       <p class="lv-note" style="margin-top:10px">Up means the fund’s implied vol is rich against what it has actually moved over 20 days (the outer ring is IV at about 1.6× realized). Left means it sits deeper below its high than most days of the last five years. Bold tickers are the 3x funds, light ones their index ETFs. Same quadrants as the other compasses: top-left is the red-day add with premium on your side.</p></section>
     <section class="lv-sec" data-v="c"><h3>Carry <small>implied vol rich or cheap against what each fund actually moves</small></h3>
-      <div class="lv-chart lv-cw2">${carry(G)}</div>
+      <div class="lv-chart lv-cw2">${safe(carry,G)}</div>
       <p class="lv-note" style="margin-top:10px">Up means IV is above the last 20 days’ realized move, right means it is above the last year’s. Top-right (both over 1×) is rich on both clocks: premium sellers get paid. Bottom-left is cheap on both: owning options costs less than the fund has been moving. Bold dots are the 3x funds, small grey ones their index ETFs.</p></section>
     <section class="lv-sec" data-v="s"><h3>Every fund <small>index ETF first, its 3x funds under it</small></h3>
       <div class="lv-tw"><table class="lv-t"><thead><tr><th scope="col">Fund</th><th>Price</th><th>1D</th><th>1W</th><th>1M</th><th>YTD</th><th>1Y</th><th>Below high</th><th>5-yr worst</th><th>IV30</th><th>ΔIV</th><th>HV20</th><th>HV60</th><th>IV−HV</th><th>IV rank</th><th>Beta 60d</th><th>Real. lev</th><th>IV vs 3×</th><th>Drag @IV</th><th>Drag @HV60</th><th>Decay 3M</th><th>Decay 1Y</th><th>Costs 1Y</th></tr></thead>
       <tbody>${G.map(g=>row(g.underlying,g.underlying,true)+g.funds.map(F=>row(F,g.underlying,false)).join('')).join('')}</tbody></table></div></section>
     <section class="lv-sec" data-v="s"><h3>Options on the 3x funds <small>is there more juice than 3× the index?</small></h3>
       <p class="lv-note">A 3x fund’s options cost about three times the index’s, because they price about three times the movement. The extra juice is only real when the fund’s IV runs above 3× the index’s (IV vs 3× over 1.05), or above what the fund has actually been moving (vol premium). Decay also drags the fund’s drift, which makes long-dated calls on it worse than calls on the index, and puts on it richer.</p>
-      ${optTable(G)}</section>
+      ${safe(optTable,G)}</section>
     <section class="lv-sec" data-v="c"><h3>Expected drag against what happened <small>a year, from today’s volatility</small></h3>
       <div class="lv-legend"><span><i class="lv-k-iv"></i>At today’s implied vol</span><span><i class="lv-k-hv"></i>At 60-day realized vol</span><span><i class="lv-k-act"></i>Last year’s actual decay</span></div>
-      <div class="lv-chart">${bars(G)}</div></section>
+      <div class="lv-chart">${safe(bars,G)}</div></section>
     <section class="lv-sec" data-lvsig data-v="c"><h3>σ move <small>today’s and this week’s return in units of the move options priced</small></h3>
       <div class="lv-seg" role="group" aria-label="Window"><button type="button" data-w="1D" aria-pressed="true">1D</button><button type="button" data-w="1W" aria-pressed="false">1W</button></div>
-      <div class="lv-chart" data-lvsigc>${sigBars(G,'1D')}</div>
+      <div class="lv-chart" data-lvsigc>${safe(sigBars,G,'1D')}</div>
       <p class="lv-note" style="margin-top:6px">A bar of +1σ means the fund moved exactly as much as its IV said a normal day (or week) would. Past ±2σ is a big move for that fund. A 3x fund should sit near its index ETF’s bar, since both are scaled by their own IV; a 3x bar much longer than its index means its options were underpricing the move.</p></section>
     <section class="lv-sec"><h3>How to read it</h3><dl class="lv-gl">${GLOSS.map(([t,d])=>`<div><dt>${t}</dt><dd>${d}</dd></div>`).join('')}</dl></section>
   </div>`;
   const want=mode==='stats'?'s':'c'; el.querySelectorAll('[data-v]').forEach(x=>{x.hidden=x.dataset.v!==want;});
   const bx=el.querySelector('[data-bt]'); if(bx) btWire(G,bx);
-  el.querySelectorAll('[data-btfund]').forEach(b=>b.addEventListener('click',()=>{ BT.fund=b.dataset.btfund; BT.reg=null; if(bx){ bx.innerHTML=btPanel(G); btLoad(G,bx); } const t=el.querySelector('#lvbt'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); }));
-  const sb=el.querySelector('[data-lvsig]'); if(sb) sb.addEventListener('click',e=>{const b=e.target.closest('button[data-w]'); if(!b) return; sb.querySelectorAll('button[data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b)); sb.querySelector('[data-lvsigc]').innerHTML=sigBars(G,b.dataset.w);});
+  el.querySelectorAll('[data-btfund]').forEach(b=>b.addEventListener('click',()=>{ BT.fund=b.dataset.btfund; BT.reg=null; if(bx){ bx.innerHTML=safe(btPanel,G); btLoad(G,bx); } const t=el.querySelector('#lvbt'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); }));
+  const sb=el.querySelector('[data-lvsig]'); if(sb) sb.addEventListener('click',e=>{const b=e.target.closest('button[data-w]'); if(!b) return; sb.querySelectorAll('button[data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b)); sb.querySelector('[data-lvsigc]').innerHTML=safe(sigBars,G,b.dataset.w);});
 };
 window.levLoad=async function(el){
   el.innerHTML='<div class="lv"><p class="lv-sub">Loading the 3x funds…</p></div>';
