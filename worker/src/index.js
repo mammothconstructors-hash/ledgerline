@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.21.0';
+const WORKER_VERSION = '3.22.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -1649,23 +1649,28 @@ function expectedSession() {
   while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d = new Date(d.getTime() - 86400e3);
   return d.toISOString().slice(0, 10);
 }
-// 15-minute delayed quote (IEX via Marketstack intraday), cached 15 minutes per symbol
+// 3.22.0: real-time quote on the Professional plan (IEX via Marketstack, 1-minute bars), cached 2 minutes per symbol while the market is open;
+// falls back to 15-minute bars if the plan refuses 1-minute data
+let QUOTE_INTERVAL = '1min';
 async function liveQuote(sym, apiKey, cache, ctx, eodAsOf) {
+  let quoteIv = QUOTE_INTERVAL;
   const now = new Date(), et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
   const mins = et.getHours() * 60 + et.getMinutes(), dow = et.getDay();
   const open = !(dow === 0 || dow === 6 || mins < 9 * 60 + 30 || mins > 16 * 60 + 30);
   // closed: keep showing the last 15-minute price until the feed posts that day's official close (usually that evening)
   const eodDay = eodAsOf ? new Date(eodAsOf * 1000).toISOString().slice(0, 10) : '';
   if (await monthUsed() >= MS_LIMIT * 0.95) return null;   // save what's left of the month for price history
-  const slot = Math.floor(now.getTime() / ((open ? 15 : 120) * 60e3));
+  const slot = Math.floor(now.getTime() / ((open ? 2 : 120) * 60e3));
   const key = new Request(`https://ledgerline-cache.internal/quote/${sym}/${slot}`);
   if (cache) { const hit = await cache.match(key); if (hit) return await hit.json(); }
   const variants = [...new Set([sym, sym.replace('-', '.')])];
   let row = null;
   for (const v of variants) {
-    const r = await msFetch(`https://api.marketstack.com/v2/intraday/latest?access_key=${encodeURIComponent(apiKey)}&symbols=${encodeURIComponent(v)}&interval=15min`, { headers: { Accept: 'application/json' } }, 'intraday');
-    const j = await r.json().catch(() => ({}));
+    let iv = QUOTE_INTERVAL, r = await msFetch(`https://api.marketstack.com/v2/intraday/latest?access_key=${encodeURIComponent(apiKey)}&symbols=${encodeURIComponent(v)}&interval=${iv}`, { headers: { Accept: 'application/json' } }, 'intraday');
+    let j = await r.json().catch(() => ({}));
+    if ((!r.ok || j.error) && iv !== '15min' && /interval|access|restricted|plan|subscription/i.test(JSON.stringify(j.error || j).slice(0, 400))) { QUOTE_INTERVAL = iv = '15min'; r = await msFetch(`https://api.marketstack.com/v2/intraday/latest?access_key=${encodeURIComponent(apiKey)}&symbols=${encodeURIComponent(v)}&interval=15min`, { headers: { Accept: 'application/json' } }, 'intraday'); j = await r.json().catch(() => ({})); }
     if (!r.ok || j.error) continue;
+    quoteIv = iv;
     const x = (j.data || [])[0], tx = x ? Date.parse(x.date) : NaN, px = x ? Number(x.last ?? x.marketstack_last ?? x.mid) : NaN;
     const fresh = open ? Date.now() - tx < 3 * 3600e3 : new Date(tx - 4 * 3600e3).toISOString().slice(0, 10) > eodDay;
     if (x && isFinite(tx) && fresh && isFinite(px) && px > 0) { row = x; break; }   // IEX answers BRK.B with yesterday's bar and only BRK-B with today's: keep trying spellings
@@ -1673,7 +1678,7 @@ async function liveQuote(sym, apiKey, cache, ctx, eodAsOf) {
   if (!row) return null;
   const price = Number(row.last ?? row.marketstack_last ?? row.mid ?? row.close), t = Date.parse(row.date);   // intraday 'close' is the prior close
   if (!isFinite(price) || price <= 0 || !isFinite(t)) return null;
-  const q = { price, t: Math.floor(t / 1000), high: Number(row.high) || null, low: Number(row.low) || null, volume: Number(row.volume) || null };
+  const q = { price, t: Math.floor(t / 1000), high: Number(row.high) || null, low: Number(row.low) || null, volume: Number(row.volume) || null, iv: quoteIv };
   if (cache) { const put = cache.put(key, new Response(JSON.stringify(q), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=900' } })); if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put; }
   return q;
 }
@@ -1682,7 +1687,7 @@ function applyQuote(d, q) {
   const sameDay = d.asOf && new Date(d.asOf * 1000).toISOString().slice(0, 10) === new Date(q.t * 1000).toISOString().slice(0, 10);
   const prev = sameDay ? d.prevClose : lastEod;
   out.price = q.price; out.prevClose = prev; out.change = q.price - prev; out.changePct = (q.price / prev - 1) * 100;
-  out.quoteTime = q.t; out.source = 'IEX via Marketstack, 15-min delayed'; out.delayed = true;
+  out.quoteTime = q.t; out.quoteRealtime = q.iv === '1min'; out.source = out.quoteRealtime ? 'IEX via Marketstack, real-time (1-minute)' : 'IEX via Marketstack, 15-min delayed'; out.delayed = !out.quoteRealtime;
   if (q.high && q.high > out.high52) out.high52 = q.high;
   if (q.low && q.low < out.low52) out.low52 = q.low;
   return out;

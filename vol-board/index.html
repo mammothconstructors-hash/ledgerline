@@ -211,7 +211,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .askbtn span{font:inherit;letter-spacing:normal;text-transform:none;color:inherit}
 .askbtn:hover{background:color-mix(in srgb,var(--accent) 18%,var(--panel))}
 .askbtn[aria-expanded="true"]{background:var(--accent);color:var(--page);border-color:var(--accent)}
-.screens .askbtn{margin-left:auto;flex:0 0 auto}
+.screens .acctlink{text-decoration:none;margin-left:auto}.screens .askbtn{flex:0 0 auto}
 @media (max-width:1300px){.screens{gap:2px}.screens .scr{padding:6px 11px}}
 @media (min-width:600px) and (max-width:1100px){.screens{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.screens::-webkit-scrollbar{display:none}.screens>*{flex:0 0 auto}.screens .askbtn{position:sticky;right:0;box-shadow:-18px 0 12px -4px var(--page),18px 0 0 0 var(--page)}}
 .kask{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);z-index:70;background:var(--panel);border-left:1px solid var(--rule);box-shadow:-12px 0 32px rgba(0,0,0,.18);display:flex;flex-direction:column;transform:translateX(102%);transition:transform .22s var(--ease)}
@@ -364,6 +364,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
     <button class="scr" data-scr="fsv" aria-current="false">Vol Surface Δ</button>
     <button class="scr" data-scr="vix" aria-current="true">VIX Term &amp; Carry</button>
     <button class="scr" data-scr="lev" aria-current="false">3x Leverage</button>
+    <a class="scr acctlink" href="https://ledgerline-dv0.pages.dev/app/?go=account" title="Profile, subscription and plans (one subscription covers LedgerLine and the KGR Vol Board)">Account</a>
     <button class="askbtn" id="kaskFab" type="button" aria-controls="kask" aria-expanded="false"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg><span>Ask AI</span></button>
   </nav>
   <div class="top"><div style="display:flex;flex-direction:column;gap:2px"><h1 id="title">VIX Term &amp; Carry</h1><span class="src" id="src"><span class="upd">Last update <b>10:41 PM ET</b></span> · VIX index (Cboe, 15-min delayed) <b>4:15 PM ET</b> · VIX futures (Cboe settle) <b>2026-10-22</b> · VIX options (Cboe, 15-min delayed) <b>4:15 PM ET</b> · page v2.9.1s</span><span class="byline">Made by Kevin Rodrigue</span></div><div class="events" id="events"></div></div>
@@ -508,7 +509,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 const SHEET_ID="";
 const SHEET_URL="";
 const GS="Google Sheets", TV="Tradingview";
-const PAGE_VERSION="2.16.1s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
+const BUILD_ID="__BUILD_ID__", PAGE_VERSION="2.17.0s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
 const GROUPS={C:{name:"Cyclicals",c:"var(--cyc)"},T:{name:"Tech & Innovation",c:"var(--tech)"},D:{name:"Defensives",c:"var(--def)"},
   I:{name:"Indices",c:"var(--idx)"},B:{name:"Bonds",c:"var(--bnd)"},M:{name:"Commodities",c:"var(--cmd)"}};
 const SCREENS={sectors:{title:"Sector Rotation",groups:["C","T","D"]},macro:{title:"Cross-Asset Regime",groups:["I","B","M"]},vix:{title:"VIX Term & Carry"},fsv:{title:"Vol Surface Δ"},lev:{title:"3x Leverage"}};
@@ -1310,6 +1311,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.17.0 · Oct 24 2026</dt><dd>Account in the top bar, before ✦ Ask AI: opens your profile, subscription and plans (one subscription covers LedgerLine and the board). Updates now arrive on their own: the board checks for a new version every two minutes and reloads itself when you are not using it, keeping the screen you were on.</dd>
    <dt>Page 2.16.1 · Oct 24 2026</dt><dd>Top bar fits on iPad: the screen names and ✦ Ask AI stay on one line (swipe the names sideways on a smaller iPad), with Ask AI pinned at the right end.</dd>
    <dt>Page 2.16.0 · LedgerLine worker 3.20.1 · Oct 24 2026</dt><dd>Ask AI can run scans across the whole board: every sector, index, bond and commodity ETF with IV, IV percentile and z-score, realized vol, carry, skew, term structure, returns, σ moves and put/call, whichever screen is open. Try “Which sectors have the highest IV vs their own history?” or “Where are options cheapest right now?”. Sample questions are grouped: How to, Scans and Concepts.</dd>
    <dt>Page 2.15.1 · Oct 24 2026</dt><dd>✦ Ask AI moved from the bottom-right corner into the top bar, next to the screen names.</dd>
@@ -2035,6 +2037,21 @@ renderHow();setupScreen();refresh();boot();
  document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&box.classList.contains("open")) open(false); });
  window.kaskTest={ask,ctxText,items};
  draw();
+})();
+</script>
+
+<script>
+/* Background auto-update (2.17.0): every 2 minutes and when the tab comes back, check /version.json. When a new build is live, reload:
+   at once if the tab is in the background, otherwise after 20 seconds without touching the page and with no Ask AI question running.
+   The open screen is kept (it is remembered across reloads). */
+(function(){ if(BUILD_ID.indexOf("__")===0) return; let pending=false, last=Date.now();
+ ["pointerdown","keydown","scroll","touchstart"].forEach(e=>addEventListener(e,()=>{last=Date.now()},{passive:true}));
+ const busy=()=>{ const a=document.activeElement, k=document.getElementById("kaskGo"); return (a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.value)||(k&&k.disabled); };
+ const go=()=>{ try{ sessionStorage.setItem("kgr_resume_y",String(scrollY)); }catch(e){} location.reload(); };
+ const tryGo=()=>{ if(pending!==true) return; if(document.visibilityState==="hidden") return go(); if(!busy()&&Date.now()-last>20000){ pending="going"; const t=document.createElement("div"); t.textContent="Updating the board to the latest version…"; t.style.cssText="position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:90;background:var(--ink);color:var(--page);padding:10px 16px;border-radius:999px;font:600 14px var(--sans)"; document.body.appendChild(t); setTimeout(go,1800); } };
+ const check=async()=>{ if(pending) return tryGo(); try{ const r=await fetch("/version.json?"+Date.now(),{cache:"no-store"}); if(!r.ok) return; const j=await r.json(); if(j&&j.id&&j.id!==BUILD_ID){ pending=true; tryGo(); } }catch(e){} };
+ setInterval(check,120000); setInterval(tryGo,5000); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"){ if(pending===true) go(); } else check(); });
+ try{ const y=+sessionStorage.getItem("kgr_resume_y"); sessionStorage.removeItem("kgr_resume_y"); if(y) setTimeout(()=>scrollTo(0,y),900); }catch(e){}
 })();
 </script>
 </body></html>

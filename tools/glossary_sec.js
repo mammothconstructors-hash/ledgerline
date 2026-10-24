@@ -126,7 +126,7 @@ const GL_MARKET=[
  ['Risk on / risk off','Price & risk','','LedgerLine’s trend switch: risk on when the faster EMA is above the slower one (50-day over 200-day EMA, or 10-week over 40-week).'],
  ['Relative volume','Price & risk','','Today’s volume against a normal day. Above 2× means something is happening.'],
  ['Benchmark','Price & risk','SPY, QQQ, DIA, IWM','The yardstick: S&P 500, Nasdaq-100, Dow or Russell 2000 ETFs.'],
- ['15-minute delayed','Price & risk','','Prices during the session are 15 minutes old (IEX); the official close posts each evening.'],
+ ['Live price (IEX)','Price & risk','15-minute delayed','During the session the price is the latest IEX trade, refreshed every couple of minutes; if the data plan ever falls back, it shows as 15-min delayed. The official close posts each evening.','IEX is one exchange, so its last trade can differ by a few cents from the consolidated price.'],
  ['Split-adjusted','Price & risk','','Old prices and per-share figures divided by every later split so the history lines up.'],
  ['ETF','Price & risk','Exchange-traded fund','A basket of stocks that trades like one stock.'],
  ['Peak-to-trough drawdown','Price & risk','Drawdown · fall from the high','How far a price fell from its highest close to the lowest close before it got back above that high, in percent. LedgerLine measures it on daily closes (weekly for 10 years) over the period you pick: MTD, QTD, YTD, 1, 3, 5 or 10 years.','The 5-year worst shows what holding through a bad stretch has cost; size positions so you could sit through it.'],

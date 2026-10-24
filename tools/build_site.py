@@ -70,7 +70,7 @@ async function loadCompanySite(q){
     if(st.__err){   // ETFs, funds and 20-F filers: no 10-K data, so price performance and technicals only
       S={sym:t, ticker:t, name:(FUNDS[t]&&FUNDS[t][0])||niceName(t, pf.name||t), exch:FUNDS[t]?'ETF':''};
       S.px=mk.weekly; S.d=mk.daily||null; S.spy=spy&&spy.weekly; S.spyD=spy&&spy.daily||null; S.qqq=qqq&&qqq.weekly||null; S.qqqD=qqq&&qqq.daily||null; S.bmx=bmx; S.pf=pf||{};
-      S.priceSource=mk.source; S.quoteTime=mk.quoteTime||null;
+      S.priceSource=mk.source; S.quoteTime=mk.quoteTime||null; S.quoteRT=!!mk.quoteRealtime;
       S.sd={description:S.name, close:mk.price, change:mk.changePct, change_abs:mk.change, price_52_week_high:mk.high52, price_52_week_low:mk.low52, sector:FUNDS[t]?'Exchange-traded fund':'No SEC 10-K filings'};
       S.fund=true; LS.set('last', t); noteRecent(t); view='fund'; render(); return;
     }
@@ -78,7 +78,7 @@ async function loadCompanySite(q){
     S={sym:(ex?ex+':':'')+t, ticker:t, name:niceName(t, pf.name||st.name||t), exch:ex};
     S.sec=fixShareUnits(splitAdjust(st)); S.src='SEC'; S.secErr=null;
     S.px=mk.weekly; S.spy=spy&&spy.weekly; S.priceSource=mk.source; S.asOf=mk.asOf||null;
-    S.pf=pf||{}; S.d=mk.daily||null; S.quoteTime=mk.quoteTime||null; S.spyChg=spy&&isNum(spy.changePct)?spy.changePct:null; S.spyD=spy&&spy.daily||null; S.qqq=qqq&&qqq.weekly||null; S.qqqD=qqq&&qqq.daily||null; S.bmx=bmx;
+    S.pf=pf||{}; S.d=mk.daily||null; S.quoteTime=mk.quoteTime||null; S.quoteRT=!!mk.quoteRealtime; S.spyChg=spy&&isNum(spy.changePct)?spy.changePct:null; S.spyD=spy&&spy.daily||null; S.qqq=qqq&&qqq.weekly||null; S.qqqD=qqq&&qqq.daily||null; S.bmx=bmx;
     S.otherClass=null; S.capNote=null;
     if(TWO_PRICE[t]){ const o=await getJSON('/api/market?symbol='+TWO_PRICE[t].other).catch(()=>null); if(o&&isNum(o.price)) S.otherClass={t:TWO_PRICE[t].other, price:o.price}; }
     buildSiteStats(mk, pf);
@@ -194,7 +194,7 @@ function tabScore(tab){""","""  return out.filter(o=>!(o.f&&o.f.na));
 }
 function tabScore(tab){""")
 rep("""Fundamentals: <b>${S.src==='SEC'?'SEC EDGAR, XBRL-tagged 10-K and 10-Q filings':'TradingView'}</b> · Prices: <b>TradingView</b> · Judgment calls: <b>${S.ai.state==='done'?'Claude':S.ai.state==='busy'?'Claude (reading…)':'unavailable'}</b>""",
-    """${SITE?`Fundamentals: <b>SEC EDGAR, XBRL-tagged 10-K and 10-Q filings</b> · Prices: <b>${S.quoteTime?(+new Date().toLocaleString('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false})>=16?`last trade ${(()=>{ const d=new Date(Math.min(S.quoteTime+900,Math.floor(Date.now()/1000))*1000), hm=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:false,timeZone:'America/New_York'}).split(':').map(Number); return hm[0]*60+hm[1]>=960?'4:00 PM':d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}); })()} ET</b> (official close posts this evening)<b>`:`15-min delayed as of ${new Date(S.quoteTime*1000).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET`):`closing price${S.asOf?' on '+new Date(S.asOf*1000).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}):''}`}</b>${S.quoteTime?'':' (end of day: updates after each market close)'} · Every score computed from the numbers`:`Fundamentals: <b>${S.src==='SEC'?'SEC EDGAR, XBRL-tagged 10-K and 10-Q filings':'TradingView'}</b> · Prices: <b>TradingView</b> · Judgment calls: <b>${S.ai.state==='done'?'Claude':S.ai.state==='busy'?'Claude (reading…)':'unavailable'}</b>`}""")
+    """${SITE?`Fundamentals: <b>SEC EDGAR, XBRL-tagged 10-K and 10-Q filings</b> · Prices: <b>${S.quoteTime?(+new Date().toLocaleString('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false})>=16?`last trade ${(()=>{ const d=new Date(Math.min(S.quoteTime+900,Math.floor(Date.now()/1000))*1000), hm=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:false,timeZone:'America/New_York'}).split(':').map(Number); return hm[0]*60+hm[1]>=960?'4:00 PM':d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}); })()} ET</b> (official close posts this evening)<b>`:`${S.quoteRT?'live (IEX)':'15-min delayed'} as of ${new Date(S.quoteTime*1000).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET`):`closing price${S.asOf?' on '+new Date(S.asOf*1000).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}):''}`}</b>${S.quoteTime?'':' (end of day: updates after each market close)'} · Every score computed from the numbers`:`Fundamentals: <b>${S.src==='SEC'?'SEC EDGAR, XBRL-tagged 10-K and 10-Q filings':'TradingView'}</b> · Prices: <b>TradingView</b> · Judgment calls: <b>${S.ai.state==='done'?'Claude':S.ai.state==='busy'?'Claude (reading…)':'unavailable'}</b>`}""")
 rep("""function aiNote(){
 ""","""function aiNote(){
   if(SITE) return `<p class="fine">Every factor here is computed from the company’s SEC filings and its price history. Nothing is hand-picked.</p>`;
@@ -202,7 +202,7 @@ rep("""function aiNote(){
 rep("""Business, moat, growth, management, risk and valuation are each scored automatically from the filings and price history, with Claude filling in the judgment calls.""",
     """Business, moat, growth, management, risk and valuation are each scored automatically from SEC filings and price history.""")
 # boot
-rep("""capsReady.then(()=>{ if(view==='empty'&&mcp){""","""if(SITE){ const first=new URLSearchParams(location.search).get('t'); if(first||last){ $('#q').value=(first||last).split(':').pop(); loadCompany(first||last); } }
+rep("""capsReady.then(()=>{ if(view==='empty'&&mcp){""","""if(SITE){ const qs=new URLSearchParams(location.search), first=qs.get('t'), go=qs.get('go'); if(go==='account'||go==='alerts'||go==='etfs'){ view=go==='account'?'account':go; render(); } else if(first||last){ $('#q').value=(first||last).split(':').pop(); loadCompany(first||last); } }
 else capsReady.then(()=>{ if(view==='empty'&&mcp){""")
 _wv=re.search(r"WORKER_VERSION = '([0-9.]+)'", open(P('worker','src','index.js')).read())
 if _wv: s=re.sub(r"WORKER_NEEDED='[0-9.]+'", "WORKER_NEEDED='"+_wv.group(1)+"'", s, 1)
