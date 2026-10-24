@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.15.1';
+const WORKER_VERSION = '3.16.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -270,6 +270,59 @@ function lvPair(fd, ud, L) {   // matched days: realized leverage, beta, and las
   // the same split month to date and over 3 months
   const win = k => { const a = tail(k); if (a.length < k * 0.8) return null; let comp = 1; for (let i = 1; i < a.length; i++) comp *= 1 + L * (a[i][1] / a[i - 1][1] - 1); const uR = (a[a.length - 1][1] / a[0][1] - 1) * 100; return { decay: (comp - 1) * 100 - L * uR, fund: (a[a.length - 1][0] / a[0][0] - 1) * 100, simple: L * uR }; };
   return { beta: lvR(beta, 2), realizedLev: sdU && sdF ? lvR(sdF / sdU, 2) : null, y1: y, m1: win(21), m3: win(63) };
+}
+// 3.16.0: drag-regime backtest. Ten years of daily closes for a 3x fund and its index; every day is labelled with the drag
+// the index's 20-day realized vol implied that day (Light under 8%/yr, Moderate 8-20%, Heavy 20%+, same cut-offs as the cards),
+// then the next 1 and 3 months are measured: the fund, 3x the index, the index, and 1/3 fund + 2/3 T-bills.
+const TB3 = '2015:0.03,0.02,0.03,0.02,0.02,0.02,0.03,0.07,0.02,0.02,0.12,0.23|2016:0.26,0.31,0.29,0.23,0.27,0.27,0.30,0.30,0.29,0.33,0.45,0.51|2017:0.51,0.52,0.74,0.80,0.89,0.98,1.07,1.01,1.03,1.07,1.23,1.32|2018:1.41,1.57,1.70,1.76,1.86,1.90,1.96,2.03,2.13,2.25,2.33,2.37|2019:2.37,2.39,2.40,2.38,2.35,2.17,2.10,1.95,1.89,1.65,1.54,1.54|2020:1.52,1.52,0.29,0.14,0.13,0.16,0.13,0.10,0.11,0.10,0.09,0.09|2021:0.08,0.04,0.03,0.02,0.02,0.04,0.05,0.05,0.04,0.05,0.05,0.06|2022:0.15,0.33,0.44,0.76,0.98,1.49,2.23,2.63,3.13,3.72,4.15,4.25|2023:4.54,4.65,4.69,4.92,5.14,5.16,5.25,5.30,5.32,5.34,5.27,5.24|2024:5.22,5.24,5.24,5.24,5.25,5.24,5.20,5.05,4.72,4.51,4.42,4.27|2025:4.21,4.22,4.20,4.21,4.25,4.23,4.25,4.12,3.92,3.82,3.78,3.59|2026:3.57,3.60,3.61,3.61,3.60,3.66,3.73,3.72,3.94';
+const TBM = (() => { const m = {}; for (const yr of TB3.split('|')) { const [y, v] = yr.split(':'); v.split(',').forEach((x, i) => { m[`${y}-${String(i + 1).padStart(2, '0')}`] = Number(x); }); } return m; })();
+const TB_LAST = Object.keys(TBM).sort().pop();
+const tbill = iso => { const k = iso.slice(0, 7); return TBM[k] != null ? TBM[k] : k > TB_LAST ? TBM[TB_LAST] : 0.03; };
+async function lvLong(sym, env, ctx) {   // ten years of split-adjusted daily closes, cached a day
+  const day = new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10), key = new Request(`https://ledgerline-cache.internal/levlong/v1/${sym}/${day}`), cache = typeof caches !== 'undefined' ? caches.default : null;
+  if (cache) { const hit = await cache.match(key); if (hit) return hit.json(); }
+  if (!env.MARKETSTACK_KEY) throw new Error('Price feed not configured');
+  const m = await marketstack(sym, env.MARKETSTACK_KEY, 2700), d = { t: m.daily.t, c: m.daily.c };
+  if (cache) { const put = cache.put(key, new Response(JSON.stringify(d), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' } })); if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put; }
+  return d;
+}
+async function levRegime(fund, env, ctx) {
+  fund = String(fund).trim().toUpperCase();
+  let pair = null; for (const [u, name, fs] of LEV_PAIRS) for (const [f, L] of fs) if (f === fund) pair = { u, name, L };
+  if (!pair) throw new Error('Not a 3x fund on the board: ' + fund);
+  const key = new Request(`https://ledgerline-cache.internal/levregime/v1/${fund}/${new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
+  if (cache) { const hit = await cache.match(key); if (hit) return hit.json(); }
+  const [fd, ud] = await Promise.all([lvLong(fund, env, ctx), lvLong(pair.u, env, ctx)]);
+  const iso = x => new Date(x * 1000).toISOString().slice(0, 10), U = {}; ud.t.forEach((x, i) => { U[iso(x)] = ud.c[i]; });
+  const D = [], F = [], X = []; fd.t.forEach((x, i) => { const k = iso(x), u = U[k]; if (u > 0 && fd.c[i] > 0) { D.push(k); F.push(fd.c[i]); X.push(u); } });
+  const n = D.length, L = pair.L, B = [1]; for (let i = 1; i < n; i++) B.push(B[i - 1] * (1 + tbill(D[i]) / 100 / 252));
+  const cut = { light: 8, heavy: 20 }, rd = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
+  const cols = { d: [], reg: [], hv: [], fd1: [], ud1: [] }; for (const h of [21, 63]) for (const k of ['f', 'u', 's', 'm', 'mdd', 'udd', 'fdd']) cols[k + h] = [];
+  for (let t = 21; t < n; t++) {
+    const lg = []; for (let i = t - 19; i <= t; i++) lg.push(Math.log(X[i] / X[i - 1]));
+    const hv = (lvSd(lg) || 0) * Math.sqrt(252) * 100, drag = lvDrag(L, hv);
+    cols.d.push(D[t]); cols.reg.push(drag < cut.light ? 0 : drag < cut.heavy ? 1 : 2); cols.hv.push(rd(hv));
+    cols.fd1.push(rd((F[t] / F[t - 1] - 1) * 100)); cols.ud1.push(rd((X[t] / X[t - 1] - 1) * 100));
+    for (const h of [21, 63]) {
+      if (t + h >= n) { for (const k of ['f', 'u', 's', 'm', 'mdd', 'udd', 'fdd']) cols[k + h].push(null); continue; }
+      let mdd = 0, udd = 0, fdd = 0, mpk = 1, upk = 1, fpk = 1;
+      for (let k = 1; k <= h; k++) {
+        const fr = F[t + k] / F[t], ur = X[t + k] / X[t], mr = fr / L + (1 - 1 / L) * B[t + k] / B[t];
+        mpk = Math.max(mpk, mr); upk = Math.max(upk, ur); fpk = Math.max(fpk, fr);
+        mdd = Math.min(mdd, mr / mpk - 1); udd = Math.min(udd, ur / upk - 1); fdd = Math.min(fdd, fr / fpk - 1);
+      }
+      const fr = F[t + h] / F[t] - 1, ur = X[t + h] / X[t] - 1;
+      cols['f' + h].push(rd(fr * 100)); cols['u' + h].push(rd(ur * 100)); cols['s' + h].push(rd(L * ur * 100));
+      cols['m' + h].push(rd((fr / L + (1 - 1 / L) * (B[t + h] / B[t] - 1)) * 100));
+      cols['mdd' + h].push(rd(mdd * 100)); cols['udd' + h].push(rd(udd * 100)); cols['fdd' + h].push(rd(fdd * 100));
+    }
+  }
+  const last = cols.reg.length - 1;
+  const out = { fund, index: pair.u, indexName: pair.name, lev: L, from: cols.d[0] || null, to: cols.d[last] || null, days: cols.d.length, cut, todayReg: cols.reg[last], todayHv20: cols.hv[last],
+    bills: 'Mix = 1/' + L + ' in ' + fund + ' and the rest in 3-month T-bills (FRED TB3MS monthly average, held without rebalancing), the same starting market exposure as 100% ' + pair.u + '.',
+    method: 'Each day is labelled by the drag (L^2 - L)/2 x HV20^2 of ' + pair.u + ' that day. Forward windows are 21 and 63 trading days and overlap.', checkedAt: Date.now(), worker: WORKER_VERSION, cols };
+  if (cache) { const put = cache.put(key, new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=21600' } })); if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put; }
+  return out;
 }
 async function ivRank(env, sym, iv) {   // store today's IV30, then where it sits in the stored history
   if (!env.DB || iv == null) return { n: 0 };
@@ -1249,6 +1302,7 @@ async function api(req, url, env, ctx) {
     if (path === '/api/market') { rankNudge(env, ctx); return out(await market(q.get('symbol') || '', env, ctx), 200, 900); }
     if (path === '/api/ranks') { rankNudge(env, ctx); return out(await sectorRank(q.get('ticker') || '', env), 200, 600); }
     if (path === '/api/levboard') return out(await levBoard(env, ctx), 200, 900);
+    if (path === '/api/levregime') return out(await levRegime(q.get('fund') || '', env, ctx), 200, 3600);
     if (path === '/api/iv') return out(await impliedVol(q.get('symbol') || q.get('ticker') || ''), 200, 600);
     if (path === '/api/etf-holdings') return out(await etfHoldings(q.get('symbol') || q.get('ticker') || '', env), 200, 3600);
     if (path === '/api/usage') return out(await usageData(), 200, 0);
@@ -1399,7 +1453,7 @@ function dailyOf(bars) {
   for (const b of bars) { d.t.push(Date.parse(b.date) / 1000); d.o.push(r(b.o)); d.h.push(r(b.h)); d.l.push(r(b.l)); d.c.push(r(b.c)); d.v.push(Math.round(b.v)); }
   return d;
 }
-async function marketstack(sym, apiKey) {
+async function marketstack(sym, apiKey, keepDaily = 1320) {
   const from = new Date(Date.now() - 10.2 * 365.25 * 86400e3).toISOString().slice(0, 10);
   const pull = async ticker => {
     const rows = [];
@@ -1476,7 +1530,7 @@ async function marketstack(sym, apiKey) {
   return {
     symbol: sym, name: sym, currency: 'USD', exchange: rows[n - 1].exchange || '', price: last.c, prevClose: prev.c, change: last.c - prev.c, changePct: (last.c / prev.c - 1) * 100,
     high52: Math.max(...yr.map(b => b.h)), low52: Math.min(...yr.map(b => b.l)),
-    asOf: Date.parse(last.date) / 1000, weekly: { t, o, h, l, c, v }, daily: dailyOf(bars.slice(-1320)), source: 'Marketstack (end of day)', splitsAdjusted: cum
+    asOf: Date.parse(last.date) / 1000, weekly: { t, o, h, l, c, v }, daily: dailyOf(bars.slice(-keepDaily)), source: 'Marketstack (end of day)', splitsAdjusted: cum
   };
 }
 
