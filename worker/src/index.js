@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.18.1';
+const WORKER_VERSION = '3.18.2';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -350,11 +350,11 @@ async function levRegime(fund, env, ctx) {
 }
 // 3.17.2: Edge finder summary computed here too (same rules as the Vol Board page), for checks and alerts
 const EDGE_SU = [
-  ['all', 'Any day', () => true, 0], ['u2', 'index down 2%+ day', (C, r) => C.ud1[r] <= -2, 0], ['u3', 'index down 3%+ day', (C, r) => C.ud1[r] <= -3, 0],
-  ['dn3', 'index 3 red days', (C, r) => r >= 2 && C.ud1[r] < 0 && C.ud1[r - 1] < 0 && C.ud1[r - 2] < 0, 0],
-  ['i5', 'index 5% below high', (C, r) => C.udh[r] <= -5, 1], ['i10', 'index 10% below high', (C, r) => C.udh[r] <= -10, 1], ['i20', 'index 20% below high', (C, r) => C.udh[r] <= -20, 1],
-  ['f20', 'fund 20% below high', (C, r) => C.fdh[r] <= -20, 1], ['f30', 'fund 30% below high', (C, r) => C.fdh[r] <= -30, 1], ['f40', 'fund 40% below high', (C, r) => C.fdh[r] <= -40, 1], ['f50', 'fund 50% below high', (C, r) => C.fdh[r] <= -50, 1],
-  ['crush', 'vol crush (Heavy fading)', (C, r) => r > 0 && C.reg[r - 1] === 2 && C.reg[r] < 2, 0], ['calm', 'calm trend near high', (C, r) => C.reg[r] === 0 && C.udh[r] >= -2, 0]];
+  ['all', 'Any day', () => true, 0], ['u2', 'Red day: index −2%', (C, r) => C.ud1[r] <= -2, 0], ['u3', 'Big red day: index −3%', (C, r) => C.ud1[r] <= -3, 0],
+  ['dn3', 'Losing streak: 3 red days', (C, r) => r >= 2 && C.ud1[r] < 0 && C.ud1[r - 1] < 0 && C.ud1[r - 2] < 0, 0],
+  ['i5', 'Pullback: index −5%', (C, r) => C.udh[r] <= -5, 1], ['i10', 'Correction: index −10%', (C, r) => C.udh[r] <= -10, 1], ['i20', 'Bear market: index −20%', (C, r) => C.udh[r] <= -20, 1],
+  ['f20', 'Trough: fund −20%', (C, r) => C.fdh[r] <= -20, 1], ['f30', 'Deep trough: fund −30%', (C, r) => C.fdh[r] <= -30, 1], ['f40', 'Crash zone: fund −40%', (C, r) => C.fdh[r] <= -40, 1], ['f50', 'Washout: fund −50%', (C, r) => C.fdh[r] <= -50, 1],
+  ['crush', 'Vol crush', (C, r) => r > 0 && C.reg[r - 1] === 2 && C.reg[r] < 2, 0], ['calm', 'Calm at the highs', (C, r) => C.reg[r] === 0 && C.udh[r] >= -2, 0]];
 async function levEdge(fund, env, ctx) {
   const R = await levRegime(fund, env, ctx), C = R.cols, n = C.d.length, out = { fund: R.fund, index: R.index, from: R.from, to: R.to, worker: WORKER_VERSION, hz: {} };
   const avg = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length * 100) / 100 : null;
@@ -368,6 +368,18 @@ async function levEdge(fund, env, ctx) {
       const f = rows.map(z => z[1]);
       return { k, t, n: rows.length, sep, avg: avg(f), win: f.length ? Math.round(f.filter(v => v > 0).length / f.length * 100) : null, worst: f.length ? Math.min(...f) : null, lo: avg(rows.map(z => z[4])), loW: rows.length ? Math.min(...rows.map(z => z[4])) : null, idx: avg(rows.map(z => z[2])), beat: rows.length ? Math.round(rows.filter(z => z[3] > z[2]).length / rows.length * 100) : null, lastFired: ev.length && k !== 'all' ? C.d[ev[ev.length - 1]] : null };
     });
+    const P = [1]; for (let r = 1; r < n; r++) P.push(P[r - 1] * (1 + (C.fd1[r] || 0) / 100));
+    for (const [k, t, lv, key] of [['ladf', 'Add ladder: fund −20/−30/−40', [-20, -30, -40], 'fdh'], ['ladi', 'Add ladder: index −5/−10/−15', [-5, -10, -15], 'udh']]) {
+      const cond = (r, L) => C[key][r] <= L, ev = []; let last = -1e9;
+      for (let r = 1; r < n - h; r++) if (cond(r, lv[0]) && !cond(r - 1, lv[0]) && r - last >= 10) { ev.push(r); last = r; }
+      const fv = [], los = [], dep = [];
+      ev.forEach(r => { const buys = [r]; for (let q2 = 1; q2 < lv.length; q2++) { for (let q = buys[buys.length - 1]; q <= r + h; q++) if (cond(q, lv[q2])) { buys.push(q); break; } if (buys.length <= q2) break; }
+        const units = buys.map(b => 1 / P[b]), end = r + h; let worst = 0;
+        for (let q = r; q <= end; q++) { let u = 0, c = 0; buys.forEach((b, i2) => { if (b <= q) { u += units[i2]; c++; } }); worst = Math.min(worst, u * P[q] / c - 1); }
+        fv.push((units.reduce((a, u) => a + u * P[end], 0) - buys.length) / lv.length * 100); los.push(worst * 100); dep.push(buys.length / lv.length * 100); });
+      let sep = 0, l2 = -1e9; ev.forEach(r => { if (r - l2 >= h) { sep++; l2 = r; } });
+      out.hz[h].push({ k, t, n: fv.length, sep, avg: avg(fv), win: fv.length ? Math.round(fv.filter(v => v > 0).length / fv.length * 100) : null, worst: fv.length ? Math.min(...fv) : null, lo: avg(los), loW: los.length ? Math.min(...los) : null, stake: avg(dep) });
+    }
   }
   return out;
 }

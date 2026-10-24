@@ -322,6 +322,10 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .lv-jump button:hover{background:var(--lv-under)}
 .lv-sec{scroll-margin-top:90px}
 .lv-sec{overflow-anchor:none}
+.lv-gr{display:inline-block;min-width:26px;text-align:center;font-size:12px;font-weight:800;padding:3px 7px;border-radius:6px;background:var(--lv-under);color:var(--lv-ink3)}
+.lv-grA{background:var(--lv-up);color:#fff}.lv-grB{background:color-mix(in srgb,var(--lv-up) 55%,var(--lv-panel));color:#fff}.lv-grC{background:color-mix(in srgb,var(--lv-up) 20%,var(--lv-panel));color:var(--lv-up)}.lv-grthin{color:var(--lv-warn)}
+.lv-verdict p{margin:2px 0 6px}
+.lv-v0{border-color:var(--lv-dn)}
 
 </style>
 </head><body>
@@ -472,7 +476,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 const SHEET_ID="";
 const SHEET_URL="";
 const GS="Google Sheets", TV="Tradingview";
-const PAGE_VERSION="2.12.2s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
+const PAGE_VERSION="2.13.0s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
 const GROUPS={C:{name:"Cyclicals",c:"var(--cyc)"},T:{name:"Tech & Innovation",c:"var(--tech)"},D:{name:"Defensives",c:"var(--def)"},
   I:{name:"Indices",c:"var(--idx)"},B:{name:"Bonds",c:"var(--bnd)"},M:{name:"Commodities",c:"var(--cmd)"}};
 const SCREENS={sectors:{title:"Sector Rotation",groups:["C","T","D"]},macro:{title:"Cross-Asset Regime",groups:["I","B","M"]},vix:{title:"VIX Term & Carry"},fsv:{title:"Vol Surface Δ"},lev:{title:"3x Leverage"}};
@@ -1205,6 +1209,8 @@ function startFsv(){if(!LIVE.mcp||fsStarted)return;fsStarted=true;
 const GLOSS=[
 ["Online now","Board","Someone has the board open on screen and it checked in within the last two and a half minutes. The board checks in every 60 seconds while it is showing.","Owner only: seen on the Testers page with the screen each person is on."],
 ["Sign-in","Board","Opening the board after 20 minutes or more away. Each one is logged with the site it was for, so the owner sees which board a tester came in on.","Testers sign in with their email and a one-time code; sessions last two days for testers, 30 days for the owner."],
+["Grade","3x funds","How a setup compares with buying on any day over the same hold. A: 5+ points better with an equal or better win rate and 8 or more separate signals. B: 2+ points better. C: slightly better. —: no better. thin: fewer than 4 separate signals.","Act on A and B. C is a small position at most. Ignore — and treat thin as a story, not an edge."],
+["Add ladder","3x funds","Scaling in: a third of the stake when the first level is hit, a third more at each deeper level if it comes during the hold, everything sold at the end of the hold. The return is on the full stake; cash not yet used earns nothing in the test.","Compare it with the single-entry trough setup: the ladder usually gives up some return for a shallower drop below your average cost."],
 ["Edge finder","3x funds","Entry setups tested on each fund's history: buy at the close the day a setup fires, hold for the chosen period. A trigger counts once, then not again for 10 trading days.","Sorted by edge. Look for a positive edge, a high % up, enough separate signals (4 or more) and a worst drop you can survive. Live now shows setups that fired in the last 5 trading days."],
 ["Edge vs any day","3x funds","A setup's average return over the hold minus the average from buying on any day, in percentage points.","Positive means the setup beat just buying whenever. The bigger and the more separate signals, the more it means."],
 ["Drop below entry","3x funds","How far the fund went under your buy price during the hold: the average across signals, and the worst one.","Size or scale in so the worst drop is survivable; it is the pain you sit through even when the trade ends up."],
@@ -1271,6 +1277,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.13.0 · Oct 24 2026</dt><dd>3x Leverage, Edge finder: clearer setup names (Red day, Big red day, Losing streak, Pullback, Correction, Bear market, Trough, Deep trough, Crash zone, Washout, Vol crush, Calm at the highs). Every setup gets a <b>Grade</b> against buying on any day: A strong edge, B edge, C slight edge, — none, thin when there are fewer than 4 separate signals. Live now is wider: the last 10 trading days, plus any trough setup whose zone still holds today, and it leads with the best graded setup in plain words. New <b>Add ladders</b> test scaling in: a third at the fund 20% below its high, a third more at 30% and 40%; and a third at the index 5% below its high, more at 10% and 15%. The drag label call now compares against buying on any day too, so it can say Edge on.</dd>
    <dt>Page 2.12.2 · LedgerLine worker 3.18.1 · Oct 24 2026</dt><dd>3x Leverage: tapping a fund, a hold period, a drag label or a setup now redraws in place, so the page no longer jumps up or down (most noticeable on iPad). The backtest loading in also keeps your place.</dd>
    <dt>Page 2.12.1 · LedgerLine worker 3.18.0 · Oct 24 2026</dt><dd>Sign-ins show up for the owner within a minute. The board now checks in when it opens and every 60 seconds while it is on screen, with the screen being viewed, so the owner's Testers page shows who is online now, which site they signed in to (KGR Vol Board or LedgerLine) and when. Nothing about what you look at is recorded beyond the screen name.</dd>
    <dt>Page 2.12.0 · LedgerLine worker 3.17.0 · Oct 24 2026</dt><dd>3x Leverage: new <b>Edge finder</b>. It tests entry setups on each fund’s history: index down 2% or 3% in a day, three red days in a row, index 5/10/20% below its high, the fund 20/30/40/50% below its high, vol crush (Heavy drag fading) and calm trend. For each: signals, separate signals, average return over your hold, edge against buying on any day, % up, average and worst drop below your entry, and how often 1/3 fund + bills beat the index. A Live now box flags any setup that fired in the last 5 trading days. UPRO, UDOW and URTY now have the full 10 years of history (they started in mid-2020 before). Distributions are clearer: green bars gained, red bars lost, a bold zero line and the % on each side printed on top; the drag-regime charts now show the gap directly (fund minus 3× the index, and the mix minus the index). Stats and Charts no longer split this screen: everything is on one page with jump buttons under the cards.</dd>
@@ -1641,11 +1648,12 @@ function btBody(R){
     <td class="${cls(x.mAvg)}">${pc(x.mAvg,2)}</td><td class="${cls(x.uAvg)}">${pc(x.uAvg,2)}</td><td><b>${f(x.beat,0)}%</b></td><td class="lv-dn">${pc(x.mDd)}</td><td class="lv-dn">${pc(x.uDd)}</td><td class="${r===effBest?'lv-ok-t':''}">${f(x.mEff,2)}</td><td>${f(x.uEff,2)}</td></tr>`).join('')}</tbody></table></div>`;
   const strip=`<div class="lv-strip">${[['Days in regime',T.days+' <small>'+f(T.share,0)+'% of all days</small>'],['Up days',T.up+' <small>avg '+pc(T.upAvg,2)+'</small>'],['Down days',T.dn+' <small>avg '+pc(T.dnAvg,2)+'</small>'],['Daily win rate',f(T.up/(T.up+T.dn)*100,1)+'%'],['Best day',pc(T.best,1)],['Worst day',pc(T.worstDay,1)],['Worst '+hl,pc(T.fWorst,1)],[hl+' windows',T.n+' <small>≈'+T.ind+' separate'+(T.ind<5?' · thin sample':'')+'</small>']].map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
   const acc='var(--accent,#7A4A1C)',ink='var(--ink3,#5A4C3A)';
-  const D=S[R.todayReg],edge=D.ind<3?null:N(D.beat)&&N(D.mEff)&&N(D.uEff)?(D.beat>=60&&D.mEff>D.uEff?2:D.beat>=50||D.mEff>D.uEff?1:0):null;
-  const vtx=edge==null?`Not enough history for a call: only ${D.ind} separate ${HA[h]} stretch${D.ind===1?'':'es'} started on ${REGN[R.todayReg]} days. Use a shorter hold, or read the table as anecdote.`:edge===2?`Edge on. Today reads ${REGN[R.todayReg]}, and after those days the 1/3 ${esc(R.fund)} + bills mix beat ${esc(R.index)} ${f(D.beat,0)}% of the time over the next ${hl}, with more return per point of dip (${f(D.mEff,2)} against ${f(D.uEff,2)}). Run the 3x sleeve instead of the index; keep the 2/3 in bills as the buffer.`
-    :edge===1?`Thin edge. Today reads ${REGN[R.todayReg]}: the mix beat ${esc(R.index)} ${f(D.beat,0)}% of the time over the next ${hl} (return ÷ dip ${f(D.mEff,2)} against ${f(D.uEff,2)}). Half size on the 3x sleeve, or add only on red days.`
-    :`No edge. Today reads ${REGN[R.todayReg]}: the mix beat ${esc(R.index)} only ${f(D.beat,0)}% of the time over the next ${hl}, with less return per point of dip (${f(D.mEff,2)} against ${f(D.uEff,2)}). Hold the index, or sell premium on the 3x fund instead of owning it.`;
-  const verdict=`<div class="lv-verdict lv-v${edge==null?'':edge}"><span>Today’s call · ${esc(R.fund)} · next ${hl}</span><p>${vtx}</p><small>Worst ${hl} after these days: ${esc(R.fund)} ${pc(D.fWorst,0)}, mix ${pc(Math.min(...D.m),0)}. Built from ${D.ind} non-overlapping windows; it is history, so size for the worst case.</small></div>`;
+  const D=S[R.todayReg],AF=R.w[h].f.filter(N),bAvg=mean(AF),bWin=AF.length?AF.filter(v=>v>0).length/AF.length*100:null;
+  const dg=D.ind<3?'thin':gradeOf({avg:D.fAvg,win:D.fWin,sep:D.ind},{avg:bAvg,win:bWin}),de=N(D.fAvg)&&N(bAvg)?D.fAvg-bAvg:null,edge=dg==='thin'?null:dg==='A'||dg==='B'?2:dg==='C'?1:0;
+  const vtx=edge==null?`Not enough history for a call: only ${D.ind} separate ${HA[h]} stretch${D.ind===1?'':'es'} started on ${REGN[R.todayReg]} days. Use a shorter hold.`
+    :edge>0?`${GRADE_TX[dg]} (${dg}). After ${REGN[R.todayReg]} days ${esc(R.fund)} averaged ${pc(D.fAvg)} over ${hl} against ${pc(bAvg)} on any day (+${f(de,1)} pts), up ${f(D.fWin,0)}% of the time.${edge===1?' Small size, or wait for a setup in the Edge finder.':' Lean in; scale in if the worst drop below is more than you can sit through.'}`
+    :`No edge from the label alone. After ${REGN[R.todayReg]} days ${esc(R.fund)} averaged ${pc(D.fAvg)} over ${hl} against ${pc(bAvg)} on any day. Use the Edge finder setups for timing, or sell premium.`;
+  const verdict=`<div class="lv-verdict lv-v${edge==null?'':edge}"><span>Drag label call · ${esc(R.fund)} · next ${hl}</span><p>${vtx}</p><small>Worst ${hl} after these days: ${esc(R.fund)} ${pc(D.fWorst,0)}, mix ${pc(Math.min(...D.m),0)}. Built from ${D.ind} non-overlapping windows; it is history, so size for the worst case.</small></div>`;
   return `${verdict}${strip}
    <div class="lv-bt2"><div class="lv-chart"><h4 class="lv-h4">${REGN[reg]} · ${hl}: did leverage pay? ${esc(R.fund)} minus 3× ${esc(R.index)}</h4>${histSign(T.f.map((v,i)=>v-T.sx[i]),null,{title:'leverage gap',pos:'beat 3×',neg:'fell short of 3×',posX:'leverage paid',negX:'decay cost'})}</div>
    <div class="lv-chart"><h4 class="lv-h4">${REGN[reg]} · ${hl}: did the 3x sleeve beat ${esc(R.index)}? Mix minus ${esc(R.index)}</h4>${histSign(T.m.map((v,i)=>v-T.u[i]),null,{title:'mix vs index',pos:'mix won',neg:esc(R.index)+' won',posX:'1/3 '+R.fund+' + bills won',negX:R.index+' won'})}</div></div>
@@ -1656,19 +1664,26 @@ function btBody(R){
 
 /* ---------- Edge finder: rule-based entries (red days, drawdown levels, vol crush) tested on the same history ---------- */
 const SU=[
- {k:'all',t:'Any day',d:'Buy on any day: the baseline every setup is measured against.',f:()=>true},
- {k:'u2',t:'{I} down 2%+ in a day',d:'{I} closes down 2% or more.',f:(C,r)=>C.ud1[r]<=-2},
- {k:'u3',t:'{I} down 3%+ in a day',d:'{I} closes down 3% or more: about a 9% day for {F}.',f:(C,r)=>C.ud1[r]<=-3},
- {k:'dn3',t:'{I} down 3 days in a row',d:'Three straight red closes on {I}.',f:(C,r)=>r>=2&&C.ud1[r]<0&&C.ud1[r-1]<0&&C.ud1[r-2]<0},
- {k:'i5',t:'{I} 5% below its high',d:'{I} first closes 5% under its running high.',x:(C,r)=>C.udh[r]<=-5},
- {k:'i10',t:'{I} 10% below its high',d:'{I} first closes 10% under its high: a correction.',x:(C,r)=>C.udh[r]<=-10},
- {k:'i20',t:'{I} 20% below its high',d:'{I} first closes 20% under its high: a bear market.',x:(C,r)=>C.udh[r]<=-20},
- {k:'f20',t:'{F} 20% below its high',d:'{F} first closes 20% under its running high.',x:(C,r)=>C.fdh[r]<=-20},
- {k:'f30',t:'{F} 30% below its high',d:'{F} first closes 30% under its high.',x:(C,r)=>C.fdh[r]<=-30},
- {k:'f40',t:'{F} 40% below its high',d:'{F} first closes 40% under its high.',x:(C,r)=>C.fdh[r]<=-40},
- {k:'f50',t:'{F} 50% below its high',d:'{F} first closes 50% under its high.',x:(C,r)=>C.fdh[r]<=-50},
- {k:'crush',t:'Vol crush: Heavy → lighter drag',d:'The drag label drops out of Heavy: the vol spike is fading.',f:(C,r)=>r>0&&C.reg[r-1]===2&&C.reg[r]<2},
- {k:'calm',t:'Calm trend: Light drag near the high',d:'Light drag and {I} within 2% of its high.',f:(C,r)=>C.reg[r]===0&&C.udh[r]>=-2}];
+ {k:'all',t:'Any day (baseline)',d:'Buy on any day: the baseline every setup is measured against.',f:()=>true},
+ {k:'u2',t:'Red day: {I} −2%',d:'{I} closes down 2% or more.',f:(C,r)=>C.ud1[r]<=-2},
+ {k:'u3',t:'Big red day: {I} −3%',d:'{I} closes down 3% or more: about a 9% day for {F}.',f:(C,r)=>C.ud1[r]<=-3},
+ {k:'dn3',t:'Losing streak: {I} 3 red days',d:'Three straight red closes on {I}.',f:(C,r)=>r>=2&&C.ud1[r]<0&&C.ud1[r-1]<0&&C.ud1[r-2]<0},
+ {k:'i5',t:'Pullback: {I} −5% from high',d:'{I} first closes 5% under its running high.',x:(C,r)=>C.udh[r]<=-5},
+ {k:'i10',t:'Correction: {I} −10% from high',d:'{I} first closes 10% under its high: a correction.',x:(C,r)=>C.udh[r]<=-10},
+ {k:'i20',t:'Bear market: {I} −20% from high',d:'{I} first closes 20% under its high: a bear market.',x:(C,r)=>C.udh[r]<=-20},
+ {k:'f20',t:'Trough: {F} −20% from high',d:'{F} first closes 20% under its running high.',x:(C,r)=>C.fdh[r]<=-20},
+ {k:'f30',t:'Deep trough: {F} −30% from high',d:'{F} first closes 30% under its high.',x:(C,r)=>C.fdh[r]<=-30},
+ {k:'f40',t:'Crash zone: {F} −40% from high',d:'{F} first closes 40% under its high.',x:(C,r)=>C.fdh[r]<=-40},
+ {k:'f50',t:'Washout: {F} −50% from high',d:'{F} first closes 50% under its high.',x:(C,r)=>C.fdh[r]<=-50},
+ {k:'crush',t:'Vol crush: Heavy drag fading',d:'The drag label drops out of Heavy: the vol spike is fading.',f:(C,r)=>r>0&&C.reg[r-1]===2&&C.reg[r]<2},
+ {k:'ladf',t:'Add ladder: {F} −20 / −30 / −40%',d:'Buy a third when {F} first closes 20% under its high, add a third at 30% and a third at 40% if they come during the hold. Return is on the full stake; unused cash sits at 0%.',lad:[-20,-30,-40],key:'fdh'},
+ {k:'ladi',t:'Add ladder: {I} −5 / −10 / −15%',d:'Buy a third of {F} when {I} first closes 5% under its high, add a third at 10% and a third at 15% if they come during the hold. Return is on the full stake.',lad:[-5,-10,-15],key:'udh'},
+ {k:'calm',t:'Calm at the highs',d:'Light drag and {I} within 2% of its high.',f:(C,r)=>C.reg[r]===0&&C.udh[r]>=-2}];
+// grade a setup against buying on any day: A strong, B solid, C slight, '' none; thin samples can't grade
+const gradeOf=(z,B)=>{ if(!z||!B||!N(z.avg)||!N(B.avg)) return ''; if(z.sep<4) return 'thin'; const e=z.avg-B.avg,w=(z.win??0)-(B.win??0);
+  return e>=5&&w>=0&&z.sep>=8?'A':e>=2&&w>=-3?'B':e>0?'C':''; };
+const GRADE_TX={A:'Strong edge',B:'Edge',C:'Slight edge',thin:'Too few signals','':'No edge'};
+const gradePill=g=>`<span class="lv-gr lv-gr${g||'0'}">${g==='thin'?'thin':g||'—'}</span>`;
 const suName=(x,R)=>x.t.replace(/\{I\}/g,R.index).replace(/\{F\}/g,R.fund);
 const suDesc=(x,R)=>x.d.replace(/\{I\}/g,R.index).replace(/\{F\}/g,R.fund);
 function suEvents(R,x){   // fresh signals only: a trigger counts once, then not again for 10 trading days
@@ -1677,15 +1692,35 @@ function suEvents(R,x){   // fresh signals only: a trigger counts once, then not
   return ev;
 }
 function suFwd(R,h){ R._fx=R._fx||{}; if(R._fx[h]) return R._fx[h]; const w=R.w[h],m=new Map(); w.i.forEach((r,j)=>m.set(r,j)); return R._fx[h]={w,m,st:(R.stride&&R.stride[h])||1}; }
+
+// Add ladder: start a third at the first trough level, add a third at each deeper level reached during the hold; exit everything at the end of the hold.
+// Returns are on the full stake (money not yet added sits in cash at 0%).
+function ladStats(R,h,lv,key){
+  const C=R.cols,n=C.d.length,P=[1];for(let r=1;r<n;r++) P.push(P[r-1]*(1+(C.fd1[r]||0)/100));
+  const cond=(r,L)=>C[key][r]<=L,ev=[];let last=-1e9;
+  for(let r=1;r<n-h;r++){ if(cond(r,lv[0])&&!cond(r-1,lv[0])&&r-last>=10){ev.push(r);last=r;} }
+  const fv=[],los=[],dep=[];
+  ev.forEach(r=>{ const buys=[r]; for(let k=1;k<lv.length;k++){ for(let q=buys[buys.length-1];q<=r+h;q++){ if(cond(q,lv[k])){buys.push(q);break;} } if(buys.length<=k) break; }
+    const units=buys.map(b=>1/P[b]),cost=buys.length,end=r+h; let worst=0;
+    for(let q=r;q<=end;q++){ let u=0,c=0; buys.forEach((b,i)=>{ if(b<=q){u+=units[i];c++;} }); worst=Math.min(worst,u*P[q]/c-1); }
+    fv.push((units.reduce((a,u)=>a+u*P[end],0)-cost)/lv.length*100); los.push(worst*100); dep.push(cost/lv.length*100); });
+  let sep=0,l2=-1e9;ev.forEach(r=>{if(r-l2>=h){sep++;l2=r;}});
+  const lastR=n-1,all=[];let la=-1e9;for(let r=1;r<n;r++) if(cond(r,lv[0])&&!cond(r-1,lv[0])&&r-la>=10){all.push(r);la=r;}
+  const lastEv=all.length?all[all.length-1]:null,still=lastEv!=null&&cond(lastR,lv[0])&&lastR-lastEv<h,active=lastEv!=null&&(lastR-lastEv<=10||still);
+  return {n:fv.length,sep,fv,avg:mean(fv),med:qtl(fv,.5),win:fv.length?fv.filter(v=>v>0).length/fv.length*100:null,worst:fv.length?Math.min(...fv):null,best:fv.length?Math.max(...fv):null,
+    lo:mean(los),loW:los.length?Math.min(...los):null,uAvg:null,beat:null,dep:mean(dep),active,still,ago:active?lastR-lastEv:null,lastDate:lastEv!=null?C.d[lastEv]:null};
+}
 function suStats(R,x,h){
+  if(x.lad) return {x,...ladStats(R,h,x.lad,x.key)};
   const ev=suEvents(R,x),F=suFwd(R,h),C=R.cols,rows=[];
   ev.forEach(r=>{ let j; for(let k=0;k<F.st;k++){ j=F.m.get(r+k); if(j!=null) break; } if(j==null) return; rows.push({r,f:F.w.f[j],u:F.w.u[j],m:F.w.m[j],lo:F.w.lo?F.w.lo[j]:null}); });
   const fv=rows.map(z=>z.f),lo=rows.map(z=>z.lo).filter(N);
   let sep=0,last=-1e9; rows.forEach(z=>{ if(z.r-last>=h){sep++;last=z.r;} });
-  const lastR=C.d.length-1,lastEv=x.k==='all'?null:ev.length?ev[ev.length-1]:null,active=lastEv!=null&&lastR-lastEv<=5;
+  // live: fired in the last 10 trading days, or a level setup fired within the hold and the condition still holds today
+  const lastR=C.d.length-1,lastEv=x.k==='all'?null:ev.length?ev[ev.length-1]:null,still=!!(x.x&&lastEv!=null&&x.x(C,lastR)&&lastR-lastEv<h),active=lastEv!=null&&(lastR-lastEv<=10||still);
   return {x,n:rows.length,sep,fv,avg:mean(fv),med:qtl(fv,.5),win:fv.length?fv.filter(v=>v>0).length/fv.length*100:null,worst:fv.length?Math.min(...fv):null,best:fv.length?Math.max(...fv):null,
     lo:mean(lo),loW:lo.length?Math.min(...lo):null,uAvg:mean(rows.map(z=>z.u)),beat:rows.length?rows.filter(z=>z.m>z.u).length/rows.length*100:null,
-    active,ago:active?lastR-lastEv:null,lastDate:lastEv!=null?C.d[lastEv]:null,open:lastEv!=null&&lastR-lastEv<h};
+    active,still,ago:active?lastR-lastEv:null,lastDate:lastEv!=null?C.d[lastEv]:null,open:lastEv!=null&&lastR-lastEv<h};
 }
 // histogram coloured by sign: green bins gained, red bins lost; optional grey outline for a comparison set
 function histSign(A,B,opt){
@@ -1710,19 +1745,23 @@ function histSign(A,B,opt){
 }
 function efBody(R){
   const h=BT.h,hl=HL[h],S=SU.map(x=>suStats(R,x,h)),B=S[0];
-  S.forEach(z=>{ z.edge=N(z.avg)&&N(B.avg)?z.avg-B.avg:null; z.wEdge=N(z.win)&&N(B.win)?z.win-B.win:null; z.ok=z.sep>=4; });
-  const rank=S.slice(1).filter(z=>z.n>0).sort((a,b)=>(b.ok-a.ok)||((b.edge??-1e9)-(a.edge??-1e9)));
+  S.forEach(z=>{ z.edge=N(z.avg)&&N(B.avg)?z.avg-B.avg:null; z.wEdge=N(z.win)&&N(B.win)?z.win-B.win:null; z.ok=z.sep>=4; z.g=z.x.k==='all'?'':gradeOf(z,B); });
+  const GR={A:3,B:2,C:1};
+  const rank=S.slice(1).filter(z=>z.n>0).sort((a,b)=>((GR[b.g]||0)-(GR[a.g]||0))||(b.ok-a.ok)||((b.edge??-1e9)-(a.edge??-1e9)));
   if(!BT.su||!S.find(z=>z.x.k===BT.su)) BT.su=(rank.find(z=>z.ok)||rank[0]||B).x.k;
-  const T=S.find(z=>z.x.k===BT.su),act=S.slice(1).filter(z=>z.active);
-  const live=act.length?act.map(z=>`<li><b>${esc(suName(z.x,R))}</b> fired ${z.ago===0?'today':z.ago+' day'+(z.ago>1?'s':'')+' ago'} · history: ${pc(z.avg)} avg over ${hl}, up ${f(z.win,0)}% of the time${z.ok?'':' (thin sample)'}</li>`).join(''):'<li>No setup has fired in the last 5 trading days. Baseline only.</li>';
-  const tbl=`<div class="lv-tw"><table class="lv-t lv-ef"><thead><tr><th scope="col">Setup</th><th>Now</th><th>Signals</th><th>Separate</th><th>Avg ${hl}</th><th>Edge vs any day</th><th>Up %</th><th>Median</th><th>Avg drop after entry</th><th>Worst drop</th><th>Worst ${hl}</th><th>Mix beat ${esc(R.index)}</th></tr></thead><tbody>${[B].concat(rank).map(z=>`<tr class="${z.x.k===BT.su?'lv-sel':''}${z.x.k==='all'?' lv-base':''}"><th scope="row"><button type="button" class="lv-sub-b" data-su="${z.x.k}">${esc(suName(z.x,R))}</button></th>
-    <td>${z.active?`<span class="lv-pill lv-ok">${z.ago===0?'Today':z.ago+'d ago'}</span>`:z.x.k==='all'?'—':'<span class="lv-mute">no</span>'}</td><td>${z.n}</td><td class="${z.ok?'':'lv-warn-t'}">${z.sep}</td><td class="${cls(z.avg)}"><b>${pc(z.avg)}</b></td><td class="${z.x.k==='all'?'':cls(z.edge)}">${z.x.k==='all'?'—':(N(z.edge)?(z.edge>0?'+':'−')+f(Math.abs(z.edge),1)+' pts':'—')}</td><td>${f(z.win,0)}%</td><td class="${cls(z.med)}">${pc(z.med)}</td><td class="lv-dn">${pc(z.lo)}</td><td class="lv-dn">${pc(z.loW,0)}</td><td class="lv-dn">${pc(z.worst,0)}</td><td>${f(z.beat,0)}%</td></tr>`).join('')}</tbody></table></div>`;
-  return `<div class="lv-ef-top"><div class="lv-verdict lv-v${act.some(z=>z.ok&&z.edge>0)?2:act.length?1:''}"><span>Live now · ${esc(R.fund)} · hold ${hl}</span><ul class="lv-live">${live}</ul></div></div>
+  const T=S.find(z=>z.x.k===BT.su),act=S.slice(1).filter(z=>z.active).sort((a,b)=>((GR[b.g]||0)-(GR[a.g]||0))||((b.edge??-1e9)-(a.edge??-1e9))),top=act.find(z=>GR[z.g]);
+  const when=z=>z.ago===0?'today':`${day(z.lastDate)}`+(z.still?', still in the zone':'');
+  const head=top?`<p><b>${GRADE_TX[top.g]} (${top.g}).</b> ${esc(suName(top.x,R))} fired ${when(top)}. After it, ${esc(R.fund)} averaged <b>${pc(top.avg)}</b> over ${hl} against ${pc(B.avg)} on any day (${top.edge>0?'+':'−'}${f(Math.abs(top.edge),1)} pts), up ${f(top.win,0)}% of the time; average drop below entry ${pc(top.lo)}, worst ${pc(top.loW,0)}.</p>`
+    :act.length?`<p><b>No edge live.</b> Setups fired recently, but none beat buying on any day over ${hl}. Wait, or sell premium.</p>`:`<p><b>Nothing live.</b> No setup fired in the last 10 trading days. Wait for one, or sell premium.</p>`;
+  const live=act.map(z=>`<li>${gradePill(z.g)} <b>${esc(suName(z.x,R))}</b> · fired ${when(z)} · ${pc(z.avg)} avg, up ${f(z.win,0)}%</li>`).join('');
+  const tbl=`<div class="lv-tw"><table class="lv-t lv-ef"><thead><tr><th scope="col">Setup</th><th>Grade</th><th>Now</th><th>Signals</th><th>Separate</th><th>Avg ${hl}</th><th>Edge vs any day</th><th>Up %</th><th>Median</th><th>Avg drop after entry</th><th>Worst drop</th><th>Worst ${hl}</th><th>Mix beat ${esc(R.index)}</th></tr></thead><tbody>${[B].concat(rank).map(z=>`<tr class="${z.x.k===BT.su?'lv-sel':''}${z.x.k==='all'?' lv-base':''}"><th scope="row"><button type="button" class="lv-sub-b" data-su="${z.x.k}">${esc(suName(z.x,R))}</button></th>
+    <td>${z.x.k==='all'?'—':gradePill(z.g)}</td><td>${z.active?`<span class="lv-pill lv-ok">${z.ago===0?'Today':z.ago+'d ago'}${z.still?' · in zone':''}</span>`:z.x.k==='all'?'—':'<span class="lv-mute">no</span>'}</td><td>${z.n}</td><td class="${z.ok?'':'lv-warn-t'}">${z.sep}</td><td class="${cls(z.avg)}"><b>${pc(z.avg)}</b></td><td class="${z.x.k==='all'?'':cls(z.edge)}">${z.x.k==='all'?'—':(N(z.edge)?(z.edge>0?'+':'−')+f(Math.abs(z.edge),1)+' pts':'—')}</td><td>${f(z.win,0)}%</td><td class="${cls(z.med)}">${pc(z.med)}</td><td class="lv-dn">${pc(z.lo)}</td><td class="lv-dn">${pc(z.loW,0)}</td><td class="lv-dn">${pc(z.worst,0)}</td><td>${N(z.beat)?f(z.beat,0)+'%':'—'}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="lv-ef-top"><div class="lv-verdict lv-v${top?(top.g==='C'?1:2):0}"><span>Live now · ${esc(R.fund)} · hold ${hl}</span>${head}${live?`<ul class="lv-live">${live}</ul>`:''}</div></div>
    <div class="lv-bt2"><div class="lv-chart"><h4 class="lv-h4">${esc(suName(T.x,R))} → ${esc(R.fund)} over the next ${hl}</h4><p class="lv-mute" style="margin:0 0 6px">${esc(suDesc(T.x,R))} ${T.n} signals${T.sep<T.n?`, ${T.sep} separate`:''}${T.lastDate?` · last ${day(T.lastDate)}`:''}</p>${histSign(T.fv,T.x.k==='all'?null:B.fv,{title:suName(T.x,R),pos:'of signals gained',neg:'of signals lost',bLab:'Any day'})}</div>
-   <div class="lv-ef-card"><dl class="lv-ef-dl">${[['Average return',pc(T.avg)],['Edge vs any day',T.x.k==='all'?'—':(N(T.edge)?(T.edge>0?'+':'−')+f(Math.abs(T.edge),1)+' pts':'—')],['Up after '+hl,f(T.win,0)+'%'],['Median',pc(T.med)],['Avg drop below entry',pc(T.lo)],['Worst drop below entry',pc(T.loW,0)],['Best',pc(T.best,0)],['Worst',pc(T.worst,0)],[esc(R.index)+' same days',pc(T.uAvg)],['Separate signals',T.sep+(T.ok?'':' · thin')]].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+   <div class="lv-ef-card"><dl class="lv-ef-dl">${[['Average return',pc(T.avg)],['Edge vs any day',T.x.k==='all'?'—':(N(T.edge)?(T.edge>0?'+':'−')+f(Math.abs(T.edge),1)+' pts':'—')],['Up after '+hl,f(T.win,0)+'%'],['Median',pc(T.med)],['Avg drop below entry',pc(T.lo)],['Worst drop below entry',pc(T.loW,0)],['Best',pc(T.best,0)],['Worst',pc(T.worst,0)],[T.x.lad?'Avg stake used':esc(R.index)+' same days',T.x.lad?f(T.dep,0)+'%':pc(T.uAvg)],['Separate signals',T.sep+(T.ok?'':' · thin')]].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
    <p class="lv-mute" style="margin:8px 0 0">Avg drop below entry is how far ${esc(R.fund)} went under your buy price before the ${hl} was up: size so the worst one is survivable, or scale in.</p></div></div>
    ${tbl}
-   <p class="lv-note" style="margin-top:10px">Each setup buys ${esc(R.fund)} at the close the day it fires and holds for ${hl}. A trigger counts once, then not again for 10 trading days, so a crash doesn’t count as ten signals. <b>Edge</b> is the setup’s average minus buying on any day; <b>Separate</b> counts signals at least ${hl} apart (orange under 4: thin, treat as anecdote). Sorted best edge first.</p>`;
+   <p class="lv-note" style="margin-top:10px">Each setup buys ${esc(R.fund)} at the close the day it fires and holds for ${hl}. A trigger counts once, then not again for 10 trading days, so a crash doesn’t count as ten signals. <b>Edge</b> is the setup’s average minus buying on any day; <b>Separate</b> counts signals at least ${hl} apart (orange under 4: thin). <b>Grade</b>: A = 5+ pts better than any day with an equal or better win rate and 8+ separate signals; B = 2+ pts better; C = slightly better; — = no better than any day. Sorted best grade first. Live now covers the last 10 trading days, plus any trough setup whose zone still holds today.</p>`;
 }
 function btPanel(G){
   const funds=G.flatMap(g=>g.funds.map(x=>x.symbol)),R=BT.cache[BT.fund];
