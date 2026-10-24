@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.16.0';
+const WORKER_VERSION = '3.16.1';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -290,41 +290,42 @@ async function levRegime(fund, env, ctx) {
   fund = String(fund).trim().toUpperCase();
   let pair = null; for (const [u, name, fs] of LEV_PAIRS) for (const [f, L] of fs) if (f === fund) pair = { u, name, L };
   if (!pair) throw new Error('Not a 3x fund on the board: ' + fund);
-  const key = new Request(`https://ledgerline-cache.internal/levregime/v2/${fund}/${new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
+  const key = new Request(`https://ledgerline-cache.internal/levregime/v3/${fund}/${new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(key); if (hit) return hit.json(); }
   const [fd, ud] = await Promise.all([lvLong(fund, env, ctx), lvLong(pair.u, env, ctx)]);
   const iso = x => new Date(x * 1000).toISOString().slice(0, 10), U = {}; ud.t.forEach((x, i) => { U[iso(x)] = ud.c[i]; });
   const D = [], F = [], X = []; fd.t.forEach((x, i) => { const k = iso(x), u = U[k]; if (u > 0 && fd.c[i] > 0) { D.push(k); F.push(fd.c[i]); X.push(u); } });
   const n = D.length, L = pair.L, B = [1]; for (let i = 1; i < n; i++) B.push(B[i - 1] * (1 + tbill(D[i]) / 100 / 252));
   const cut = { light: 8, heavy: 20 }, rd = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
-  const cols = { d: [], reg: [], hv: [], fd1: [], ud1: [] }; for (const h of [21, 63]) for (const k of ['f', 'u', 's', 'm', 'mdd', 'udd', 'fdd']) cols[k + h] = [];
+  // forward windows: 1M, 3M, 6M, 1Y, 2Y, 3Y. Short ones start every day; 6M and longer start every 5th day (neighbours are near-identical anyway).
+  const HZ = [21, 63, 126, 252, 504, 756], cols = { d: [], reg: [], hv: [], fd1: [], ud1: [] }, W = {};
+  for (const h of HZ) W[h] = { i: [], f: [], u: [], s: [], m: [], mdd: [], udd: [] };
   for (let t = 21; t < n; t++) {
     const lg = []; for (let i = t - 19; i <= t; i++) lg.push(Math.log(X[i] / X[i - 1]));
-    const hv = (lvSd(lg) || 0) * Math.sqrt(252) * 100, drag = lvDrag(L, hv);
+    const hv = (lvSd(lg) || 0) * Math.sqrt(252) * 100, drag = lvDrag(L, hv), row = cols.d.length;
     cols.d.push(D[t]); cols.reg.push(drag < cut.light ? 0 : drag < cut.heavy ? 1 : 2); cols.hv.push(rd(hv));
     cols.fd1.push(rd((F[t] / F[t - 1] - 1) * 100)); cols.ud1.push(rd((X[t] / X[t - 1] - 1) * 100));
-    for (const h of [21, 63]) {
-      if (t + h >= n) { for (const k of ['f', 'u', 's', 'm', 'mdd', 'udd', 'fdd']) cols[k + h].push(null); continue; }
-      let mdd = 0, udd = 0, fdd = 0, mpk = 1, upk = 1, fpk = 1;
+    for (const h of HZ) {
+      if (t + h >= n || (h > 63 && row % 5)) continue;
+      let mdd = 0, udd = 0, mpk = 1, upk = 1;
       for (let k = 1; k <= h; k++) {
-        const fr = F[t + k] / F[t], ur = X[t + k] / X[t], mr = fr / L + (1 - 1 / L) * B[t + k] / B[t];
-        mpk = Math.max(mpk, mr); upk = Math.max(upk, ur); fpk = Math.max(fpk, fr);
-        mdd = Math.min(mdd, mr / mpk - 1); udd = Math.min(udd, ur / upk - 1); fdd = Math.min(fdd, fr / fpk - 1);
+        const ur = X[t + k] / X[t], mr = F[t + k] / F[t] / L + (1 - 1 / L) * B[t + k] / B[t];
+        if (mr > mpk) mpk = mr; else if (mr / mpk - 1 < mdd) mdd = mr / mpk - 1;
+        if (ur > upk) upk = ur; else if (ur / upk - 1 < udd) udd = ur / upk - 1;
       }
-      const fr = F[t + h] / F[t] - 1, ur = X[t + h] / X[t] - 1;
-      cols['f' + h].push(rd(fr * 100)); cols['u' + h].push(rd(ur * 100)); cols['s' + h].push(rd(L * ur * 100));
-      cols['m' + h].push(rd((fr / L + (1 - 1 / L) * (B[t + h] / B[t] - 1)) * 100));
-      cols['mdd' + h].push(rd(mdd * 100)); cols['udd' + h].push(rd(udd * 100)); cols['fdd' + h].push(rd(fdd * 100));
+      const fr = F[t + h] / F[t] - 1, ur = X[t + h] / X[t] - 1, w = W[h];
+      w.i.push(row); w.f.push(rd(fr * 100)); w.u.push(rd(ur * 100)); w.s.push(rd(L * ur * 100));
+      w.m.push(rd((fr / L + (1 - 1 / L) * (B[t + h] / B[t] - 1)) * 100)); w.mdd.push(rd(mdd * 100)); w.udd.push(rd(udd * 100));
     }
   }
   const last = cols.reg.length - 1, avg = a => a.length ? rd(a.reduce((x, y) => x + y, 0) / a.length) : null, sum = {};
-  for (const h of [21, 63]) { sum[h] = [0, 1, 2].map(g => { const ix = []; for (let i = 0; i <= last; i++) if (cols.reg[i] === g && cols['f' + h][i] != null) ix.push(i); const c = k => ix.map(i => cols[k + h][i]);
+  for (const h of HZ) { const w = W[h], st = h > 63 ? 5 : 1; sum[h] = [0, 1, 2].map(g => { const ix = []; w.i.forEach((r, j) => { if (cols.reg[r] === g) ix.push(j); }); const c = k => ix.map(j => w[k][j]);
     const f = c('f'), sx = c('s'), u = c('u'), m = c('m'), mdd = c('mdd'), udd = c('udd'), mA = avg(m), uA = avg(u), mD = avg(mdd), uD = avg(udd);
-    return { n: ix.length, ind: Math.floor(ix.length / h), fAvg: avg(f), sAvg: avg(sx), gap: avg(f.map((v, i) => v - sx[i])), fWin: f.length ? rd(f.filter(v => v > 0).length / f.length * 100) : null, fWorst: f.length ? Math.min(...f) : null, fBest: f.length ? Math.max(...f) : null,
+    return { n: ix.length, ind: Math.floor(ix.length * st / h), fAvg: avg(f), sAvg: avg(sx), gap: avg(f.map((v, i) => v - sx[i])), fWin: f.length ? rd(f.filter(v => v > 0).length / f.length * 100) : null, fWorst: f.length ? Math.min(...f) : null, fBest: f.length ? Math.max(...f) : null,
       mAvg: mA, uAvg: uA, beat: m.length ? rd(m.filter((v, i) => v > u[i]).length / m.length * 100) : null, mDd: mD, uDd: uD, mEff: mD < 0 ? rd(mA / -mD) : null, uEff: uD < 0 ? rd(uA / -uD) : null, mWorst: m.length ? Math.min(...m) : null, uWorst: u.length ? Math.min(...u) : null }; }); }
-  const out = { fund, index: pair.u, indexName: pair.name, lev: L, from: cols.d[0] || null, to: cols.d[last] || null, days: cols.d.length, cut, todayReg: cols.reg[last], todayHv20: cols.hv[last], sum,
+  const out = { fund, index: pair.u, indexName: pair.name, lev: L, from: cols.d[0] || null, to: cols.d[last] || null, days: cols.d.length, cut, todayReg: cols.reg[last], todayHv20: cols.hv[last], sum, w: W, stride: { 21: 1, 63: 1, 126: 5, 252: 5, 504: 5, 756: 5 },
     bills: 'Mix = 1/' + L + ' in ' + fund + ' and the rest in 3-month T-bills (monthly average rate, held without rebalancing), the same starting market exposure as 100% ' + pair.u + '.',
-    method: 'Each day is labelled by the drag (L^2 - L)/2 x HV20^2 of ' + pair.u + ' that day. Forward windows are 21 and 63 trading days and overlap.', checkedAt: Date.now(), worker: WORKER_VERSION, cols };
+    method: 'Each day is labelled by the drag (L^2 - L)/2 x HV20^2 of ' + pair.u + ' that day. Forward windows are 21, 63, 126, 252, 504 and 756 trading days and overlap; 126 and longer start every 5th day.', checkedAt: Date.now(), worker: WORKER_VERSION, cols };
   if (cache) { const put = cache.put(key, new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=21600' } })); if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put; }
   return out;
 }

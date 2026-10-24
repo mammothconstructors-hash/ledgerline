@@ -304,6 +304,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .lv-verdict small{font-size:12.5px;color:var(--lv-ink3)}
 .lv-v2{border-color:var(--lv-up)}.lv-v1{border-color:var(--lv-warn)}.lv-v0{border-color:var(--lv-dn)}
 .lv-h4{margin:0 0 4px;font-size:14px;font-weight:700}
+.lv-segl{align-self:center;padding:0 10px;font-size:12px;font-weight:700;color:var(--lv-ink3);text-transform:uppercase;letter-spacing:.06em}
 
 </style>
 </head><body>
@@ -454,7 +455,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 const SHEET_ID="";
 const SHEET_URL="";
 const GS="Google Sheets", TV="Tradingview";
-const PAGE_VERSION="2.11.0s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
+const PAGE_VERSION="2.11.1s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
 const GROUPS={C:{name:"Cyclicals",c:"var(--cyc)"},T:{name:"Tech & Innovation",c:"var(--tech)"},D:{name:"Defensives",c:"var(--def)"},
   I:{name:"Indices",c:"var(--idx)"},B:{name:"Bonds",c:"var(--bnd)"},M:{name:"Commodities",c:"var(--cmd)"}};
 const SCREENS={sectors:{title:"Sector Rotation",groups:["C","T","D"]},macro:{title:"Cross-Asset Regime",groups:["I","B","M"]},vix:{title:"VIX Term & Carry"},fsv:{title:"Vol Surface Δ"},lev:{title:"3x Leverage"}};
@@ -838,7 +839,8 @@ const HELP={
  lev:{t:"What each control does · how to use the 3x Leverage screen",dl:[
   ["Drag pill","On each card: Light, Moderate or Heavy drag at today's IV. Click it to open the backtest for that fund."],
   ["Fund buttons","In the backtest: which 3x fund to test over 10 years."],
-  ["Next 1M / Next 3M","The forward window measured from each day: 21 or 63 trading days."],
+  ["Hold for 1M … 3Y","How long you hold after each day: 1 month, 3 months, 6 months, 1 year, 2 years or 3 years. Longer holds have fewer separate stretches, so the thin-sample flag shows up more."],
+  ["Charts / Stats","Top tabs. Charts shows the backtest and every chart; Stats shows the full table of every fund and the options table."],
   ["Label buttons","In the backtest table: Light, Moderate or Heavy. The charts and strip redraw for days with that label."],
   ["1D / 1W","On the σ-move bars: today's or this week's move."]],
   how:["Start with Today's call in the backtest: it says whether today's drag label has historically favored the 3x sleeve over the index.",
@@ -1244,6 +1246,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.11.1 · LedgerLine worker 3.16.1 · Oct 24 2026</dt><dd>3x Leverage: the Stats and Charts tabs now work on this screen. Charts shows the backtest, compass, carry, drag and σ-move charts; Stats shows the full table of every fund and the options table. The backtest hold period now runs 1M, 3M, 6M, 1Y, 2Y and 3Y (was 1M and 3M only), and Today’s call says when a label has too few separate stretches to trust.</dd>
    <dt>Page 2.11.0 · LedgerLine worker 3.16.0 · Oct 24 2026</dt><dd>3x Leverage screen: new Drag regime backtest. Pick TQQQ, UPRO, UDOW, TNA, URTY, SOXL or TECL and see up to 10 years of what happened after days labelled Light, Moderate or Heavy drag: forward 1- and 3-month returns, up and down days, two distributions (the fund against 3× its index, and 1/3 fund + T-bills against 100% of the index), return per point of dip, and a Today’s call line (Edge on, Thin edge, No edge). Each card’s drag pill now opens the backtest for that fund. Also new: a 3x compass with a read per fund, a Carry chart (IV against 20-day and 1-year realized, IV RICH and IV CHEAP corners), σ-move bars with a 1D / 1W switch, a help box at the top of the screen and a 3x Leverage section in How it works. Glossary terms added for each.</dd>
    <dt>Page 2.10.0 · LedgerLine worker 3.15.0 · Oct 24 2026</dt><dd>New 3x Leverage screen: TQQQ, UPRO, UDOW, TNA, URTY, SOXL and TECL next to QQQ, SPY, DIA, IWM, SOXX and XLK. A card per pair with drag a year at today’s IV and a Light, Moderate or Heavy drag pill; a full table with returns, below high, 5-year worst, IV30 and its change, HV20 and HV60, IV − HV, IV rank, beta, realized leverage, IV vs 3×, drag at implied and realized vol, decay over 3 months and a year and a year of costs; an Options on the 3x funds table (IV vs 3× the index, implied leverage, vol premium, 1-month move in % and $, 30-day straddle against the index’s, and a read); and an expected-drag against actual-decay chart. Nine new glossary terms under 3x funds. Data refreshes every 15 minutes from the LedgerLine worker.</dd>
    <dt>Page 2.9.1 · Data worker 2.1.0 · Oct 23 2026</dt><dd>Visit log like LedgerLine. When someone opens the board it records their sign-in email, the time and the screen, once per 30 minutes. The owner sees it on a private usage page on the data worker (people, last visit, 7-day and all-time visits, first seen, most-viewed screen, a 30-day visits chart and the last 15 data runs). The page needs the owner’s passphrase. FAQ says what is recorded.</dd>
@@ -1328,7 +1331,7 @@ function renderHow(){
   ["3x Leverage",[
   ["lvscreen","3x Leverage screen","Overview",`<p>Every 3x fund next to the ETF that holds its index: TQQQ on QQQ, UPRO on SPY, UDOW on DIA, TNA and URTY on IWM, SOXL on SOXX, TECL on XLK. Prices are end of day; IV30 is Cboe’s 15-minute delayed quote. The screen refreshes every 15 minutes.</p><p>Top to bottom: a card per fund with its drag label, the drag regime backtest, the 3x compass, carry, the full table, options on the 3x funds, expected against actual drag, and σ-move bars.</p>`],
   ["lvcards","Cards and drag labels","Top row",`<p>Drag a year at today’s IV is (L² − L) ÷ 2 × σ² with the index’s IV30: about 3 × σ² for a 3x fund. Under 8% a year is <b>Light drag</b>, 8–20% <b>Moderate</b>, 20% or more <b>Heavy</b>. Click the label to open the backtest for that fund.</p>`],
-  ["lvbt","Drag regime backtest","Up to 10 years",`<p>Each trading day of up to ten years (UPRO, UDOW and URTY from June 2020) is labelled Light, Moderate or Heavy from the index’s 20-day realized vol that day (past IV isn’t stored, so realized stands in; today’s pill uses IV, which usually runs higher). From every day the next 21 trading days (1M) or 63 (3M) are measured.</p>
+  ["lvbt","Drag regime backtest","Up to 10 years",`<p>Each trading day of up to ten years (UPRO, UDOW and URTY from June 2020) is labelled Light, Moderate or Heavy from the index’s 20-day realized vol that day (past IV isn’t stored, so realized stands in; today’s pill uses IV, which usually runs higher). From every day the next 1 month, 3 months, 6 months, 1 year, 2 years or 3 years is measured (Hold for buttons). Why not 5 or 10 years: with ten years of history there are only one or two separate 5-year stretches, and none for 10, so there is nothing to make a distribution from.</p>
    <dl><dt>Today’s call</dt><dd>Edge on when the mix beat the index at least 60% of the time after today’s label <i>and</i> earned more return per point of dip; Thin edge when one of the two held; No edge when neither did.</dd>
    <dt>Strip</dt><dd>Days with that label, up and down days with their average size, daily win rate, best and worst day, worst window, and how many windows (with the non-overlapping count).</dd>
    <dt>Left chart</dt><dd>Distribution of the fund’s forward return (bars) against 3× the index’s (line). Where the bars sit right of the line, daily reset helped; left of it, decay and costs hurt.</dd>
@@ -1550,20 +1553,21 @@ function sigBars(groups,w){
 
 /* ---------- Drag regime backtest: what happened after days the board would have shown Light, Moderate or Heavy ---------- */
 const BT={fund:'TQQQ',reg:null,h:21,cache:{},busy:{},err:{}};
+const HZ=[[21,'1M'],[63,'3M'],[126,'6M'],[252,'1Y'],[504,'2Y'],[756,'3Y']],HA={21:'1-month',63:'3-month',126:'6-month',252:'1-year',504:'2-year',756:'3-year'},HL={21:'1 month',63:'3 months',126:'6 months',252:'1 year',504:'2 years',756:'3 years'};
 const REGN=['Light drag','Moderate drag','Heavy drag'],REGC=['lv-ok','lv-warn','lv-bad'];
 const API_R=API.replace('/api/levboard','/api/levregime?fund=');
 const qtl=(a,q)=>{if(!a.length)return null;const b=[...a].sort((x,y)=>x-y),i=(b.length-1)*q,lo=Math.floor(i);return b[lo]+(b[Math.min(lo+1,b.length-1)]-b[lo])*(i-lo)};
 const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
 function btStats(R,reg,h){
   const C=R.cols,ix=[];for(let i=0;i<C.reg.length;i++) if(C.reg[i]===reg) ix.push(i);
-  const fw=ix.filter(i=>C['f'+h][i]!=null),g=k=>fw.map(i=>C[k+h][i]);
-  const f=g('f'),u=g('u'),sx=g('s'),m=g('m'),mdd=g('mdd'),udd=g('udd'),fdd=g('fdd');
+  const w=R.w[h],st=(R.stride&&R.stride[h])||1,jx=[];w.i.forEach((r,j)=>{if(C.reg[r]===reg) jx.push(j)});const fw=jx,g=k=>jx.map(j=>w[k][j]);
+  const f=g('f'),u=g('u'),sx=g('s'),m=g('m'),mdd=g('mdd'),udd=g('udd');
   const fd=ix.map(i=>C.fd1[i]).filter(N),up=fd.filter(v=>v>0),dn=fd.filter(v=>v<0);
   const mAvg=mean(m),uAvg=mean(u),mDd=mean(mdd),uDd=mean(udd);
-  return {days:ix.length,share:ix.length/C.reg.length*100,n:fw.length,ind:Math.floor(fw.length/h),f,u,sx,m,
+  return {days:ix.length,share:ix.length/C.reg.length*100,n:fw.length,ind:Math.floor(fw.length*st/h),f,u,sx,m,
     fAvg:mean(f),fMed:qtl(f,.5),fWin:f.length?f.filter(v=>v>0).length/f.length*100:null,fP10:qtl(f,.1),fP90:qtl(f,.9),fWorst:f.length?Math.min(...f):null,
     gap:f.length?mean(f.map((v,i)=>v-sx[i])):null,gapWin:f.length?f.filter((v,i)=>v>sx[i]).length/f.length*100:null,
-    mAvg,uAvg,beat:m.length?m.filter((v,i)=>v>u[i]).length/m.length*100:null,mDd,uDd,fDd:mean(fdd),
+    mAvg,uAvg,beat:m.length?m.filter((v,i)=>v>u[i]).length/m.length*100:null,mDd,uDd,
     mEff:N(mAvg)&&mDd<0?mAvg/-mDd:null,uEff:N(uAvg)&&uDd<0?uAvg/-uDd:null,
     up:up.length,dn:dn.length,upAvg:mean(up),dnAvg:mean(dn),best:fd.length?Math.max(...fd):null,worstDay:fd.length?Math.min(...fd):null};
 }
@@ -1587,15 +1591,15 @@ function hist(A,B,labA,labB,cA,cB,title){   // A as bars, B as an outline, same 
   return s+'</svg>';
 }
 function btBody(R){
-  const h=BT.h,hl=h===21?'1 month':'3 months',reg=BT.reg==null?R.todayReg:BT.reg,S=[0,1,2].map(r=>btStats(R,r,h)),T=S[reg];
+  const h=BT.h,hl=HL[h],reg=BT.reg==null?R.todayReg:BT.reg,S=[0,1,2].map(r=>btStats(R,r,h)),T=S[reg];
   const effBest=S.map(x=>N(x.mEff)?x.mEff:-1e9).reduce((b,v,i,a)=>v>a[b]?i:b,0);
   const tbl=`<div class="lv-tw"><table class="lv-t lv-bt"><thead><tr><th scope="col">Label that day</th><th>Days</th><th>${esc(R.fund)} avg</th><th>Median</th><th>Up %</th><th>10th–90th</th><th>vs 3× ${esc(R.index)}</th><th>Mix avg</th><th>${esc(R.index)} avg</th><th>Mix beat ${esc(R.index)}</th><th>Mix dip</th><th>${esc(R.index)} dip</th><th>Mix return ÷ dip</th><th>${esc(R.index)} return ÷ dip</th></tr></thead><tbody>${S.map((x,r)=>`<tr class="${r===reg?'lv-sel':''}"><th scope="row"><button type="button" class="lv-rb ${REGC[r]}" data-reg="${r}">${REGN[r]}</button>${r===R.todayReg?'<small>today</small>':''}</th>
     <td>${x.days} <span class="lv-mute">${f(x.share,0)}%</span></td><td class="${cls(x.fAvg)}"><b>${pc(x.fAvg)}</b></td><td class="${cls(x.fMed)}">${pc(x.fMed)}</td><td>${f(x.fWin,0)}%</td><td>${pc(x.fP10,0)} to ${pc(x.fP90,0)}</td><td class="${cls(x.gap)}">${pc(x.gap)}</td>
     <td class="${cls(x.mAvg)}">${pc(x.mAvg,2)}</td><td class="${cls(x.uAvg)}">${pc(x.uAvg,2)}</td><td><b>${f(x.beat,0)}%</b></td><td class="lv-dn">${pc(x.mDd)}</td><td class="lv-dn">${pc(x.uDd)}</td><td class="${r===effBest?'lv-ok-t':''}">${f(x.mEff,2)}</td><td>${f(x.uEff,2)}</td></tr>`).join('')}</tbody></table></div>`;
-  const strip=`<div class="lv-strip">${[['Days in regime',T.days+' <small>'+f(T.share,0)+'% of 10 yrs</small>'],['Up days',T.up+' <small>avg '+pc(T.upAvg,2)+'</small>'],['Down days',T.dn+' <small>avg '+pc(T.dnAvg,2)+'</small>'],['Daily win rate',f(T.up/(T.up+T.dn)*100,1)+'%'],['Best day',pc(T.best,1)],['Worst day',pc(T.worstDay,1)],['Worst '+hl,pc(T.fWorst,1)],[hl+' windows',T.n+' <small>≈'+T.ind+' non-overlapping</small>']].map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
+  const strip=`<div class="lv-strip">${[['Days in regime',T.days+' <small>'+f(T.share,0)+'% of 10 yrs</small>'],['Up days',T.up+' <small>avg '+pc(T.upAvg,2)+'</small>'],['Down days',T.dn+' <small>avg '+pc(T.dnAvg,2)+'</small>'],['Daily win rate',f(T.up/(T.up+T.dn)*100,1)+'%'],['Best day',pc(T.best,1)],['Worst day',pc(T.worstDay,1)],['Worst '+hl,pc(T.fWorst,1)],[hl+' windows',T.n+' <small>≈'+T.ind+' separate'+(T.ind<5?' · thin sample':'')+'</small>']].map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
   const acc='var(--accent,#7A4A1C)',ink='var(--ink3,#5A4C3A)';
-  const D=S[R.todayReg],edge=N(D.beat)&&N(D.mEff)&&N(D.uEff)?(D.beat>=60&&D.mEff>D.uEff?2:D.beat>=50||D.mEff>D.uEff?1:0):null;
-  const vtx=edge==null?'Not enough history for a call.':edge===2?`Edge on. Today reads ${REGN[R.todayReg]}, and after those days the 1/3 ${esc(R.fund)} + bills mix beat ${esc(R.index)} ${f(D.beat,0)}% of the time over the next ${hl}, with more return per point of dip (${f(D.mEff,2)} against ${f(D.uEff,2)}). Run the 3x sleeve instead of the index; keep the 2/3 in bills as the buffer.`
+  const D=S[R.todayReg],edge=D.ind<3?null:N(D.beat)&&N(D.mEff)&&N(D.uEff)?(D.beat>=60&&D.mEff>D.uEff?2:D.beat>=50||D.mEff>D.uEff?1:0):null;
+  const vtx=edge==null?`Not enough history for a call: only ${D.ind} separate ${HA[h]} stretch${D.ind===1?'':'es'} started on ${REGN[R.todayReg]} days. Use a shorter hold, or read the table as anecdote.`:edge===2?`Edge on. Today reads ${REGN[R.todayReg]}, and after those days the 1/3 ${esc(R.fund)} + bills mix beat ${esc(R.index)} ${f(D.beat,0)}% of the time over the next ${hl}, with more return per point of dip (${f(D.mEff,2)} against ${f(D.uEff,2)}). Run the 3x sleeve instead of the index; keep the 2/3 in bills as the buffer.`
     :edge===1?`Thin edge. Today reads ${REGN[R.todayReg]}: the mix beat ${esc(R.index)} ${f(D.beat,0)}% of the time over the next ${hl} (return ÷ dip ${f(D.mEff,2)} against ${f(D.uEff,2)}). Half size on the 3x sleeve, or add only on red days.`
     :`No edge. Today reads ${REGN[R.todayReg]}: the mix beat ${esc(R.index)} only ${f(D.beat,0)}% of the time over the next ${hl}, with less return per point of dip (${f(D.mEff,2)} against ${f(D.uEff,2)}). Hold the index, or sell premium on the 3x fund instead of owning it.`;
   const verdict=`<div class="lv-verdict lv-v${edge==null?'':edge}"><span>Today’s call · ${esc(R.fund)} · next ${hl}</span><p>${vtx}</p><small>Worst ${hl} after these days: ${esc(R.fund)} ${pc(D.fWorst,0)}, mix ${pc(Math.min(...D.m),0)}. Built from ${D.ind} non-overlapping windows; it is history, so size for the worst case.</small></div>`;
@@ -1609,7 +1613,7 @@ function btBody(R){
 function btPanel(G){
   const funds=G.flatMap(g=>g.funds.map(x=>x.symbol)),R=BT.cache[BT.fund];
   return `<div class="lv-bth"><div class="lv-seg" role="group" aria-label="Fund">${funds.map(s=>`<button type="button" data-fund="${s}" aria-pressed="${s===BT.fund}">${s}</button>`).join('')}</div>
-    <div class="lv-seg" role="group" aria-label="Window">${[[21,'Next 1M'],[63,'Next 3M']].map(([h,l])=>`<button type="button" data-h="${h}" aria-pressed="${h===BT.h}">${l}</button>`).join('')}</div></div>
+    <div class="lv-seg" role="group" aria-label="Window"><span class="lv-segl">Hold for</span>${HZ.map(([h,l])=>`<button type="button" data-h="${h}" aria-pressed="${h===BT.h}">${l}</button>`).join('')}</div></div>
     ${R?`<p class="lv-asof" style="text-align:left;margin:0 0 10px">${esc(R.fund)} · 3× ${esc(R.index)} · ${esc(R.index)} HV20 today <b>${f(R.todayHv20)}</b> → <b>${REGN[R.todayReg]}</b> on realized vol · Last checked <b>${when(R.checkedAt)}</b></p><div data-btbody>${btBody(R)}</div>`
       :BT.err[BT.fund]?`<p class="lv-sub">The history for ${esc(BT.fund)} didn’t load (${esc(BT.err[BT.fund])}). Try again shortly.</p>`:`<p class="lv-sub">Loading the history of ${esc(BT.fund)} and its index…</p>`}`;
 }
@@ -1664,38 +1668,39 @@ const GLOSS=[
  ['Depth %ile, Avg 10%+ drop','Depth percentile is the horizontal compass axis as a number (90 means only 10% of days were deeper). Average 10%+ drop is the mean depth of every 10%+ drawdown in five years.'],
  ['SOXX for SOXL','SOXL is 3× the NYSE Semiconductor Index; SOXX holds that same index, so it is the right comparison. TECL is 3× the Technology Select Sector Index, which XLK holds.']];
 
-window.levRender=function(el,data){
+window.levRender=function(el,data,mode){
   const G=data.groups||[];
   el.innerHTML=`<div class="lv">
     <div class="lv-head"><div><div class="lv-kick">3x Leverage</div><h2>Leveraged funds against their index</h2>
       <p class="lv-sub">Decay, realized against implied, drawdown and costs for every 3x fund next to the ETF that holds its index.</p></div>
       <p class="lv-asof">Prices end of day · IV from Cboe, 15 minutes delayed<br>Last checked <b>${when(data.checkedAt)}</b></p></div>
     <div class="lv-cards">${G.map(card).join('')}</div>
-    <section class="lv-sec" id="lvbt"><h3>Drag regime backtest <small>up to 10 years: what happened after days with each drag label</small></h3>
+    <section class="lv-sec" id="lvbt" data-v="c"><h3>Drag regime backtest <small>up to 10 years: what happened after days with each drag label</small></h3>
       <p class="lv-note">Pick a fund. Every day of up to 10 years gets the label its card would have shown (Light, Moderate or Heavy drag), then the next month or three are measured. Click a label to see its distribution.</p>
       <div data-bt>${btPanel(G)}</div></section>
-    <section class="lv-sec"><h3>3x compass <small>implied vol against realized, by drawdown depth</small></h3>
+    <section class="lv-sec" data-v="c"><h3>3x compass <small>implied vol against realized, by drawdown depth</small></h3>
       <div class="lv-cmp"><div class="lv-chart lv-cw">${compass(G)}</div>
       <div class="lv-tw"><table class="lv-t"><thead><tr><th scope="col">Fund</th><th>Read</th><th>Depth %ile</th><th>Below high</th><th>Avg 10%+ drop</th><th>IV ÷ HV20</th><th style="text-align:left">Why</th></tr></thead><tbody>${compassReads(G)}</tbody></table></div></div>
       <p class="lv-note" style="margin-top:10px">Up means the fund’s implied vol is rich against what it has actually moved over 20 days (the outer ring is IV at about 1.4× realized). Left means it sits deeper below its high than most days of the last five years. Bold tickers are the 3x funds, light ones their index ETFs. Same quadrants as the other compasses: top-left is the red-day add with premium on your side.</p></section>
-    <section class="lv-sec"><h3>Carry <small>implied vol rich or cheap against what each fund actually moves</small></h3>
+    <section class="lv-sec" data-v="c"><h3>Carry <small>implied vol rich or cheap against what each fund actually moves</small></h3>
       <div class="lv-chart lv-cw2">${carry(G)}</div>
       <p class="lv-note" style="margin-top:10px">Up means IV is above the last 20 days’ realized move, right means it is above the last year’s. Top-right (both over 1×) is rich on both clocks: premium sellers get paid. Bottom-left is cheap on both: owning options costs less than the fund has been moving. Bold dots are the 3x funds, small grey ones their index ETFs.</p></section>
-    <section class="lv-sec"><h3>Every fund <small>index ETF first, its 3x funds under it</small></h3>
+    <section class="lv-sec" data-v="s"><h3>Every fund <small>index ETF first, its 3x funds under it</small></h3>
       <div class="lv-tw"><table class="lv-t"><thead><tr><th scope="col">Fund</th><th>Price</th><th>1D</th><th>1W</th><th>1M</th><th>YTD</th><th>1Y</th><th>Below high</th><th>5-yr worst</th><th>IV30</th><th>ΔIV</th><th>HV20</th><th>HV60</th><th>IV−HV</th><th>IV rank</th><th>Beta 60d</th><th>Real. lev</th><th>IV vs 3×</th><th>Drag @IV</th><th>Drag @HV60</th><th>Decay 3M</th><th>Decay 1Y</th><th>Costs 1Y</th></tr></thead>
       <tbody>${G.map(g=>row(g.underlying,g.underlying,true)+g.funds.map(F=>row(F,g.underlying,false)).join('')).join('')}</tbody></table></div></section>
-    <section class="lv-sec"><h3>Options on the 3x funds <small>is there more juice than 3× the index?</small></h3>
+    <section class="lv-sec" data-v="s"><h3>Options on the 3x funds <small>is there more juice than 3× the index?</small></h3>
       <p class="lv-note">A 3x fund’s options cost about three times the index’s, because they price about three times the movement. The extra juice is only real when the fund’s IV runs above 3× the index’s (IV vs 3× over 1.05), or above what the fund has actually been moving (vol premium). Decay also drags the fund’s drift, which makes long-dated calls on it worse than calls on the index, and puts on it richer.</p>
       ${optTable(G)}</section>
-    <section class="lv-sec"><h3>Expected drag against what happened <small>a year, from today’s volatility</small></h3>
+    <section class="lv-sec" data-v="c"><h3>Expected drag against what happened <small>a year, from today’s volatility</small></h3>
       <div class="lv-legend"><span><i class="lv-k-iv"></i>At today’s implied vol</span><span><i class="lv-k-hv"></i>At 60-day realized vol</span><span><i class="lv-k-act"></i>Last year’s actual decay</span></div>
       <div class="lv-chart">${bars(G)}</div></section>
-    <section class="lv-sec" data-lvsig><h3>σ move <small>today’s and this week’s return in units of the move options priced</small></h3>
+    <section class="lv-sec" data-lvsig data-v="c"><h3>σ move <small>today’s and this week’s return in units of the move options priced</small></h3>
       <div class="lv-seg" role="group" aria-label="Window"><button type="button" data-w="1D" aria-pressed="true">1D</button><button type="button" data-w="1W" aria-pressed="false">1W</button></div>
       <div class="lv-chart" data-lvsigc>${sigBars(G,'1D')}</div>
       <p class="lv-note" style="margin-top:6px">A bar of +1σ means the fund moved exactly as much as its IV said a normal day (or week) would. Past ±2σ is a big move for that fund. A 3x fund should sit near its index ETF’s bar, since both are scaled by their own IV; a 3x bar much longer than its index means its options were underpricing the move.</p></section>
     <section class="lv-sec"><h3>How to read it</h3><dl class="lv-gl">${GLOSS.map(([t,d])=>`<div><dt>${t}</dt><dd>${d}</dd></div>`).join('')}</dl></section>
   </div>`;
+  const want=mode==='stats'?'s':'c'; el.querySelectorAll('[data-v]').forEach(x=>{x.hidden=x.dataset.v!==want;});
   const bx=el.querySelector('[data-bt]'); if(bx) btWire(G,bx);
   el.querySelectorAll('[data-btfund]').forEach(b=>b.addEventListener('click',()=>{ BT.fund=b.dataset.btfund; BT.reg=null; if(bx){ bx.innerHTML=btPanel(G); btLoad(G,bx); } const t=el.querySelector('#lvbt'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); }));
   const sb=el.querySelector('[data-lvsig]'); if(sb) sb.addEventListener('click',e=>{const b=e.target.closest('button[data-w]'); if(!b) return; sb.querySelectorAll('button[data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b)); sb.querySelector('[data-lvsigc]').innerHTML=sigBars(G,b.dataset.w);});
@@ -1708,7 +1713,7 @@ window.levLoad=async function(el){
 })();
 
 const LEVD={data:null,at:0,busy:false,err:null};
-function renderLev(){const el=$("levv");if(!el)return;if(LEVD.data){levRender(el,LEVD.data);el.insertAdjacentHTML("afterbegin",helpBox("lev"));}else el.innerHTML=`<div class="lv"><p class="lv-sub">${LEVD.err?esc("The 3x data didn’t load ("+LEVD.err+"). It retries on the next refresh."):"Loading the 3x funds…"}</p></div>`;}
+function renderLev(){const el=$("levv");if(!el)return;if(LEVD.data){levRender(el,LEVD.data,tab==="metrics"?"stats":"charts");el.insertAdjacentHTML("afterbegin",helpBox("lev"));}else el.innerHTML=`<div class="lv"><p class="lv-sub">${LEVD.err?esc("The 3x data didn’t load ("+LEVD.err+"). It retries on the next refresh."):"Loading the 3x funds…"}</p></div>`;}
 async function startLev(){if(LEVD.busy)return;if(LEVD.data&&Date.now()-LEVD.at<14*60000){renderLev();return}LEVD.busy=true;
   try{const r=await fetch("https://sec-proxy.mammothconstructors.workers.dev/api/levboard",{cache:"no-store"});if(!r.ok)throw new Error("data service returned "+r.status);LEVD.data=await r.json();LEVD.at=LEVD.data.checkedAt||Date.now();LEVD.err=null;}
   catch(e){LEVD.err=String(e&&e.message||e);}finally{LEVD.busy=false;}
