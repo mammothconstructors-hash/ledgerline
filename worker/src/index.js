@@ -17,7 +17,7 @@ import UNIVERSE from './universe.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.12.0';
+const WORKER_VERSION = '3.12.1';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -169,7 +169,7 @@ async function fundSeries(ticker) {
   const row = (j.data || []).find(d => String(d[iS]).toUpperCase() === ticker);
   if (row) return { cik: String(row[iC]), series: String(row[iSe]) };
   // unit trusts have no series: use the trust's own CIK from the company ticker list
-  try { const co = await cikFor(ticker); return { cik: co.cikInt, series: co.cik }; } catch (e) { return null; }
+  try { const co = await cikFor(ticker); return { cik: co.cikInt, series: co.cik, name: co.name }; } catch (e) { return null; }
 }
 async function latestNport(fs) {
   // EDGAR's company browser takes a series id in place of a CIK
@@ -203,7 +203,7 @@ async function etfHoldings(symbol, env) {
   const xr = await secGet(folder + 'primary_doc.xml', 604800);
   if (!xr) return none('The N-PORT filing has no readable holdings file.');
   const x = await xr.text();
-  const fund = xTag(x, 'seriesName') || xTag(x, 'regName') || sym, asOf = xTag(x, 'repPdDate'), net = Number(xTag(x, 'netAssets')) || null;
+  const fund = xTag(x, 'seriesName') || xTag(x, 'regName') || fs.name || sym, asOf = xTag(x, 'repPdDate'), net = Number(xTag(x, 'netAssets')) || null;
   let rows = [];
   for (const blk of x.split(/<(?:\w+:)?invstOrSec>/).slice(1)) {
     const b = blk.split(/<\/(?:\w+:)?invstOrSec>/)[0];
@@ -214,7 +214,11 @@ async function etfHoldings(symbol, env) {
       type: xTag(b, 'assetCat') || '', long: (xTag(b, 'payoffProfile') || 'Long') !== 'Short'
     });
   }
-  rows = rows.filter(h => h.name && h.weight != null).sort((a, b) => (b.weight || 0) - (a.weight || 0));
+  rows = rows.filter(h => h.name && h.weight != null);
+  // cash sweeps and securities-lending collateral (money market funds, asset category STIV) aren't holdings: report them as one line
+  const isCash = h => h.type === 'STIV' || /money market|cash collateral|liquidity fund|treasury (cash|obligations) fund|government (money|cash)|cash management/i.test(h.name);
+  const cashW = rows.filter(isCash).reduce((a, h) => a + (h.weight || 0), 0);
+  rows = rows.filter(h => !isCash(h)).sort((a, b) => (b.weight || 0) - (a.weight || 0));
   // tickers: filings often give only CUSIP and name; match names to SEC's company list so the page can link and group by sector
   try {
     const tr = await secGet('https://www.sec.gov/files/company_tickers.json', 86400), tj = tr ? await tr.json() : {};
@@ -235,7 +239,7 @@ async function etfHoldings(symbol, env) {
   const sumW = rows.reduce((a, h) => a + (h.weight || 0), 0), top10 = rows.slice(0, 10).reduce((a, h) => a + (h.weight || 0), 0);
   const body = {
     symbol: sym, fund, day, asOf, filed: f.filed, netAssets: net, count: rows.length,
-    top10Weight: Math.round(top10 * 100) / 100, totalWeight: Math.round(sumW * 10) / 10, sectors, sectorCoverage: coverage,
+    top10Weight: Math.round(top10 * 100) / 100, totalWeight: Math.round(sumW * 10) / 10, cashWeight: Math.round(cashW * 100) / 100, sectors, sectorCoverage: coverage,
     holdings: rows.slice(0, 500), source: 'SEC Form N-PORT', filing: folder
   };
   if (DB && rows.length) await DB.prepare('INSERT INTO etf_hold (symbol, day, body) VALUES (?, ?, ?) ON CONFLICT (symbol) DO UPDATE SET day = excluded.day, body = excluded.body').bind(sym, day, JSON.stringify(body)).run();
