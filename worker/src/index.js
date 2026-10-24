@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.15.0';
+const WORKER_VERSION = '3.15.1';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -246,8 +246,13 @@ function lvStats(d) {
   const c = d.c, n = c.length, last = c[n - 1], t = d.t, yr = new Date(t[n - 1] * 1000).getUTCFullYear();
   const y0 = t.findIndex(x => new Date(x * 1000).getUTCFullYear() === yr), ytd = y0 > 0 ? (last / c[y0 - 1] - 1) * 100 : null;
   const st5 = t[n - 1] - 5 * 365.25 * 86400; let i5 = t.findIndex(x => x >= st5); if (i5 < 0) i5 = 0;
-  let pk = c[i5], pkAt = i5, worst = 0; for (let i = i5; i < n; i++) { if (c[i] >= pk) { pk = c[i]; pkAt = i; } worst = Math.min(worst, (c[i] / pk - 1) * 100); }
+  // running drawdown over 5 years: worst, today's depth percentile (share of days shallower than today), average 10%+ drop
+  let pk = c[i5], pkAt = i5, worst = 0; const dd = [], drops = []; let cur = 0;
+  for (let i = i5; i < n; i++) { if (c[i] >= pk) { if (cur <= -10) drops.push(cur); cur = 0; pk = c[i]; pkAt = i; } const v = (c[i] / pk - 1) * 100; dd.push(v); cur = Math.min(cur, v); worst = Math.min(worst, v); }
+  if (cur <= -10) drops.push(cur);
+  const today = dd[dd.length - 1], ddPct = dd.filter(v => v > today).length / dd.length * 100, avg10 = drops.length ? drops.reduce((a, v) => a + v, 0) / drops.length : null;
   return { price: last, d1: lvRet(c, 1), w1: lvRet(c, 5), m1: lvRet(c, 21), m3: lvRet(c, 63), ytd, y1: lvRet(c, 252), hv20: lvHv(c, 20), hv60: lvHv(c, 60), hv252: lvHv(c, 252),
+    ddPct, avg10, drops10: drops.length,
     below: (last / Math.max(...c.slice(i5)) - 1) * 100, highAt: new Date(t[c.slice(i5).indexOf(Math.max(...c.slice(i5))) + i5] * 1000).toISOString().slice(0, 10), worst5: worst };
 }
 function lvPair(fd, ud, L) {   // matched days: realized leverage, beta, and last year's decay vs costs
