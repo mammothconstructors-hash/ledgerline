@@ -319,7 +319,7 @@ async function levRegime(fund, env, ctx) {
   }
   const last = cols.reg.length - 1;
   const out = { fund, index: pair.u, indexName: pair.name, lev: L, from: cols.d[0] || null, to: cols.d[last] || null, days: cols.d.length, cut, todayReg: cols.reg[last], todayHv20: cols.hv[last],
-    bills: 'Mix = 1/' + L + ' in ' + fund + ' and the rest in 3-month T-bills (FRED TB3MS monthly average, held without rebalancing), the same starting market exposure as 100% ' + pair.u + '.',
+    bills: 'Mix = 1/' + L + ' in ' + fund + ' and the rest in 3-month T-bills (monthly average rate, held without rebalancing), the same starting market exposure as 100% ' + pair.u + '.',
     method: 'Each day is labelled by the drag (L^2 - L)/2 x HV20^2 of ' + pair.u + ' that day. Forward windows are 21 and 63 trading days and overlap.', checkedAt: Date.now(), worker: WORKER_VERSION, cols };
   if (cache) { const put = cache.put(key, new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=21600' } })); if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put; }
   return out;
