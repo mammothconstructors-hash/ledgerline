@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.16.1';
+const WORKER_VERSION = '3.16.2';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -290,7 +290,7 @@ async function levRegime(fund, env, ctx) {
   fund = String(fund).trim().toUpperCase();
   let pair = null; for (const [u, name, fs] of LEV_PAIRS) for (const [f, L] of fs) if (f === fund) pair = { u, name, L };
   if (!pair) throw new Error('Not a 3x fund on the board: ' + fund);
-  const key = new Request(`https://ledgerline-cache.internal/levregime/v3/${fund}/${new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
+  const key = new Request(`https://ledgerline-cache.internal/levregime/v4/${fund}/${new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(key); if (hit) return hit.json(); }
   const [fd, ud] = await Promise.all([lvLong(fund, env, ctx), lvLong(pair.u, env, ctx)]);
   const iso = x => new Date(x * 1000).toISOString().slice(0, 10), U = {}; ud.t.forEach((x, i) => { U[iso(x)] = ud.c[i]; });
@@ -318,6 +318,8 @@ async function levRegime(fund, env, ctx) {
       w.m.push(rd((fr / L + (1 - 1 / L) * (B[t + h] / B[t] - 1)) * 100)); w.mdd.push(rd(mdd * 100)); w.udd.push(rd(udd * 100));
     }
   }
+  // older pages (2.11.0) read 1M and 3M as day-aligned columns: keep them until every copy is replaced
+  for (const h of [21, 63]) { const w = W[h]; for (const k of ['f', 'u', 's', 'm', 'mdd', 'udd', 'fdd']) cols[k + h] = Array(cols.d.length).fill(null); w.i.forEach((r, j) => { for (const k of ['f', 'u', 's', 'm', 'mdd', 'udd']) cols[k + h][r] = w[k][j]; cols['fdd' + h][r] = w.mdd[j]; }); }
   const last = cols.reg.length - 1, avg = a => a.length ? rd(a.reduce((x, y) => x + y, 0) / a.length) : null, sum = {};
   for (const h of HZ) { const w = W[h], st = h > 63 ? 5 : 1; sum[h] = [0, 1, 2].map(g => { const ix = []; w.i.forEach((r, j) => { if (cols.reg[r] === g) ix.push(j); }); const c = k => ix.map(j => w[k][j]);
     const f = c('f'), sx = c('s'), u = c('u'), m = c('m'), mdd = c('mdd'), udd = c('udd'), mA = avg(m), uA = avg(u), mD = avg(mdd), uD = avg(udd);
