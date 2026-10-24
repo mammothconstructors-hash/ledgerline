@@ -3,6 +3,7 @@ name: Vol Board copy
 on: { workflow_dispatch: {} }
 env:
   CLOUDFLARE_ACCOUNT_ID: 51799e9e2cfaf727a3bc287626828255
+permissions: { contents: write }
 jobs:
   fetch:
     runs-on: ubuntu-latest
@@ -20,5 +21,8 @@ jobs:
             i=$((i+1)); code=$(curl -s -L -o out/page$i.html -w '%{http_code}' "$u/"); echo "$u -> $code $(wc -c < out/page$i.html) bytes $(grep -o '<title>[^<]*' out/page$i.html | head -1)"
           done
           cp deps.json out/
-      - uses: actions/upload-artifact@v4
-        with: { name: vol-board-page, path: out, retention-days: 3 }
+      - name: Save the copy on branch volboard-copy
+        run: |
+          git init -q copy && cd copy && cp ../out/* . && git checkout -q -b volboard-copy
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com add -A && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -q -m "Vol Board page copy"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" volboard-copy
