@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><script>try{var t=localStorage.getItem('kgr_theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="author" content="Kevin Rodrigue">
+<meta name="author" content="KGR">
 <title>LedgerLine Regime</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
@@ -234,6 +234,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .screens .brandrow{display:inline-flex;align-items:center;gap:8px;margin-right:10px;letter-spacing:normal}.brandrow b{font:800 16px var(--sans);letter-spacing:.02em;color:var(--ink);white-space:nowrap}.brandrow b em{font-style:normal;color:var(--accent)}
 .llhome{display:inline-flex;line-height:0}.appsw{font:600 13px var(--sans);letter-spacing:normal;text-transform:none;color:var(--ink3);text-decoration:none;border:1px solid var(--rule);border-radius:999px;padding:4px 10px;white-space:nowrap}.appsw:hover{color:var(--ink);background:var(--strip)}
 @media (max-width:1300px){.appsw{display:none}}
+.kfoot{max-width:1180px;margin:36px auto 24px;padding:16px max(16px,env(safe-area-inset-left,0px)) 0;border-top:1px solid var(--rule);font:13.5px/1.55 var(--sans);color:var(--ink3)}.kfoot p{margin:0 0 8px}.kfoot b{color:var(--ink2)}
 .tabrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}.tabrow .themeseg{margin-left:0}
 @media (max-width:560px){.themeseg button span{display:none}.themeseg button{padding:8px 10px}}
 .tabs{border-bottom:0;gap:4px;background:var(--strip);padding:4px;border-radius:999px;width:max-content;max-width:100%;box-shadow:inset 0 1px 2px rgba(30,28,25,.06)}
@@ -370,7 +371,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
     <a class="scr acctlink" href="https://ledgerline-dv0.pages.dev/app/?go=account" title="Profile, subscription and plans (one subscription covers LedgerLine and the KGR Vol Board)">Account</a>
     <button class="askbtn" id="kaskFab" type="button" aria-controls="kask" aria-expanded="false"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg><span>Ask AI</span></button>
   </nav>
-  <div class="top"><div style="display:flex;flex-direction:column;gap:2px"><h1 id="title">VIX Term &amp; Carry</h1><span class="src" id="src"><span class="upd">Last update <b>10:41 PM ET</b></span> · VIX index (Cboe, 15-min delayed) <b>4:15 PM ET</b> · VIX futures (Cboe settle) <b>2026-10-22</b> · VIX options (Cboe, 15-min delayed) <b>4:15 PM ET</b> · page v2.9.1s</span><span class="byline">Made by Kevin Rodrigue</span></div><div class="events" id="events"></div></div>
+  <div class="top"><div style="display:flex;flex-direction:column;gap:2px"><h1 id="title">VIX Term &amp; Carry</h1><span class="src" id="src"><span class="upd">Last update <b>10:41 PM ET</b></span> · VIX index (Cboe, 15-min delayed) <b>4:15 PM ET</b> · VIX futures (Cboe settle) <b>2026-10-22</b> · VIX options (Cboe, 15-min delayed) <b>4:15 PM ET</b> · page v2.9.1s</span><span class="byline">© 2026 KGR · LedgerLine Regime™</span></div><div class="events" id="events"></div></div>
   <div class="tabrow">
   <div class="tabs" role="tablist" id="tabs">
     <button class="tab" role="tab" id="tabMetrics" aria-selected="false">Stats</button>
@@ -470,7 +471,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
    <dt>Page 2.3.8 · Oct 20 2026</dt><dd>Fixed: on the public site every screen showed the same charts stacked together, because hidden screens were not being hidden in Safari and other browsers. Each screen and tab now shows only its own charts.</dd>
    <dt>Page 2.3.7 · Oct 20 2026</dt><dd>Fixed: the Options coverage gauge said "page expects a newer data worker" even when the script was newer. It now only warns when the script is older than the page needs.</dd>
    <dt>Script 1.5.3 · Oct 20 2026 (SurfaceTrigger.gs, install pending)</dt><dd>Fix: the vol surface moves to its own 30-minute trigger so the 15-minute refresh no longer runs past the 6-minute run limit and drops a run (missed 11:25 Oct 19 and 11:10 Oct 20).</dd>
-   <dt>Page 2.3.6s · Oct 19 2026</dt><dd>New: public website at vol-board.pages.dev. Reads the published sheet directly, no login needed, "Made by Kevin Rodrigue" under the title.</dd>
+   <dt>Page 2.3.6s · Oct 19 2026</dt><dd>New: public website at vol-board.pages.dev. Reads the published sheet directly, no login needed, a byline under the title.</dd>
    <dt>Page 2.3.6 · Oct 19 2026</dt><dd>Bigger chart text. σ move bar labels and ticks up from about 11 to 14 with taller bars; text on every other chart up 2 sizes. Wide panels no longer squeeze small groups.</dd>
    <dt>Page 2.3.5 · Oct 19 2026</dt><dd>New: help boxes on every screen, hover notes on each setting, Bollinger band labels on the compass, BB % as the default spot axis, quick-start section here.</dd>
    <dt>Script 1.5.2 · Oct 19 2026</dt><dd>Fixed SPX surface symbol and previous-close vol; feed status block on README.</dd>
@@ -610,7 +611,7 @@ function barSVG(g){
   return s+`</svg>`;
 }
 const SC={
-  skew:{title:"SKEW z vs IV z · PUT DEMAND",x:"skewz",y:"ivz",xd:[-2.5,3.5],yd:[-2.5,3],xl:"SKEW z-score",yl:"IV z-score",grad:[["0","#9DBCDA"],["0.5","var(--gmid)"],["1","#C6B2DA"]],zero:true},
+  skew:{title:"SKEW MAP · PUT SKEW z × IV z",x:"skewz",y:"ivz",xd:[-2.5,3.5],yd:[-2.5,3],xl:"SKEW z-score",yl:"IV z-score",grad:[["0","#9DBCDA"],["0.5","var(--gmid)"],["1","#C6B2DA"]],zero:true},
   ts:{title:"TERM STRUCTURE (IV30÷IV90) vs IV z",x:"ivz",y:"ts",xd:[-2.5,3],yd:[80,125],xl:"IV z-score",yl:"T/S (IV30 / IV90)",ysuf:"%",grad:[["0","#D57F72"],["0.48","var(--gmid)"],["1","#8EBE8C"]],hline:100,xzero:true,
     tags:[{t:"INVERTED",x:"r",y:"t",c:"#8C2A1F"},{t:"CONTANGO",x:"l",y:"b",c:"#2D6B2B"}]},
   dsk:{title:"Δ SKEW vs 1-WEEK σ MOVE",x:"sig1w",y:"dskew",xd:[-3.2,3.2],yd:[-2,2],xl:"1-week σ move",yl:"Δ skew z",grad:[["0","#D7C38F"],["0.5","#E8DDC9"],["1","#B7C9D6"]],zero:true,
@@ -619,6 +620,7 @@ const SC={
     tags:[{t:"IV RICH",x:"r",y:"t",c:"#7A4A1C"},{t:"IV CHEAP",x:"l",y:"b",c:"#2D6B2B"}]}
 };
 function scatterSVG(id,uid){
+  if(QSC[id]&&typeof quadChart==='function') return quadScatter(id,uid);
   const c=SC[id],z=Z(id),d=rows().filter(r=>fin(r[c.x])&&fin(r[c.y]));
   if(!d.length){if(id==="dsk"&&usingLive()){const h=Math.max(0,...ROWS.map(r=>r.hist||0));return `<div class="empty">Δ skew needs at least 20 days of history plus the Δ window.<br>The sheet has ${h} day${h===1?"":"s"} so far.</div>`}
     return `<div class="empty">No points to plot yet for this chart.</div>`}
@@ -648,8 +650,8 @@ function scatterSVG(id,uid){
    points off the chart, and the LedgerLine Regime mark. Strength is the larger of |x| and |y| so it matches the square bands. */
 const qStrength=(x,y)=>Math.max(Math.abs(x),Math.abs(y));
 function quadChart(o){
-  const W=o.W||860,H=o.H||620,ml=64,mr=22,mt=46,mb=58,R=o.range||3,pw=W-ml-mr,ph=H-mt-mb;
-  const X=v=>ml+(Math.max(-R,Math.min(R,v))+R)/(2*R)*pw, Y=v=>mt+(R-Math.max(-R,Math.min(R,v)))/(2*R)*ph, cx=X(0), cy=Y(0);
+  const W=o.W||860,H=o.H||620,ml=64,mr=22,mt=46,mb=58,R=o.range||3,RX=o.rx||R,RY=o.ry||R,pw=W-ml-mr,ph=H-mt-mb;
+  const X=v=>ml+(Math.max(-RX,Math.min(RX,v))+RX)/(2*RX)*pw, Y=v=>mt+(RY-Math.max(-RY,Math.min(RY,v)))/(2*RY)*ph, cx=X(0), cy=Y(0);
   const id=o.id||"q"+Math.random().toString(36).slice(2,7), warm="color-mix(in srgb,var(--cyc) 11%,var(--panel))", cool="color-mix(in srgb,var(--def) 11%,var(--panel))";
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||"Quadrant chart")}" class="quad"><defs><clipPath id="${id}"><rect x="${ml}" y="${mt}" width="${pw}" height="${ph}"/></clipPath>
     <pattern id="${id}h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--ink3)" stroke-width="1" opacity=".14"/></pattern></defs>`;
@@ -660,8 +662,8 @@ function quadChart(o){
   (o.xTicks||[]).forEach(([v,t])=>{ const x=X(v); s+=`<line x1="${x}" x2="${x}" y1="${mt}" y2="${mt+ph}" stroke="var(--grid)" stroke-dasharray="2 4"/><text x="${x}" y="${mt+ph+18}" font-size="13" text-anchor="middle" fill="var(--ink3)">${esc(t)}</text>`; });
   (o.yTicks||[]).forEach(([v,t])=>{ const y=Y(v); s+=`<line x1="${ml}" x2="${ml+pw}" y1="${y}" y2="${y}" stroke="var(--grid)" stroke-dasharray="2 4"/><text x="${ml-8}" y="${y+4}" font-size="13" text-anchor="end" fill="var(--ink3)">${esc(t)}</text>`; });
   // strength bands: extreme, strong (dashed squares) and the spread box (hatched)
-  [[2.4,"EXTREME"],[1.6,"STRONG"]].forEach(([b,l])=>{ if(b>=R) return; s+=`<rect x="${X(-b)}" y="${Y(b)}" width="${X(b)-X(-b)}" height="${Y(-b)-Y(b)}" fill="none" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="${b>2?"2 5":"6 5"}" opacity=".55"/><text x="${X(b)-6}" y="${Y(b)+14}" font-size="11" font-weight="800" letter-spacing=".08em" text-anchor="end" fill="var(--ink3)" opacity=".8">${l}</text>`; });
-  const sb=o.spread||0.75; s+=`<rect x="${X(-sb)}" y="${Y(sb)}" width="${X(sb)-X(-sb)}" height="${Y(-sb)-Y(sb)}" fill="url(#${id}h)" stroke="var(--ink3)" stroke-width="1.2" rx="6"/><text x="${cx}" y="${Y(-sb)-6}" font-size="11.5" font-weight="800" letter-spacing=".08em" text-anchor="middle" fill="var(--ink3)">SPREAD ZONE</text>`;
+  (o.bands===false?[]:[[2.4,"EXTREME"],[1.6,"STRONG"]]).forEach(([b,l])=>{ if(b>=Math.min(RX,RY)) return; s+=`<rect x="${X(-b)}" y="${Y(b)}" width="${X(b)-X(-b)}" height="${Y(-b)-Y(b)}" fill="none" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="${b>2?"2 5":"6 5"}" opacity=".55"/><text x="${X(b)-6}" y="${Y(b)+14}" font-size="11" font-weight="800" letter-spacing=".08em" text-anchor="end" fill="var(--ink3)" opacity=".8">${l}</text>`; });
+  const sb=o.spread||0.75; s+=`<rect x="${X(-sb)}" y="${Y(sb)}" width="${X(sb)-X(-sb)}" height="${Y(-sb)-Y(sb)}" fill="url(#${id}h)" stroke="var(--ink3)" stroke-width="1.2" rx="6"/><text x="${cx}" y="${Y(-sb)-6}" font-size="11.5" font-weight="800" letter-spacing=".08em" text-anchor="middle" fill="var(--ink3)">${esc(o.centerLabel||"SPREAD ZONE")}</text>`;
   // axes through zero
   s+=`<line x1="${ml}" x2="${ml+pw}" y1="${cy}" y2="${cy}" stroke="var(--ink2)" stroke-width="1.4"/><line x1="${cx}" x2="${cx}" y1="${mt}" y2="${mt+ph}" stroke="var(--ink2)" stroke-width="1.4"/>`;
   s+=`<rect x="${ml}" y="${mt}" width="${pw}" height="${ph}" fill="none" stroke="var(--rule)"/>`;
@@ -670,10 +672,10 @@ function quadChart(o){
   // axis titles
   s+=`<text x="${ml+pw/2}" y="${H-12}" font-size="14" font-weight="700" letter-spacing=".05em" text-anchor="middle" fill="var(--ink)">${esc(o.xLabel)}</text>`;
   s+=`<text transform="translate(18 ${mt+ph/2}) rotate(-90)" font-size="14" font-weight="700" letter-spacing=".05em" text-anchor="middle" fill="var(--ink)">${esc(o.yLabel)}</text>`;
-  s+=`<text x="${ml}" y="${mt-14}" font-size="12" font-weight="800" letter-spacing=".12em" fill="var(--accent)">LEDGERLINE REGIME · QUADRANT</text>`;
+  s+=`<text x="${ml}" y="${mt-14}" font-size="12" font-weight="800" letter-spacing=".12em" fill="var(--accent)">LEDGERLINE REGIME · ${esc(o.mark||"QUADRANT")}</text>`;
   if(o.note) s+=`<text x="${ml+pw}" y="${mt-14}" font-size="12.5" text-anchor="end" fill="var(--ink3)">${esc(o.note)}</text>`;
   // points: dots first, then labels that avoid each other, the quadrant names and the dots
-  const pts=(o.points||[]).filter(p=>isFinite(p.x)&&isFinite(p.y)).map(p=>({...p,px:X(p.x),py:Y(p.y),off:Math.abs(p.x)>R||Math.abs(p.y)>R}));
+  const pts=(o.points||[]).filter(p=>isFinite(p.x)&&isFinite(p.y)).map(p=>({...p,px:X(p.x),py:Y(p.y),off:Math.abs(p.x)>RX||Math.abs(p.y)>RY}));
   const placed=[[ml,mt,ml+230,mt+44],[ml+pw-230,mt,ml+pw,mt+44],[ml,mt+ph-46,ml+230,mt+ph],[ml+pw-230,mt+ph-46,ml+pw,mt+ph],[cx-60,Y(-sb)-20,cx+60,Y(-sb)]];
   s+=`<g clip-path="url(#${id})">`;
   pts.forEach(p=>{ const r=p.big?6.5:4.8; s+=p.off?`<path d="M${p.px} ${p.py-7}L${p.px+7} ${p.py}L${p.px} ${p.py+7}L${p.px-7} ${p.py}Z" fill="none" stroke="${p.color}" stroke-width="2"/>`:`<circle cx="${p.px}" cy="${p.py}" r="${r}" fill="${p.color}" stroke="var(--panel)" stroke-width="1.5"/>`; });
@@ -687,6 +689,18 @@ function quadChart(o){
   // the mark: a small four-square glyph, bottom right
   const gx=ml+pw-34,gy=mt+ph-74; s+=`<g opacity=".28"><rect x="${gx}" y="${gy}" width="12" height="12" rx="2" fill="var(--cyc)"/><rect x="${gx+14}" y="${gy}" width="12" height="12" rx="2" fill="var(--cyc)"/><rect x="${gx}" y="${gy+14}" width="12" height="12" rx="2" fill="var(--def)"/><rect x="${gx+14}" y="${gy+14}" width="12" height="12" rx="2" fill="var(--def)"/></g>`;
   return s+`</svg>`;
+}
+const QSC={
+  skew:{mark:"SKEW MAP",xl:"PUT SKEW · z-SCORE",yl:"IMPLIED VOL · z-SCORE",rx:3,ry:3,center:"NEUTRAL",bands:true,
+    quads:{tl:["UPSIDE CHASE","IV high, put skew light: calls in demand"],tr:["FEAR BID","IV high and puts bid"],bl:["COMPLACENT","IV low, puts cheap"],br:["QUIET HEDGING","IV low but puts quietly bid"]}},
+  dsk:{mark:"SKEW SHIFT",xl:"1-WEEK MOVE IN σ",yl:"CHANGE IN SKEW · z",rx:3.2,ry:2,center:"NO SIGNAL",bands:false,
+    quads:{tl:["FEAR CONFIRMS","Selling off while puts get bid"],tr:["HEDGED RALLY","Rising while puts get bid: divergence"],bl:["CALM SELLOFF","Falling while puts are offered: no panic"],br:["CLEAN RALLY","Rising while puts are offered"]}}};
+function quadScatter(id,uid){ const c=SC[id],q=QSC[id],z=Z(id),d=rows().filter(r=>fin(r[c.x])&&fin(r[c.y]));
+  if(!d.length){ if(id==="dsk"&&usingLive()){const h=Math.max(0,...ROWS.map(r=>r.hist||0));return `<div class="empty">Δ skew needs at least 20 days of history plus the Δ window.<br>The data has ${h} day${h===1?"":"s"} so far.</div>`} return `<div class="empty">No points to plot yet for this chart.</div>`; }
+  const k=Math.max(.5,z.k||1), RX=q.rx/k, RY=q.ry/k, tk=(R,step,suf)=>{const o=[];for(let v=-Math.floor(R/step)*step;v<=R+1e-9;v+=step)o.push([+v.toFixed(2),(v>0?"+":v<0?"−":"")+Math.abs(+v.toFixed(2))+(suf||"")]);return o;};
+  return quadChart({id:"qs"+id+uid,W:860,H:440,rx:RX,ry:RY,mark:q.mark,bands:q.bands,centerLabel:q.center,aria:c.title,xLabel:q.xl,yLabel:q.yl,
+    xTicks:tk(RX,1,id==="dsk"?"σ":""),yTicks:tk(RY,id==="dsk"?.5:1),quads:q.quads,note:"Italic = stand-in z-score",
+    points:d.map(r=>{const pr=r.proxy[c.x]||r.proxy[c.y];return {x:r[c.x],y:r[c.y],label:r.ticker,color:gc(r.group),italic:!!pr,cls:"pt",data:`data-t="${esc(r.ticker)}"`,title:`${r.ticker} · ${c.xl} ${r[c.x].toFixed(2)} · ${c.yl} ${r[c.y].toFixed(2)}${pr?" · stand-in z":""}`};})});
 }
 /* ---------- regime quadrant (formerly the strategy compass) ---------- */
 const compassX=r=>spotAxis==="bbp"?(fin(r.bbp)?(r.bbp-0.5)*4.8:null):r.sig1w;
@@ -720,7 +734,7 @@ const PANELS={
 function titleFor(id){const p=PANELS[id];
   if(p&&p.gi!=null){const g=scrGroups()[p.gi];return `<em style="--c:${GROUPS[g].c}">${cad()==="W"?"1W":"1D"} σ-MOVE (RETURN ÷ IMPLIED) — ${GROUPS[g].name.toUpperCase()}</em>`}
   if(id==="compass")return "REGIME QUADRANT · IV z × SPOT";
-  if(id==="dsk")return `${$("dskew").value}D Δ SKEW z vs 1W σ-MOVE`;
+  if(id==="dsk")return `SKEW SHIFT · ${$("dskew").value}D Δ SKEW z × 1W σ`;
   if(id==="carry")return `VOL RISK PREMIUM (${$("ivterm").value} ÷ HV${$("carryvs").value}) vs IV z`;
   if(SC[id])return esc(SC[id].title);
   if(VP[id])return esc(VP[id].t());
@@ -1285,6 +1299,7 @@ function startFsv(){if(!LIVE.mcp||fsStarted)return;fsStarted=true;
 /* ---------- how it works ---------- */
 const GLOSS=[
 ["Ask AI","Board","The ✦ Ask AI button in the top bar. An options and volatility analyst that reads the screen you have open and the glossary, checks live Cboe implied volatility for any symbol and the 3x data, and searches the web when the question is about something current.","Board marks a number from the board; a blue number is a web source, listed under the answer."],
+["Quadrant zones","Signals","Regime Quadrant: Paid to wait (sell puts), Rent the rally (sell calls), Cheap rebound (buy calls), Cheap insurance (buy puts). Skew Map: Upside chase, Fear bid, Complacent, Quiet hedging. Skew Shift: Fear confirms, Hedged rally, Calm selloff, Clean rally.","The further from the center box, the stronger the read; the center box means no edge either way."],
 ["Online now","Board","Someone has the board open on screen and it checked in within the last two and a half minutes. The board checks in every 60 seconds while it is showing.","Owner only: seen on the Testers page with the screen each person is on."],
 ["Sign-in","Board","Opening the board after 20 minutes or more away. Each one is logged with the site it was for, so the owner sees which board a tester came in on.","Testers sign in with their email and a one-time code; sessions last two days for testers, 30 days for the owner."],
 ["Grade","3x funds","How a setup compares with buying on any day over the same hold. A: 5+ points better with an equal or better win rate and 8 or more separate signals. B: 2+ points better. C: slightly better. —: no better. thin: fewer than 4 separate signals.","Act on A and B. C is a small position at most. Ignore — and treat thin as a story, not an edge."],
@@ -1355,6 +1370,8 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.21.0 · Oct 24 2026</dt><dd>Disclosures at the foot of every screen: information only, the risks of options and leveraged funds, data delays, and the copyright and trademark notice (© 2026 KGR). The byline under the title now reads © 2026 KGR · LedgerLine Regime.</dd>
+   <dt>Page 2.20.0 · Oct 24 2026</dt><dd>The two skew charts beside the Regime Quadrant get the same design. <b>Skew Map</b> (put skew z against IV z) reads Upside chase, Fear bid, Complacent and Quiet hedging. <b>Skew Shift</b> (change in skew against the 1-week σ move) reads Fear confirms, Hedged rally, Calm selloff and Clean rally. Both have real axes, a neutral center box and labels that never overlap.</dd>
    <dt>Page 2.19.0 · Oct 24 2026</dt><dd>The round compasses are gone. The Regime screens and the 3x screen now use the <b>Regime Quadrant</b>: a rectangular chart split into four zones, Paid to wait (sell puts), Rent the rally (sell calls), Cheap rebound (buy calls) and Cheap insurance (buy puts), tinted warm where premium is rich and cool where it is cheap. Square strength bands replace the rings (a hatched spread zone in the middle, then strong and extreme), both axes show real values, and every ticker gets a dot with a label that never overlaps. Strength is now the larger of the two readings, so it matches the square bands.</dd>
    <dt>Page 2.18.0 · Oct 24 2026</dt><dd>The KGR Vol Board is now <b>LedgerLine Regime</b>: the market regime and options app inside LedgerLine. Same screens and data, the LedgerLine mark in the top bar, and a Research ↗ switch to the stocks and ETFs app. One sign-in and one subscription cover both.</dd>
    <dt>Page 2.17.0 · Oct 24 2026</dt><dd>Account in the top bar, before ✦ Ask AI: opens your profile, subscription and plans (one subscription covers LedgerLine and the board). Updates now arrive on their own: the board checks for a new version every two minutes and reloads itself when you are not using it, keeping the screen you were on.</dd>
@@ -1386,7 +1403,7 @@ function renderHow(){
    <dt>Page 2.3.8 · Oct 20 2026</dt><dd>Fixed: on the public site every screen showed the same charts stacked together, because hidden screens were not being hidden in Safari and other browsers. Each screen and tab now shows only its own charts.</dd>
    <dt>Page 2.3.7 · Oct 20 2026</dt><dd>Fixed: the Options coverage gauge said "page expects a newer data worker" even when the script was newer. It now only warns when the script is older than the page needs.</dd>
    <dt>Script 1.5.3 · Oct 20 2026 (SurfaceTrigger.gs, install pending)</dt><dd>Fix: the vol surface moves to its own 30-minute trigger so the 15-minute refresh no longer runs past the 6-minute run limit and drops a run (missed 11:25 Oct 19 and 11:10 Oct 20).</dd>
-   <dt>Page 2.3.6s · Oct 19 2026</dt><dd>New: public website at vol-board.pages.dev. Reads the published sheet directly, no login needed, "Made by Kevin Rodrigue" under the title.</dd>
+   <dt>Page 2.3.6s · Oct 19 2026</dt><dd>New: public website at vol-board.pages.dev. Reads the published sheet directly, no login needed, a byline under the title.</dd>
    <dt>Page 2.3.6 · Oct 19 2026</dt><dd>Bigger chart text. σ move bar labels and ticks up from about 11 to 14 with taller bars; text on every other chart up 2 sizes. Wide panels no longer squeeze small groups.</dd>
    <dt>Page 2.3.5 · Oct 19 2026</dt><dd>New: help boxes on every screen, hover notes on each setting, Bollinger band labels on the compass, BB % as the default spot axis, quick-start section here.</dd>
    <dt>Script 1.5.2 · Oct 19 2026</dt><dd>Fixed SPX surface symbol and previous-close vol; feed status block on README.</dd>
@@ -2025,6 +2042,11 @@ renderHow();setupScreen();refresh();boot();
  try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",sync)}catch(_){}sync()})();
 </script>
 
+
+<footer class="kfoot"><p><b>Important disclosures.</b> LedgerLine Regime is provided for information and education only. It is not investment, legal or tax advice, and nothing on it is a recommendation or solicitation to buy, sell or hold any security, option or other instrument. Quadrant zones, labels and backtests are produced automatically by fixed rules from market data; they describe conditions, not trades for you, and they can be incomplete, delayed or wrong.</p>
+<p><b>Options and leveraged funds carry high risk.</b> Options can lose their entire value quickly, and selling options can lose more than the premium received. Leveraged and inverse ETFs reset daily and can lose value even when their index rises. Read the options risk disclosure document from your broker before trading options, and talk to a licensed adviser before acting.</p>
+<p><b>Data.</b> Options and volatility data are from Cboe, delayed at least 15 minutes; prices are delayed or end of day. Past and backtested results do not guarantee future results.</p>
+<p>© 2026 KGR. All rights reserved. LedgerLine™, LedgerLine Regime™ and Regime Quadrant™ are trademarks of KGR. The board’s design, methods, charts and text may not be copied or redistributed without written permission.</p></footer>
 <aside class="kask" id="kask" role="dialog" aria-label="Ask AI" aria-hidden="true">
   <div class="kask-h"><div style="flex:1"><h3>Ask AI</h3><small>LedgerLine Regime’s analyst: options, volatility and 3x questions. It sees this screen, can check live IV for any symbol, and searches the web.</small></div><button class="kask-x" id="kaskX" type="button" aria-label="Close">×</button></div>
   <div class="kask-b" id="kaskB"></div>
