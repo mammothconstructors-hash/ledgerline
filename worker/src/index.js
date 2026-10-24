@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.17.0';
+const WORKER_VERSION = '3.17.1';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -279,10 +279,24 @@ const TBM = (() => { const m = {}; for (const yr of TB3.split('|')) { const [y, 
 const TB_LAST = Object.keys(TBM).sort().pop();
 const tbill = iso => { const k = iso.slice(0, 7); return TBM[k] != null ? TBM[k] : k > TB_LAST ? TBM[TB_LAST] : 0.03; };
 async function lvLong(sym, env, ctx) {   // ten years of split-adjusted daily closes, cached a day
-  const day = new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10), key = new Request(`https://ledgerline-cache.internal/levlong/v1/${sym}/${day}`), cache = typeof caches !== 'undefined' ? caches.default : null;
+  const day = new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10), key = new Request(`https://ledgerline-cache.internal/levlong/v2/${sym}/${day}`), cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(key); if (hit) return hit.json(); }
   if (!env.MARKETSTACK_KEY) throw new Error('Price feed not configured');
   const m = await marketstack(sym, env.MARKETSTACK_KEY, 2700), d = { t: m.daily.t, c: m.daily.c };
+  // the price feed has no history for some funds before mid-2020 (UPRO, UDOW, URTY): splice in earlier daily closes, scaled to meet at the first shared day
+  const want = Date.now() / 1000 - 10 * 365.25 * 86400;
+  if (d.t.length && d.t[0] > want + 120 * 86400) {
+    try {
+      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=10y&interval=1d`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      const j = await r.json(), res = j && j.chart && j.chart.result && j.chart.result[0], ts = res && res.timestamp, cl = res && res.indicators && res.indicators.quote && res.indicators.quote[0].close;
+      if (ts && cl) {
+        const day = x => Math.floor((x - 4 * 3600) / 86400), first = day(d.t[0]); let k = null;
+        for (let i = 0; i < ts.length; i++) if (day(ts[i]) === first && cl[i] > 0) { k = d.c[0] / cl[i]; break; }
+        if (k) { const T = [], C = []; for (let i = 0; i < ts.length; i++) { if (day(ts[i]) >= first) break; if (cl[i] > 0) { T.push(Date.UTC(1970, 0, 1 + day(ts[i])) / 1000); C.push(Math.round(cl[i] * k * 1e4) / 1e4); } }
+          if (T.length > 100) { d.t = T.concat(d.t); d.c = C.concat(d.c); d.spliced = T.length; } }
+      }
+    } catch (e) { d.spliceErr = String(e.message || e); }
+  }
   if (cache) { const put = cache.put(key, new Response(JSON.stringify(d), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' } })); if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put; }
   return d;
 }
@@ -290,7 +304,7 @@ async function levRegime(fund, env, ctx) {
   fund = String(fund).trim().toUpperCase();
   let pair = null; for (const [u, name, fs] of LEV_PAIRS) for (const [f, L] of fs) if (f === fund) pair = { u, name, L };
   if (!pair) throw new Error('Not a 3x fund on the board: ' + fund);
-  const key = new Request(`https://ledgerline-cache.internal/levregime/v5/${fund}/${new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
+  const key = new Request(`https://ledgerline-cache.internal/levregime/v6/${fund}/${new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(key); if (hit) return hit.json(); }
   const [fd, ud] = await Promise.all([lvLong(fund, env, ctx), lvLong(pair.u, env, ctx)]);
   const iso = x => new Date(x * 1000).toISOString().slice(0, 10), U = {}; ud.t.forEach((x, i) => { U[iso(x)] = ud.c[i]; });
@@ -1322,7 +1336,7 @@ async function api(req, url, env, ctx) {
       const r = await msFetch(u, { headers: { Accept: 'application/json' } }, 'eod'), j = await r.json(); const d = j.data || [], jumps = [];
       for (let i = 1; i < d.length; i++) { const k = d[i].close / d[i - 1].close; if (k > 1.5 || k < 0.67) jumps.push([String(d[i].date).slice(0, 10), Math.round(k * 1000) / 1000, d[i].split_factor]); }
       return out({ total: j.pagination && j.pagination.total, n: d.length, first: d[0] ? [String(d[0].date).slice(0, 10), d[0].close] : null, last: d.length ? [String(d[d.length - 1].date).slice(0, 10), d[d.length - 1].close] : null, jumps, err: j.error || null }, 200, 0); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
-    if (path === '/api/levlong') { try { const d = await lvLong(String(q.get('symbol') || '').toUpperCase(), env, ctx), iso = x => new Date(x * 1000).toISOString().slice(0, 10), j = []; for (let i = 1; i < d.c.length; i++) { const r = d.c[i] / d.c[i - 1]; if (r > 1.35 || r < 0.65) j.push([iso(d.t[i]), Math.round(r * 1000) / 1000]); } return out({ n: d.c.length, first: d.t.length ? iso(d.t[0]) : null, last: d.t.length ? iso(d.t[d.t.length - 1]) : null, jumps: j }, 200, 600); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
+    if (path === '/api/levlong') { try { const d = await lvLong(String(q.get('symbol') || '').toUpperCase(), env, ctx), iso = x => new Date(x * 1000).toISOString().slice(0, 10), j = []; for (let i = 1; i < d.c.length; i++) { const r = d.c[i] / d.c[i - 1]; if (r > 1.35 || r < 0.65) j.push([iso(d.t[i]), Math.round(r * 1000) / 1000]); } return out({ n: d.c.length, spliced: d.spliced || 0, spliceErr: d.spliceErr || null, first: d.t.length ? iso(d.t[0]) : null, last: d.t.length ? iso(d.t[d.t.length - 1]) : null, jumps: j }, 200, 600); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
     if (path === '/api/levregime') { try { return out(await levRegime(q.get('fund') || '', env, ctx), 200, 3600); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
     if (path === '/api/iv') return out(await impliedVol(q.get('symbol') || q.get('ticker') || ''), 200, 600);
     if (path === '/api/etf-holdings') return out(await etfHoldings(q.get('symbol') || q.get('ticker') || '', env), 200, 3600);
