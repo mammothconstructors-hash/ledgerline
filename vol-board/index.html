@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><script>try{var t=localStorage.getItem('kgr_theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="author" content="Kevin Rodrigue">
-<title>KGR Vol Board · VIX Term &amp; Carry</title>
+<title>LedgerLine Regime</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&amp;family=Inter:wght@400;500;600;700&amp;display=swap">
@@ -231,6 +231,9 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .kask-src{font-size:13.5px;color:var(--ink3);display:grid;gap:4px;border-top:1px solid var(--grid);padding-top:8px}.kask-src a{color:var(--ink)}
 .kask-item{border-bottom:1px solid var(--rule);padding-bottom:12px}
 .kask-wait{color:var(--ink3);font-size:14px}.kask-err{background:color-mix(in srgb,var(--bad) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--bad) 40%,transparent);border-radius:10px;padding:10px 12px;font-size:14px}
+.screens .brandrow{display:inline-flex;align-items:center;gap:8px;margin-right:10px;letter-spacing:normal}.brandrow b{font:800 16px var(--sans);letter-spacing:.02em;color:var(--ink);white-space:nowrap}.brandrow b em{font-style:normal;color:var(--accent)}
+.llhome{display:inline-flex;line-height:0}.appsw{font:600 13px var(--sans);letter-spacing:normal;text-transform:none;color:var(--ink3);text-decoration:none;border:1px solid var(--rule);border-radius:999px;padding:4px 10px;white-space:nowrap}.appsw:hover{color:var(--ink);background:var(--strip)}
+@media (max-width:1300px){.appsw{display:none}}
 .tabrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}.tabrow .themeseg{margin-left:0}
 @media (max-width:560px){.themeseg button span{display:none}.themeseg button{padding:8px 10px}}
 .tabs{border-bottom:0;gap:4px;background:var(--strip);padding:4px;border-radius:999px;width:max-content;max-width:100%;box-shadow:inset 0 1px 2px rgba(30,28,25,.06)}
@@ -358,7 +361,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 </style>
 </head><body>
 <div class="wrap">
-  <nav class="screens" aria-label="Screens"><span><b style="font-size:16px;letter-spacing:.06em;color:var(--ink);margin-right:10px">KGR VOL BOARD</b></span>
+  <nav class="screens" aria-label="Screens"><span class="brandrow"><a class="llhome" href="https://ledgerline-dv0.pages.dev/" title="LedgerLine home"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="28" height="28" aria-hidden="true" style="flex:none;display:block"><rect width="48" height="48" rx="11" fill="#FBF7F1"/><path d="M10 14h20.5l6-6" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 7.5h7v7" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 24h17" fill="none" stroke="#A39C93" stroke-width="4" stroke-linecap="round"/><path d="M10 34h14.5l6 6" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 40.5h7v-7" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></a><b>LedgerLine <em>Regime</em></b><a class="appsw" href="https://ledgerline-dv0.pages.dev/app/" title="Switch to LedgerLine Research: stocks and ETFs">Research ↗</a></span>
     <button class="scr" data-scr="macro" aria-current="false">Cross-Asset Regime</button>
     <button class="scr" data-scr="sectors" aria-current="false">Sector Rotation</button>
     <button class="scr" data-scr="fsv" aria-current="false">Vol Surface Δ</button>
@@ -1311,6 +1314,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.18.0 · Oct 24 2026</dt><dd>The KGR Vol Board is now <b>LedgerLine Regime</b>: the market regime and options app inside LedgerLine. Same screens and data, the LedgerLine mark in the top bar, and a Research ↗ switch to the stocks and ETFs app. One sign-in and one subscription cover both.</dd>
    <dt>Page 2.17.0 · Oct 24 2026</dt><dd>Account in the top bar, before ✦ Ask AI: opens your profile, subscription and plans (one subscription covers LedgerLine and the board). Updates now arrive on their own: the board checks for a new version every two minutes and reloads itself when you are not using it, keeping the screen you were on.</dd>
    <dt>Page 2.16.1 · Oct 24 2026</dt><dd>Top bar fits on iPad: the screen names and ✦ Ask AI stay on one line (swipe the names sideways on a smaller iPad), with Ask AI pinned at the right end.</dd>
    <dt>Page 2.16.0 · LedgerLine worker 3.20.1 · Oct 24 2026</dt><dd>Ask AI can run scans across the whole board: every sector, index, bond and commodity ETF with IV, IV percentile and z-score, realized vol, carry, skew, term structure, returns, σ moves and put/call, whichever screen is open. Try “Which sectors have the highest IV vs their own history?” or “Where are options cheapest right now?”. Sample questions are grouped: How to, Scans and Concepts.</dd>
@@ -1921,7 +1925,7 @@ setInterval(()=>{if(screen==="lev"&&!document.hidden){LEVD.at=0;startLev();}},15
 /* ---------- render + wiring ---------- */
 function setupScreen(){
   document.querySelectorAll(".scr").forEach(b=>b.setAttribute("aria-current",b.dataset.scr===screen));
-  $("title").textContent=SCREENS[screen].title;document.title="KGR Vol Board · "+SCREENS[screen].title;
+  $("title").textContent=SCREENS[screen].title;document.title="LedgerLine Regime · "+SCREENS[screen].title;
   const gs=scrGroups();$("legend").innerHTML=gs.map(g=>`<span><i style="background:${GROUPS[g].c}"></i>${esc(GROUPS[g].name)}</span>`).join("");
   $("group").innerHTML=`<option value="ALL">ALL</option>`+gs.map(g=>`<option value="${g}">${esc(GROUPS[g].name.toUpperCase())}</option>`).join("");
   sortK="group";sortDir=1;Object.keys(FILT).forEach(k=>delete FILT[k]);
@@ -1989,7 +1993,7 @@ renderHow();setupScreen();refresh();boot();
 </script>
 
 <aside class="kask" id="kask" role="dialog" aria-label="Ask AI" aria-hidden="true">
-  <div class="kask-h"><div style="flex:1"><h3>Ask AI</h3><small>Options, volatility and 3x questions. It sees this screen, can check live IV for any symbol, and searches the web.</small></div><button class="kask-x" id="kaskX" type="button" aria-label="Close">×</button></div>
+  <div class="kask-h"><div style="flex:1"><h3>Ask AI</h3><small>LedgerLine Regime’s analyst: options, volatility and 3x questions. It sees this screen, can check live IV for any symbol, and searches the web.</small></div><button class="kask-x" id="kaskX" type="button" aria-label="Close">×</button></div>
   <div class="kask-b" id="kaskB"></div>
   <div class="kask-f"><div class="kask-chips" id="kaskChips"></div><div class="kask-row"><input id="kaskQ" type="search" placeholder="Ask anything about options or vol…" autocomplete="off"><button id="kaskGo" type="button">Ask</button></div></div>
 </aside>

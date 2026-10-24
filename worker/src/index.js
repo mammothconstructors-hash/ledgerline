@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.22.1';
+const WORKER_VERSION = '3.22.2';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -1346,7 +1346,7 @@ const VOL_TOOLS = [
   { name: 'leverage_board', description: 'The board’s 3x leverage data right now: each 3x fund (TQQQ, UPRO, UDOW, TNA, URTY, SOXL, TECL) next to its index ETF with returns, IV30, realized vol, IV rank, realized leverage and beta, expected drag at implied and realized vol, last year’s decay split from costs, drawdowns.', input_schema: { type: 'object', properties: {} } },
   ASK_TOOLS[0]
 ];
-function volSystem(today) { return `You are the KGR Vol Board's options and volatility analyst. Today is ${today}. Answer anything about options, volatility and leveraged ETFs clearly and correctly, for an experienced trader: definitions, formulas, how to read the board's charts, what today's numbers mean, trade structures and their risks.
+function volSystem(today) { return `You are the options and volatility analyst for LedgerLine Regime (formerly the KGR Vol Board), LedgerLine's market regime and options app. Today is ${today}. Answer anything about options, volatility and leveraged ETFs clearly and correctly, for an experienced trader: definitions, formulas, how to read the board's charts, what today's numbers mean, trade structures and their risks.
 You know the math cold and show it when it helps, with a worked example using today's numbers when available: Black-Scholes and the Greeks (delta, gamma, vega, theta, rho, vanna, charm), implied vs realized (historical) volatility, the implied move (price × IV × √(days/365)), variance and volatility risk premium, skew and smile, term structure, contango and backwardation, VIX futures roll yield and carry, the VVIX, sigma moves (return ÷ implied move), z-scores, IV rank and percentile, put/call ratios, and leveraged ETF math: daily reset, volatility drag ≈ (L² − L)/2 × σ² per year for leverage L and annual volatility σ, path dependence, beta slippage, fees and financing costs.
 Scans ("which sectors have the highest IV vs history", "where are options cheapest", "richest carry", "most put skew"): use the Scan table in [D], which covers every ETF on the board whatever screen is open. Rank by the right column (IV percentile or IV z for IV vs its own history; low IV percentile for cheap options; carry IV/HV above 1 for rich premium; skew pts or skew z for put demand), show the top and bottom 5 in a small table with the numbers, then one or two lines on what it means and how a trader might use it. If the table says SAMPLE data, say the live feed hasn't loaded and the ranking is illustrative.
 How-to questions: explain the screen or chart in plain steps (what each part shows, what to look for, a typical daily routine), using the board glossary in [D].
@@ -1367,7 +1367,7 @@ Sources you have, in order of preference:
 - web_fetch: open a full web page (a search result, an investor-relations page, a press release) when the search snippet isn't enough.
 Work like a researcher: use as many lookups as the question needs, check numbers against a second source when it matters, and never give up with "the excerpts don't say" when another tool could find it. If a tool errors, try another route.
 Rules: lead with the direct answer in the first sentence. Use real numbers. Cite every factual claim with [D], [D:TICKER] or [S#]; web facts are cited automatically. If sources conflict, say so and prefer the newest. If something can't be found, say exactly what you checked. No hype, no filler, no investment advice disclaimers. Format in Markdown: short paragraphs, **bold** key figures sparingly, "- " bullets for lists, at most about 300 words unless the question needs a table.`;
-  const user = vol ? [`Question: ${qn}`, pageData ? `[D] The KGR Vol Board screen the user has open, as shown right now:\n${pageData}` : ''].filter(Boolean).join('\n\n')
+  const user = vol ? [`Question: ${qn}`, pageData ? `[D] The LedgerLine Regime screen the user has open, as shown right now:\n${pageData}` : ''].filter(Boolean).join('\n\n')
     : [ t ? `Stock open on the page: ${t}` : 'No stock is open on the page.', `Question: ${qn}`, pageData ? `[D] LedgerLine page data for ${t}, as shown on the site right now:\n${pageData}` : ''].filter(Boolean).join('\n\n');
   const messages = [{ role: 'user', content: user }], sources = [], web = [], data = new Set();
   let useFetch = true, webOn = true, finalBlocks = [], rounds = 0, done = false;

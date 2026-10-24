@@ -7,7 +7,7 @@ root=re.search(r':root\{.*?\n:root\[data-theme="dark"\]\{.*?\}',idx,re.S).group(
 header=re.search(r'<header class="top">.*?</header>',idx,re.S).group(0)
 footer=re.search(r'<footer class="wrap">.*?</footer>',idx,re.S).group(0)
 brand=re.search(r'<a class="brand".*?</a>',header,re.S).group(0)
-header='<header class="top"><div class="wrap">'+brand+'<nav class="tn"><a href="/features.html" aria-current="page">Features</a><a href="/#pricing">Pricing</a><a class="login" href="/app/">Start here</a></nav></div></header>'
+header='<header class="top"><div class="wrap">'+brand+'<nav class="tn"><a href="/features.html" aria-current="page">Features</a><a href="/#beta">Beta</a><a class="login" href="/app/">Start here</a></nav></div></header>'
 body=open(P('tools','features','body.html')).read()
 body=body.replace('<p>Net sales increased <mark>10%</mark> during 2026, driven by comparable sales growth and new warehouses…</p>','<p>Results of operations · <mark>Net sales</mark> · Gross margin · Liquidity and capital resources · Critical accounting estimates</p>')
 body=body.replace('<span class="cap real">Costco · Oct 22, 2026</span>','<span class="cap">Illustration · 49% is Costco’s figure on Oct 22, 2026</span>')

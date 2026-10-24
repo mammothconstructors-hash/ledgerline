@@ -81,16 +81,22 @@ footer p{max-width:110ch;margin:0 0 8px}
 
 .tn{display:flex;align-items:center;gap:2px}.tn a{color:var(--onnavy);font-weight:600;font-size:15px;text-decoration:none;padding:6px 10px;white-space:nowrap}.tn a.login{margin-left:6px}
 @media (max-width:430px){.tn .np{display:none}.brand{font-size:20px!important}.brand svg{width:32px;height:32px}.tn a{padding:6px 7px}}
+.apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px}
+.app{display:flex;flex-direction:column;gap:6px;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:12px;padding:20px;background:var(--bg);transition:transform .15s,box-shadow .15s}
+.app:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.10)}
+.app-k{font:700 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--claret)}.app h3{margin:0;font:700 28px var(--serif)}.app-s{margin:0;color:var(--muted);font-weight:600}
+.app.soon{border-style:dashed;opacity:.92}.app.soon:hover{transform:none;box-shadow:none}
+.app ul{margin:8px 0 12px;padding-left:20px}.app li{margin:0 0 6px}.app .btn{margin-top:auto;align-self:flex-start}
 </style></head><body>
 <header class="top"><div class="wrap"><a class="brand" href="/" style="display:inline-flex;align-items:center;gap:9px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="38" height="38" aria-hidden="true" style="flex:none;display:block"><rect width="48" height="48" rx="11" fill="#FBF7F1"/><path d="M10 14h20.5l6-6" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M30 7.5h7v7" fill="none" stroke="#1E8C52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 24h17" fill="none" stroke="#A39C93" stroke-width="4" stroke-linecap="round"/><path d="M10 34h14.5l6 6" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 40.5h7v-7" fill="none" stroke="#8E1B33" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>LedgerLine</a><nav class="tn"><a href="/features.html">Features</a><a href="#pricing" class="np">Pricing</a><a class="login" href="/app/">Start here</a></nav></div></header>
 <main class="wrap">
   <div class="hero">
     <div>
-      <div class="kicker">Know what you own.</div>
-      <h1>Every stock, scored from what it filed.</h1>
-      <p class="stand">Type a ticker. LedgerLine reads up to 17 years of SEC filings and ten years of prices, then tells you if the business is good, the moat is real, the risk is low and the price is fair.</p>
-      <div class="cta"><a class="btn primary big" href="/app/">Start here →</a><a class="btn" href="/features.html">See every feature</a></div>
-      <p class="fine" style="margin-top:10px">Free during the beta. Sign in with the email you were invited with; we email you a one-time code.</p>
+      <div class="kicker">Know what you own. Know the market you’re in.</div>
+      <h1>Every stock scored from what it filed, and the market read from its options.</h1>
+      <p class="stand">LedgerLine is a set of research apps under one sign-in. <b>Research</b> reads up to 17 years of SEC filings and ten years of prices and tells you if the business is good, the moat is real, the risk is low and the price is fair. <b>Regime</b> reads options across every sector, index, bond and commodity ETF and tells you whether the market is calm or stressed, where volatility is cheap or rich, and what 3x funds cost to hold.</p>
+      <div class="cta"><a class="btn primary big" href="/app/">Open Research →</a><a class="btn primary big" href="https://vol-board.pages.dev">Open Regime →</a><a class="btn" href="/features.html">See every feature</a></div>
+      <p class="fine" style="margin-top:10px">Private beta, free while we test. Sign in with the email you were invited with; we email you a one-time code.</p>
     </div>
     <div class="card" aria-label="Example scorecard">
       <div class="lbl">Example verdict</div>
@@ -101,6 +107,21 @@ footer p{max-width:110ch;margin:0 0 8px}
   </div>
 
 
+
+  <section id="apps" aria-label="The apps">
+    <div class="kicker">The apps</div>
+    <h2>One sign-in, every app.</h2>
+    <div class="apps">
+      <a class="app" href="/app/"><div class="app-k">LedgerLine</div><h3>Research</h3><p class="app-s">Stocks and ETFs</p>
+        <ul><li>Every US stock scored from its own 10-K and 10-Q: business, moat, growth, management, risk, valuation</li><li>Fair value, verdict, forecast and full statements with charts</li><li>ETF holdings, drawdowns, technicals, earnings reactions, insider trades, screens</li><li>Ask AI on any stock, with every claim sourced</li></ul><span class="btn primary">Open Research →</span></a>
+      <a class="app" href="https://vol-board.pages.dev"><div class="app-k">LedgerLine</div><h3>Regime</h3><p class="app-s">Market regime and options</p>
+        <ul><li>Risk on or risk off across indexes, bonds and commodities, read from options</li><li>Sector rotation by implied volatility, skew and σ moves</li><li>The VIX curve, carry and the volatility surface</li><li>3x leveraged ETFs: drag, decay and when the edge is on; Ask AI on any options question</li></ul><span class="btn primary">Open Regime →</span></a>
+      <div class="app soon"><div class="app-k">Coming soon</div><h3>Portfolio</h3><p class="app-s">Your holdings against a model</p>
+        <ul><li>Actual holdings against target weights, by account</li><li>Drift, rebalance trades and red-day add ladders sized to you</li><li>Drawdowns, support levels and full risk metrics against QQQ and SPY</li></ul></div>
+      <div class="app soon"><div class="app-k">Coming soon</div><h3>Futures</h3><p class="app-s">Broad-market equity futures, energy and advanced forecasting</p>
+        <ul><li>ES, NQ, YM, RTY and the energy complex in one view</li><li>Composite signals with entries, targets and exits</li><li>Advanced forecasting models for trend, timing and levels</li></ul></div>
+    </div>
+  </section>
   <section aria-label="LedgerLine on a real stock">
     <div class="kicker">See it on a real stock</div>
     <h2>Costco, the way LedgerLine shows it.</h2>
@@ -143,26 +164,11 @@ footer p{max-width:110ch;margin:0 0 8px}
     </div>
   </section>
 
-  <section id="pricing">
-    <div class="kicker">Pricing</div>
-    <h2>Free during the beta. Paid plans open soon.</h2>
-    <p class="fine" style="font-size:16px;max-width:62ch;margin:-8px 0 20px">LedgerLine is in a private beta and costs nothing while we test. When paid plans open, every new account starts with a <b>21-day free trial</b>: a card is required, nothing is charged until day 22, and you can cancel before then and pay nothing.</p>
-    <div class="plans">
-      <div class="plan">
-        <div class="tag">Monthly</div>
-        <div class="p">$19<small> / month</small></div>
-        <ul><li>Every US-listed stock</li><li>All tabs and filings</li><li>21-day free trial, cancel any time</li></ul>
-        <span class="btn soon" aria-disabled="true">Opens after the beta</span>
-      </div>
-      <div class="plan best">
-        <div class="tag">Annual · two months free</div>
-        <div class="p">$190<small> / year</small></div>
-        <ul><li>Everything in monthly</li><li>Works out to $15.83 a month</li><li>21-day free trial, cancel any time</li></ul>
-        <span class="btn soon" aria-disabled="true">Opens after the beta</span>
-      </div>
-    </div>
-    <div class="cta" style="margin-top:18px"><a class="btn primary" href="mailto:kgrodrigue@yahoo.com?subject=LedgerLine%20beta%20access&amp;body=Please%20add%20me%20to%20the%20LedgerLine%20beta.%0A%0AEmail%20to%20sign%20in%20with%3A%20">Request beta access</a><a class="btn" href="/app/">Already invited? Start here</a></div>
-    <p class="fine" style="margin-top:12px">Payments will be handled by Stripe. LedgerLine never sees or stores your card number.</p>
+  <section id="beta">
+    <div class="kicker">Private beta</div>
+    <h2>Free while we test.</h2>
+    <p class="fine" style="font-size:16px;max-width:62ch;margin:-8px 0 18px">LedgerLine is in a private beta. Testers get every app at no cost while we finish it. Plans will be announced before launch, and beta testers hear first.</p>
+    <div class="cta"><a class="btn primary" href="mailto:kgrodrigue@yahoo.com?subject=LedgerLine%20beta%20access&amp;body=Please%20add%20me%20to%20the%20LedgerLine%20beta.%0A%0AEmail%20to%20sign%20in%20with%3A%20">Request beta access</a><a class="btn" href="/app/">Already invited? Sign in</a></div>
   </section>
 
   <section>
