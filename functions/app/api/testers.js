@@ -11,6 +11,12 @@ export async function onRequest({ request, env }) {
   await env.DB.prepare("CREATE TABLE IF NOT EXISTS tester_queue (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, name TEXT, sites TEXT DEFAULT 'LedgerLine', action TEXT DEFAULT 'add', done INTEGER DEFAULT 0, result TEXT)").run();
   if (request.method === 'POST') {
     const b = await request.json().catch(() => ({}));
+    if (b.action === 'admins') {   // up to 5 admin emails, left out of the user count with the two owner emails
+      const list = [...new Set((Array.isArray(b.admins) ? b.admins : []).map(x => String(x).trim().toLowerCase()).filter(x => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x) && !OWNERS.includes(x)))];
+      if (list.length > 5) return json({ error: 'Up to 5 admins.' }, 400);
+      await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('admins', ?) ON CONFLICT (k) DO UPDATE SET v = excluded.v").bind(JSON.stringify(list)).run();
+      return json({ ok: true, admins: list });
+    }
     const email = String(b.email || '').trim().toLowerCase(), name = String(b.name || '').trim().slice(0, 80), action = ['add', 'remove', 'rename'].includes(b.action) ? b.action : 'add';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'That is not an email address' }, 400);
     if (action === 'remove' && OWNERS.includes(email)) return json({ error: 'You can’t remove the owner (that would lock you out).' }, 400);
@@ -30,5 +36,6 @@ export async function onRequest({ request, env }) {
   try { presence = (await env.DB.prepare('SELECT email, site, first_ts, last_ts, screen FROM presence ORDER BY last_ts DESC LIMIT 200').all()).results || []; } catch (e) { }
   try { signins = (await env.DB.prepare('SELECT email, site, ts FROM signins ORDER BY ts DESC LIMIT 30').all()).results || []; } catch (e) { }
   presence.forEach(p => { p.name = names[p.email] || ''; }); signins.forEach(p => { p.name = names[p.email] || ''; });
-  return json({ me: who, cache, queue: q, presence, signins, now: Math.floor(Date.now() / 1000) });
+  let admins = []; try { const r = await env.DB.prepare("SELECT v FROM settings WHERE k = 'admins'").first(); admins = r && r.v ? JSON.parse(r.v) : []; } catch (e) { }
+  return json({ me: who, owners: OWNERS, admins, cache, queue: q, presence, signins, now: Math.floor(Date.now() / 1000) });
 }

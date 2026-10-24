@@ -2,7 +2,7 @@
 import { spawnSync } from 'child_process';
 import path from 'path'; import { fileURLToPath } from 'url'; import fs from 'fs';
 const dir=path.dirname(fileURLToPath(import.meta.url)); fs.mkdirSync(dir+'/out',{recursive:true});
-const tests=['audit.mjs','treact.mjs','tres2.mjs','tmet.mjs','tmetq.mjs','tov.mjs','tcb.mjs','tqs.mjs','tmsearch.mjs','tcore.mjs','tfeat.mjs','tskin.mjs','talign.mjs','tvb.mjs','tvbask.mjs','task.mjs','tacct.mjs'];
+const tests=['audit.mjs','treact.mjs','tres2.mjs','tmet.mjs','tmetq.mjs','tov.mjs','tcb.mjs','tqs.mjs','tmsearch.mjs','tcore.mjs','tfeat.mjs','tskin.mjs','talign.mjs','tvb.mjs','tvbask.mjs','task.mjs','tacct.mjs','ttst.mjs'];
 let bad=0;
 for(const t of tests){
   const t0=Date.now(); const r=spawnSync(process.execPath,[path.join(dir,t)],{encoding:'utf8',timeout:240000});
