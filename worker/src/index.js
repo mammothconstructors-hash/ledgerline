@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.16.2';
+const WORKER_VERSION = '3.17.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -290,7 +290,7 @@ async function levRegime(fund, env, ctx) {
   fund = String(fund).trim().toUpperCase();
   let pair = null; for (const [u, name, fs] of LEV_PAIRS) for (const [f, L] of fs) if (f === fund) pair = { u, name, L };
   if (!pair) throw new Error('Not a 3x fund on the board: ' + fund);
-  const key = new Request(`https://ledgerline-cache.internal/levregime/v4/${fund}/${new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
+  const key = new Request(`https://ledgerline-cache.internal/levregime/v5/${fund}/${new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(key); if (hit) return hit.json(); }
   const [fd, ud] = await Promise.all([lvLong(fund, env, ctx), lvLong(pair.u, env, ctx)]);
   const iso = x => new Date(x * 1000).toISOString().slice(0, 10), U = {}; ud.t.forEach((x, i) => { U[iso(x)] = ud.c[i]; });
@@ -298,28 +298,31 @@ async function levRegime(fund, env, ctx) {
   const n = D.length, L = pair.L, B = [1]; for (let i = 1; i < n; i++) B.push(B[i - 1] * (1 + tbill(D[i]) / 100 / 252));
   const cut = { light: 8, heavy: 20 }, rd = v => v == null || !isFinite(v) ? null : Math.round(v * 100) / 100;
   // forward windows: 1M, 3M, 6M, 1Y, 2Y, 3Y. Short ones start every day; 6M and longer start every 5th day (neighbours are near-identical anyway).
-  const HZ = [21, 63, 126, 252, 504, 756], cols = { d: [], reg: [], hv: [], fd1: [], ud1: [] }, W = {};
-  for (const h of HZ) W[h] = { i: [], f: [], u: [], s: [], m: [], mdd: [], udd: [] };
+  const HZ = [21, 63, 126, 252, 504, 756], cols = { d: [], reg: [], hv: [], fd1: [], ud1: [], fdh: [], udh: [] }, W = {};
+  const FH = [], XH = []; for (let i = 0; i < n; i++) { FH.push(Math.max(F[i], i ? FH[i - 1] : 0)); XH.push(Math.max(X[i], i ? XH[i - 1] : 0)); }
+  for (const h of HZ) W[h] = { i: [], f: [], u: [], s: [], m: [], mdd: [], udd: [], fdd: [], lo: [] };
   for (let t = 21; t < n; t++) {
     const lg = []; for (let i = t - 19; i <= t; i++) lg.push(Math.log(X[i] / X[i - 1]));
     const hv = (lvSd(lg) || 0) * Math.sqrt(252) * 100, drag = lvDrag(L, hv), row = cols.d.length;
     cols.d.push(D[t]); cols.reg.push(drag < cut.light ? 0 : drag < cut.heavy ? 1 : 2); cols.hv.push(rd(hv));
     cols.fd1.push(rd((F[t] / F[t - 1] - 1) * 100)); cols.ud1.push(rd((X[t] / X[t - 1] - 1) * 100));
+    cols.fdh.push(Math.round((F[t] / FH[t] - 1) * 1000) / 10); cols.udh.push(Math.round((X[t] / XH[t] - 1) * 1000) / 10);
     for (const h of HZ) {
       if (t + h >= n || (h > 63 && row % 5)) continue;
-      let mdd = 0, udd = 0, mpk = 1, upk = 1;
+      let mdd = 0, udd = 0, fdd = 0, lo = 1, mpk = 1, upk = 1, fpk = 1;
       for (let k = 1; k <= h; k++) {
-        const ur = X[t + k] / X[t], mr = F[t + k] / F[t] / L + (1 - 1 / L) * B[t + k] / B[t];
+        const ur = X[t + k] / X[t], fr0 = F[t + k] / F[t], mr = fr0 / L + (1 - 1 / L) * B[t + k] / B[t];
+        if (fr0 < lo) lo = fr0; if (fr0 > fpk) fpk = fr0; else if (fr0 / fpk - 1 < fdd) fdd = fr0 / fpk - 1;
         if (mr > mpk) mpk = mr; else if (mr / mpk - 1 < mdd) mdd = mr / mpk - 1;
         if (ur > upk) upk = ur; else if (ur / upk - 1 < udd) udd = ur / upk - 1;
       }
       const fr = F[t + h] / F[t] - 1, ur = X[t + h] / X[t] - 1, w = W[h];
       w.i.push(row); w.f.push(rd(fr * 100)); w.u.push(rd(ur * 100)); w.s.push(rd(L * ur * 100));
-      w.m.push(rd((fr / L + (1 - 1 / L) * (B[t + h] / B[t] - 1)) * 100)); w.mdd.push(rd(mdd * 100)); w.udd.push(rd(udd * 100));
+      w.m.push(rd((fr / L + (1 - 1 / L) * (B[t + h] / B[t] - 1)) * 100)); w.mdd.push(rd(mdd * 100)); w.udd.push(rd(udd * 100)); w.fdd.push(rd(fdd * 100)); w.lo.push(rd((lo - 1) * 100));
     }
   }
   // older pages (2.11.0) read 1M and 3M as day-aligned columns: keep them until every copy is replaced
-  for (const h of [21, 63]) { const w = W[h]; for (const k of ['f', 'u', 's', 'm', 'mdd', 'udd', 'fdd']) cols[k + h] = Array(cols.d.length).fill(null); w.i.forEach((r, j) => { for (const k of ['f', 'u', 's', 'm', 'mdd', 'udd']) cols[k + h][r] = w[k][j]; cols['fdd' + h][r] = w.mdd[j]; }); }
+  for (const h of [21, 63]) { const w = W[h]; for (const k of ['f', 'u', 's', 'm', 'mdd', 'udd', 'fdd']) cols[k + h] = Array(cols.d.length).fill(null); w.i.forEach((r, j) => { for (const k of ['f', 'u', 's', 'm', 'mdd', 'udd']) cols[k + h][r] = w[k][j]; cols['fdd' + h][r] = w.fdd[j]; }); }
   const last = cols.reg.length - 1, avg = a => a.length ? rd(a.reduce((x, y) => x + y, 0) / a.length) : null, sum = {};
   for (const h of HZ) { const w = W[h], st = h > 63 ? 5 : 1; sum[h] = [0, 1, 2].map(g => { const ix = []; w.i.forEach((r, j) => { if (cols.reg[r] === g) ix.push(j); }); const c = k => ix.map(j => w[k][j]);
     const f = c('f'), sx = c('s'), u = c('u'), m = c('m'), mdd = c('mdd'), udd = c('udd'), mA = avg(m), uA = avg(u), mD = avg(mdd), uD = avg(udd);
@@ -1314,6 +1317,11 @@ async function api(req, url, env, ctx) {
       const r = await msFetch(u, { headers: { Accept: 'application/json' } }, 'eod'), j = await r.json(); const d = j.data || [], jumps = [];
       for (let i = 1; i < d.length; i++) { const k = d[i].close / d[i - 1].close; if (k > 1.5 || k < 0.67) jumps.push([String(d[i].date).slice(0, 10), Math.round(k * 1000) / 1000, d[i].split_factor, d[i].exchange]); }
       return out({ total: j.pagination && j.pagination.total, n: d.length, first: d[0] && [String(d[0].date).slice(0, 10), d[0].close, d[0].exchange], last: d.length ? [String(d[d.length - 1].date).slice(0, 10), d[d.length - 1].close] : null, jumps, err: j.error || null }, 200, 0); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
+    if (path === '/api/levraw') { try { const sym = String(q.get('symbol') || '').toUpperCase(), from = q.get('from') || '2016-01-01', to = q.get('to') || '2021-01-01';
+      const u = `https://api.marketstack.com/v2/eod?access_key=${encodeURIComponent(env.MARKETSTACK_KEY)}&symbols=${encodeURIComponent(sym)}&date_from=${from}&date_to=${to}&limit=1000&sort=ASC`;
+      const r = await msFetch(u, { headers: { Accept: 'application/json' } }, 'eod'), j = await r.json(); const d = j.data || [], jumps = [];
+      for (let i = 1; i < d.length; i++) { const k = d[i].close / d[i - 1].close; if (k > 1.5 || k < 0.67) jumps.push([String(d[i].date).slice(0, 10), Math.round(k * 1000) / 1000, d[i].split_factor]); }
+      return out({ total: j.pagination && j.pagination.total, n: d.length, first: d[0] ? [String(d[0].date).slice(0, 10), d[0].close] : null, last: d.length ? [String(d[d.length - 1].date).slice(0, 10), d[d.length - 1].close] : null, jumps, err: j.error || null }, 200, 0); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
     if (path === '/api/levlong') { try { const d = await lvLong(String(q.get('symbol') || '').toUpperCase(), env, ctx), iso = x => new Date(x * 1000).toISOString().slice(0, 10), j = []; for (let i = 1; i < d.c.length; i++) { const r = d.c[i] / d.c[i - 1]; if (r > 1.35 || r < 0.65) j.push([iso(d.t[i]), Math.round(r * 1000) / 1000]); } return out({ n: d.c.length, first: d.t.length ? iso(d.t[0]) : null, last: d.t.length ? iso(d.t[d.t.length - 1]) : null, jumps: j }, 200, 600); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
     if (path === '/api/levregime') { try { return out(await levRegime(q.get('fund') || '', env, ctx), 200, 3600); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
     if (path === '/api/iv') return out(await impliedVol(q.get('symbol') || q.get('ticker') || ''), 200, 600);
