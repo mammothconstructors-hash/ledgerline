@@ -136,12 +136,20 @@ async function vanguard(t) {
   return { asOf, fund: null, holdings: out.filter(h => h.name && h.weight != null) };
 }
 
+// funds that hold exactly the same index as a fund with a daily file: same stocks, same weights
+const TWIN = { VOO: ['SPY', 'S&P 500'], IVV: null, SPLG: ['SPY', 'S&P 500'], QQQM: ['QQQ', 'Nasdaq-100'] };
 export function issuerFor(t) {
   return SSGA.has(t) ? ['State Street SPDR daily holdings', ssga] : ISHARES[t] ? ['iShares daily holdings', ishares] : INVESCO.has(t) ? ['Invesco daily holdings', invesco] : VANGUARD.has(t) ? ['Vanguard monthly holdings', vanguard] : null;
 }
 export async function issuerHoldings(t) {
-  const it = issuerFor(t); if (!it) return null;
-  const r = await it[1](t);
+  let it = issuerFor(t), r;
+  try { if (!it) throw new Error('no daily file'); r = await it[1](t); if (!r.holdings || r.holdings.length < 5) throw new Error('fund file had no holdings'); }
+  catch (e) {
+    const tw = TWIN[t]; if (!tw) { if (!it) return null; throw e; }
+    const base = issuerFor(tw[0]); r = await base[1](tw[0]);
+    r = { ...r, fund: null, holdings: r.holdings.map(h => ({ ...h, shares: null, value: null })) };   // weights carry over; share counts belong to the other fund
+    it = [`${tw[1]} weights from ${tw[0]}'s daily file (${t} holds the same index)`, null];
+  }
   if (!r.holdings || r.holdings.length < 5) throw new Error('fund file had no holdings');
   const tot = r.holdings.reduce((a, h) => a + (h.weight || 0), 0);
   if (tot > 0 && tot < 1.5) r.holdings.forEach(h => { h.weight *= 100; });   // fractions to percent
