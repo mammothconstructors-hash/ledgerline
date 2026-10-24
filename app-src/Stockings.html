@@ -2160,7 +2160,8 @@ function ddCalc(d){
   const px=c[n-1], allZ=zones.map(z=>({lo:z.lo,hi:z.hi,mid:z.pts.reduce((a,v)=>a+v.p,0)/z.pts.length,touch:z.pts.length})), sup=zones.map(z=>({lo:z.lo,hi:z.hi,mid:z.pts.reduce((a,v)=>a+v.p,0)/z.pts.length,touch:z.pts.length,last:Math.max(...z.pts.map(v=>v.i))}))
     .filter(z=>z.hi<px).sort((a,b)=>b.mid-a.mid).slice(0,5);
   const mid=eps.filter(e=>e.depth<=-5);
-  return {t,c,o:op,h:hh,l:lo,dd,n,eps,big,mid,worst,avgDepth,avgUnder,today,deeper,sup,px,from:t[0],hiNow:px/(1+today/100),allZ};
+  let hiAt=n-1; for(let i=n-1;i>=0;i--) if(c[i]>=c[hiAt]) hiAt=i;
+  return {t,c,o:op,h:hh,l:lo,dd,n,eps,big,mid,worst,avgDepth,avgUnder,today,deeper,sup,px,from:t[0],hiNow:Math.max(...c),hiAt,allZ};
 }
 function ddSvg(D){
   const W=900,H=190,pl=40,pr=10,pt=10,pb=22, lo=Math.min(-5,Math.floor(Math.min(...D.dd)/10)*10), X=i=>pl+i/(D.n-1)*(W-pl-pr), Y=v=>pt+(v/lo)*(H-pt-pb);
@@ -2216,11 +2217,11 @@ let DDB={};
 function ddHtml(){
   const D=ddCalc(S&&S.d); if(!D) return '';
   const w=D.worst, rec=w&&w.rec!=null?`recovered ${ddDay(D.t[w.rec])} (${Math.round((D.t[w.rec]-D.t[w.tr])/86400)} days)`:'<b>not yet recovered</b>';
-  const stats=statCells([['5-yr worst drop',w?pct(w.depth,1):'—'],['Average 10%+ drop',isNum(D.avgDepth)?pct(D.avgDepth,1):'none'],['Average distance below high',pct(D.avgUnder,1)],['Today, below the high',pct(D.today,1)],['10%+ drops in 5 years',String(D.big.length)],['Days deeper than today',pct(D.deeper,0)]]);
+  const stats=statCells([['5-yr worst drop',w?pct(w.depth,1):'—'],['Average 10%+ drop',isNum(D.avgDepth)?pct(D.avgDepth,1):'none'],['Average distance below high',pct(D.avgUnder,1)],['Below its high now',pct(D.today,1)+' <span class="muted">high '+ddDay(D.t[D.hiAt])+'</span>'],['10%+ drops in 5 years',String(D.big.length)],['Days deeper than today',pct(D.deeper,0)]]);
   const rows=D.big.slice(0,8).map(e=>`<tr><td style="text-align:left">${ddDay(D.t[e.pk])}</td><td>${ddDay(D.t[e.tr])}</td><td class="num neg"><b>${pct(e.depth,1)}</b></td><td class="num">${Math.round((D.t[e.tr]-D.t[e.pk])/86400)}</td><td>${e.rec!=null?ddDay(D.t[e.rec])+` <span class="muted">(${Math.round((D.t[e.rec]-D.t[e.tr])/86400)} d)</span>`:'<b>still below</b>'}</td></tr>`).join('');
   const sup=D.sup.map(z=>`<tr><td style="text-align:left"><b>${money(z.mid)}</b> <span class="muted">${money(z.lo)}–${money(z.hi)}</span></td><td class="num">${pct((z.mid/D.px-1)*100,1)}</td><td class="num">${z.touch}</td><td>${ddDay(D.t[z.last])}</td></tr>`).join('');
   return `<div class="sec" id="ddSec"><h3>Drawdowns and support <small>daily closes since ${ddDay(D.from)}</small></h3>
-    <p class="stand" style="font-size:16px;margin:0 0 10px">${pct(D.today,1)} below its high today. ${ddRead(D)}</p>
+    <p class="stand" style="font-size:16px;margin:0 0 10px">Closed ${pct(Math.abs(D.today),1)} below its ${ddDay(D.t[D.hiAt])} high of ${money(D.hiNow)}. ${ddRead(D)}</p>
     ${ddMeter(D)}${stats}
     <h3 style="margin-top:14px">Price with the drop levels <small>weekly bars</small></h3><div>${ddPriceSvg(D)}</div>
     <p class="fine">Dashed lines: the price at the average 10%+ drop and at the 5-year worst, measured from today’s high. Teal dot: today.</p>
@@ -2235,9 +2236,9 @@ function ddHtml(){
 }
 function ddBenchHtml(){
   const sets=[['SPY',S&&S.spyD||(bm('SPY').d)],['QQQ',S&&S.qqqD||(bm('QQQ').d)],['TQQQ',DDB.TQQQ]];
-  const rows=sets.map(([k,d])=>{ const D=ddCalc(d); if(!D) return `<tr><td style="text-align:left">${k}</td><td colspan="4" class="muted">${k==='TQQQ'&&DDB.TQQQ===undefined?'loading…':'no daily history'}</td></tr>`;
-    return `<tr><td style="text-align:left"><b>${k}</b></td><td class="num neg">${pct(D.worst.depth,1)}</td><td class="num">${isNum(D.avgDepth)?pct(D.avgDepth,1):'—'}</td><td class="num"><b>${pct(D.today,1)}</b></td><td class="muted">${ddRead(D)}</td></tr>`; }).join('');
-  return `<h3 style="margin-top:16px">Against SPY, QQQ and TQQQ</h3><div class="tblwrap"><table><thead><tr><th style="text-align:left">Fund</th><th>5-yr worst</th><th>Avg 10%+ drop</th><th>Today</th><th style="text-align:left">Read</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  const rows=sets.map(([k,d])=>{ const D=ddCalc(d); if(!D) return `<tr><td style="text-align:left">${k}</td><td colspan="5" class="muted">${k==='TQQQ'&&DDB.TQQQ===undefined?'loading…':'no daily history'}</td></tr>`;
+    return `<tr><td style="text-align:left"><b>${k}</b></td><td class="num neg">${pct(D.worst.depth,1)}</td><td class="num">${isNum(D.avgDepth)?pct(D.avgDepth,1):'—'}</td><td class="num"><b>${pct(D.today,1)}</b></td><td>${ddDay(D.t[D.hiAt])}</td><td class="muted">${ddRead(D)}</td></tr>`; }).join('');
+  return `<h3 style="margin-top:16px">Against SPY, QQQ and TQQQ</h3><div class="tblwrap"><table><thead><tr><th style="text-align:left">Fund</th><th>5-yr worst</th><th>Avg 10%+ drop</th><th>Below high now</th><th style="text-align:left">High set</th><th style="text-align:left">Read</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 async function fillDD(){
   if(!document.getElementById('ddBench')||DDB.TQQQ!==undefined) return;
