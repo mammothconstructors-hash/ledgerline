@@ -1,4 +1,5 @@
 import UNIVERSE from './universe.js';
+import { issuerHoldings } from './issuer.js';
 // sec-proxy — one Worker, two jobs:
 //   1. GET /?u=<sec.gov url>   the original relay your Google Sheet uses (unchanged)
 //   2. POST /mcp               an MCP server the LedgerLine page reads through a claude.ai
@@ -17,7 +18,7 @@ import UNIVERSE from './universe.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.12.2';
+const WORKER_VERSION = '3.13.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -196,7 +197,10 @@ async function etfHoldings(symbol, env) {
     const hit = await DB.prepare('SELECT day, body FROM etf_hold WHERE symbol = ?').bind(sym).first();
     if (hit && hit.day === day && (!/"count":0,/.test(hit.body) || /"checked":true/.test(hit.body))) return JSON.parse(hit.body);
   }
-  let out = await secHoldings(sym, env, day);
+  // 3.13.0: the fund company's own daily file first; SEC N-PORT (3-4 months behind) only if that fails
+  let out = null, why = '';
+  try { const r = await issuerHoldings(sym); if (r) out = await finishHoldings(sym, day, r, env); } catch (e) { why = String(e && e.message || e); }
+  if (!out || !out.count) { out = await secHoldings(sym, env, day); if (why) out.issuerError = why.slice(0, 200); }
   if (!out.count && env.MARKETSTACK_KEY) {
     const ms = await msHoldings(sym, env, day).catch(e => ({ count: 0, reason: String(e && e.message || e) }));
     if (ms.count) out = ms; else out = { ...out, reason: out.reason + ' Marketstack has no holdings for it either.' };
@@ -225,6 +229,23 @@ async function msHoldings(sym, env, day) {
   const top10 = rows.slice(0, 10).reduce((a, h) => a + h.weight, 0), b = j.basics || (j.data && j.data.basics) || {}, at = (j.output && j.output.attributes) || {};
   return { symbol: sym, fund: pickStr(at, ['series_name']) || pickStr(b, ['fund_name']) || sym, day, asOf: pickStr(at, ['rep_pd_date', 'report_date', 'date']) || null, count: rows.length,
     top10Weight: Math.round(top10 * 100) / 100, cashWeight: Math.round(cashW * 100) / 100, sectors: [], holdings: rows.slice(0, 500), source: 'Marketstack ETF holdings (SEC N-PORT)' };
+}
+async function finishHoldings(sym, day, r, env) {
+  const isCash = h => /money market|cash collateral|liquidity fund|government (money|cash)|cash management|^cash\b|us dollar/i.test(h.name) || /cash|money market/i.test(h.type || '');
+  const cashW = r.holdings.filter(isCash).reduce((a, h) => a + (h.weight || 0), 0);
+  const rows = r.holdings.filter(h => !isCash(h)).sort((a, b) => (b.weight || 0) - (a.weight || 0));
+  let sectors = [], coverage = null;
+  if (env.DB) { try {
+    const uni = Object.fromEntries((((await env.DB.prepare('SELECT ticker, sector FROM universe').all()).results) || []).map(u => [u.ticker, u.sector]));
+    const m = {}; let covered = 0;
+    for (const h of rows) { const s = h.symbol && uni[String(h.symbol).replace('.', '-')]; if (s && h.weight > 0) { m[s] = (m[s] || 0) + h.weight; covered += h.weight; } }
+    sectors = Object.entries(m).map(([sector, weight]) => ({ sector, weight: Math.round(weight * 100) / 100 })).sort((a, b) => b.weight - a.weight);
+    coverage = sectors.length ? Math.round(covered * 10) / 10 : null;
+  } catch (e) { } }
+  const top10 = rows.slice(0, 10).reduce((a, h) => a + (h.weight || 0), 0);
+  return { symbol: sym, fund: r.fund || sym, day, asOf: r.asOf || null, count: rows.length, top10Weight: Math.round(top10 * 100) / 100,
+    totalWeight: Math.round(rows.reduce((a, h) => a + (h.weight || 0), 0) * 10) / 10, cashWeight: Math.round(cashW * 100) / 100,
+    sectors, sectorCoverage: coverage, holdings: rows.slice(0, 500), source: r.source, daily: !/monthly/i.test(r.source) };
 }
 async function secHoldings(sym, env, day) {
   const DB = env.DB;
