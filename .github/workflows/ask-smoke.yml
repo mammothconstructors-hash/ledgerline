@@ -26,4 +26,5 @@ jobs:
           ask "" AMD "Are there any lawsuits against AMD, and what is their status?"
           ask "" AMD "Is AMD cheap or expensive right now versus NVDA?"
           ask vol "" "What is vol drag on TQQQ right now and how is it calculated?"
+          ask vol "" "Where are options cheapest right now?"
           [ -n "$EXTRA" ] && ask "" AMD "$EXTRA" || true

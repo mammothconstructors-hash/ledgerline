@@ -220,7 +220,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .kask-f{padding:12px 16px;border-top:1px solid var(--rule);display:grid;gap:8px}
 .kask-row{display:flex;gap:8px}.kask-row input{flex:1;min-width:0;font:15px var(--sans);padding:11px 14px;border-radius:999px;border:1px solid var(--rule);background:var(--page);color:var(--ink)}
 .kask-row button{font:700 15px var(--sans);padding:0 18px;border-radius:999px;border:0;background:var(--accent);color:var(--page);cursor:pointer;min-height:44px}.kask-row button:disabled{opacity:.6}
-.kask-chips{display:flex;flex-wrap:wrap;gap:6px}.kask-chips button{font:600 13px var(--sans);padding:7px 11px;border-radius:999px;border:1px solid var(--rule);background:var(--page);color:var(--ink);cursor:pointer}
+.kask-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.kask-chips button{text-align:left}.kask-g{flex-basis:100%;font:800 11.5px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin-top:4px}.kask-chips button{font:600 13px var(--sans);padding:7px 11px;border-radius:999px;border:1px solid var(--rule);background:var(--page);color:var(--ink);cursor:pointer}
 .kask-q{font:700 15px var(--sans);color:var(--ink)}.kask-a{font:15px/1.55 var(--sans);color:var(--ink)}.kask-a p{margin:0 0 9px}.kask-a ul{margin:0 0 9px;padding-left:20px}.kask-a li{margin:0 0 5px}.kask-a h4{font:700 15px var(--sans);margin:12px 0 5px}
 .kask-tr{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;padding:5px 0;border-bottom:1px solid var(--grid);font-size:14px}.kask-tr:first-child{font-weight:700}
 .kask-c{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;font:700 12px var(--sans);vertical-align:2px;text-decoration:none;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
@@ -505,7 +505,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 const SHEET_ID="";
 const SHEET_URL="";
 const GS="Google Sheets", TV="Tradingview";
-const PAGE_VERSION="2.15.1s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
+const PAGE_VERSION="2.16.0s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
 const GROUPS={C:{name:"Cyclicals",c:"var(--cyc)"},T:{name:"Tech & Innovation",c:"var(--tech)"},D:{name:"Defensives",c:"var(--def)"},
   I:{name:"Indices",c:"var(--idx)"},B:{name:"Bonds",c:"var(--bnd)"},M:{name:"Commodities",c:"var(--cmd)"}};
 const SCREENS={sectors:{title:"Sector Rotation",groups:["C","T","D"]},macro:{title:"Cross-Asset Regime",groups:["I","B","M"]},vix:{title:"VIX Term & Carry"},fsv:{title:"Vol Surface Δ"},lev:{title:"3x Leverage"}};
@@ -1307,6 +1307,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.16.0 · LedgerLine worker 3.20.1 · Oct 24 2026</dt><dd>Ask AI can run scans across the whole board: every sector, index, bond and commodity ETF with IV, IV percentile and z-score, realized vol, carry, skew, term structure, returns, σ moves and put/call, whichever screen is open. Try “Which sectors have the highest IV vs their own history?” or “Where are options cheapest right now?”. Sample questions are grouped: How to, Scans and Concepts.</dd>
    <dt>Page 2.15.1 · Oct 24 2026</dt><dd>✦ Ask AI moved from the bottom-right corner into the top bar, next to the screen names.</dd>
    <dt>Page 2.15.0 · LedgerLine worker 3.20.0 · Oct 24 2026</dt><dd>New ✦ Ask AI button at the bottom right of every screen. Ask anything about options and volatility: definitions, formulas (vol drag, implied move, the Greeks), how to read any chart, or what today’s numbers mean. It reads the screen you have open and the board’s glossary, can check live Cboe implied volatility for any symbol and the 3x data, and searches the web for anything current. Answers show their sources.</dd>
    <dt>Page 2.14.0 · Oct 24 2026</dt><dd>New look, easier on the eyes, the same as LedgerLine: warm off-white pages in light mode and soft charcoal in dark (never pure white or pure black), about 13:1 contrast for main text and 6–7:1 for secondary text. Light | Dark switch next to the Stats, Charts and How it works tabs (icons only on a phone); it remembers your choice and until then follows your device. The whole board now has a dark mode, not just the 3x screen. Inter for reading text with figures that line up; Source Serif stays for titles. Text is larger: nothing under 13px. Accent colors toned down; VIX price bars black (off-white in dark). Fixed on phones: the three Sector Rotation σ-move charts now stack in one column instead of squeezing side by side past the screen edge. The board is now checked automatically before every update, on every screen and tab, phone and desktop, light and dark.</dd>
@@ -1991,13 +1992,19 @@ renderHow();setupScreen();refresh();boot();
    the board's 3x data, prices for any ticker, and search the web. Answers in Markdown with numbered sources. */
 (function(){
  const API="https://sec-proxy.mammothconstructors.workers.dev", $k=id=>document.getElementById(id), box=$k("kask"), body=$k("kaskB");
- const SAMPLES=["What is vol drag and how is it calculated?","Is TQQQ's drag heavy right now?","Explain contango in the VIX curve today","What does a 2σ move mean on this board?","IV vs HV: which is higher for QQQ now?","How do I read the skew chart?"];
+ const SAMPLES=[["How to",["How do I use this board day to day?","How do I read the Sector Rotation charts?","What is the Vol Surface Δ screen telling me?"]],
+   ["Scans",["Which sectors have the highest IV vs their own history?","Where are options cheapest right now?","Where is IV richest vs realized (best to sell premium)?","Which ETFs have the most put skew?"]],
+   ["Concepts",["What is vol drag and how is it calculated?","Is TQQQ's drag heavy right now?","Explain contango in the VIX curve today","What does a 2σ move mean?"]]];
  const H=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
  const items=[]; let busy=false, err=null;
  const ctxText=()=>{ const w=document.querySelector(".wrap"); let t=""; try{ const c=w.cloneNode(true); c.querySelectorAll("script,style,svg,button,nav,.kask,.askbtn,.tabrow,.themeseg").forEach(e=>e.remove()); t=(c.innerText||c.textContent||"").replace(/[ \t]+/g," ").replace(/\n\s*\n+/g,"\n").trim(); }catch(e){}
    let g=""; try{ if(typeof GLOSS!=="undefined") g=GLOSS.map(x=>"- "+x[0]+": "+x[2]+(x[3]?" ("+x[3]+")":"")).join("\n"); }catch(e){}
    const scr=(document.querySelector("button.scr[aria-current=true]")||{}).textContent||"";
-   return ("Screen: "+scr+"\n"+t).slice(0,30000)+(g?"\n\n## Board glossary\n"+g.slice(0,14000):""); };
+   let scan=""; try{ const keep=screen, all=[]; for(const sc of ["sectors","macro"]){ screen=sc; all.push(...rowsAll()); } screen=keep;
+     const f=(v,d)=>v==null||!isFinite(v)?"":(+v).toFixed(d), live=typeof usingLive==="function"&&usingLive();
+     scan="## Scan table: every ETF on the board ("+(live?"live, Cboe 15-min delayed":"SAMPLE data, the live feed has not loaded")+")\nticker | group | IV % | IV percentile | IV z | HV20 % | carry IV/HV | skew pts | skew z | term IV30/IV90 % | 1D % | 1W % | 1D σ | put/call OI\n"
+       +all.map(r=>[r.ticker,(GROUPS[r.group]||{}).name||r.group,f(r.iv,1),f(r.ivpct,0),f(r.ivz,2),f(r.hv20,1),f(r.carry,2),f(r.skew,2),f(r.skewz,2),f(r.ts,1),f(r.ret1d,2),f(r.retw,2),f(r.sig1d,2),f(r.pcoi,2)].join(" | ")).join("\n"); }catch(e){}
+   return ("Screen: "+scr+"\n"+t).slice(0,26000)+(scan?"\n\n"+scan.slice(0,12000):"")+(g?"\n\n## Board glossary\n"+g.slice(0,12000):""); };
  const nums=a=>{ const n={}; (a.webSources||[]).forEach((w,i)=>n[w.id]=i+1); return n; };
  const md=a=>{ const N=nums(a), web=a.webSources||[];
    const inl=x=>x.replace(/\*\*([^*\n]+)\*\*/g,"<b>$1</b>").replace(/\[(W\d+)\]/g,(m,id)=>{ const w=web.find(z=>z.id===id); return w?`<a class="kask-c w" href="${H(w.url)}" target="_blank" rel="noopener" title="${H(w.title)}">${N[id]}</a>`:""; })
@@ -2011,14 +2018,14 @@ renderHow();setupScreen();refresh();boot();
    flush(); return html; };
  const draw=()=>{ body.innerHTML=(err?`<div class="kask-err">${H(err)}</div>`:"")+(busy?`<div class="kask-wait">Working on it: reading the board, checking live IV and the web. Up to a minute when it needs a search.</div>`:"")
    +(items.length?items.map(a=>`<div class="kask-item"><div class="kask-q">${H(a.question)}</div><div class="kask-a">${md(a)}</div>${(a.webSources||[]).length?`<div class="kask-src">${a.webSources.map((w,i)=>`<div><span class="kask-c w">${i+1}</span> <a href="${H(w.url)}" target="_blank" rel="noopener">${H(w.title)}</a></div>`).join("")}</div>`:""}</div>`).join("")
-     :(busy?"":`<div class="kask-wait">Ask about anything on the board, any options concept or formula, or any symbol's volatility.</div>`));
-   $k("kaskGo").disabled=busy; $k("kaskGo").textContent=busy?"Working…":"Ask"; $k("kaskChips").hidden=items.length>0; };
+     :(busy?"":`<div class="kask-wait">Ask about anything on the board, any options concept or formula, or any symbol's volatility. Or start with one of these:</div><div class="kask-chips">${chipsHtml()}</div>`));
+   $k("kaskGo").disabled=busy; $k("kaskGo").textContent=busy?"Working…":"Ask"; $k("kaskChips").hidden=true; };
  const ask=async q=>{ q=String(q||"").trim(); if(!q||busy) return; busy=true; err=null; draw(); const context=ctxText(); let a=null, last="";
    for(let k=0;k<2&&!a;k++){ try{ const r=await fetch(API+"/api/ask",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode:"vol",question:q,context})}); const j=await r.json().catch(()=>({})); if(r.ok&&j.answer) a=j; else { last=j.error||("Error "+r.status); if(r.status===429||j.needsKey) break; } }catch(e){ last="Couldn't reach the data service."; } if(!a&&k===0) await new Promise(r=>setTimeout(r,1500)); }
    busy=false; if(a){ items.unshift(a); $k("kaskQ").value=""; } else err=last==="AI is not switched on yet"?"Ask AI isn't switched on yet.":last; draw(); };
  const open=v=>{ box.classList.toggle("open",v); box.setAttribute("aria-hidden",String(!v)); $k("kaskFab").setAttribute("aria-expanded",String(v)); if(v) setTimeout(()=>$k("kaskQ").focus(),220); };
- $k("kaskChips").innerHTML=SAMPLES.map(x=>`<button type="button" data-q="${H(x)}">${H(x)}</button>`).join("");
- $k("kaskChips").addEventListener("click",e=>{ const b=e.target.closest("button[data-q]"); if(b) ask(b.dataset.q); });
+ function chipsHtml(){ return SAMPLES.map(([g,qs])=>`<span class="kask-g">${H(g)}</span>${qs.map(x=>`<button type="button" data-q="${H(x)}">${H(x)}</button>`).join("")}`).join(""); }
+ box.addEventListener("click",e=>{ const b=e.target.closest("button[data-q]"); if(b) ask(b.dataset.q); });
  $k("kaskGo").addEventListener("click",()=>ask($k("kaskQ").value)); $k("kaskQ").addEventListener("keydown",e=>{ if(e.key==="Enter") ask($k("kaskQ").value); });
  $k("kaskFab").addEventListener("click",()=>open(!box.classList.contains("open"))); $k("kaskX").addEventListener("click",()=>open(false));
  document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&box.classList.contains("open")) open(false); });

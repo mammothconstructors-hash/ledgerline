@@ -13,7 +13,7 @@ for (const [w, h] of [[1280, 900], [390, 844]]) for (const mode of ['light', 'da
     return r.fulfill({ status: 404, body: '' }); });
   await p.goto('https://vol-board.pages.dev/'); await p.waitForTimeout(1200);
   await p.click('#kaskFab'); await p.waitForTimeout(400);
-  await p.click('#kaskChips button'); await p.waitForTimeout(800);
+  await p.click('#kaskB .kask-chips button'); await p.waitForTimeout(800);
   const ok = await p.evaluate(() => { const a = document.querySelector('.kask-item'); return !!a && !!a.querySelector('ul li') && !/\*\*/.test(a.textContent) && a.querySelectorAll('.kask-src a').length === 1 && document.getElementById('kask').classList.contains('open'); });
   if (!ok) bad.push(`${w} ${mode} answer did not render`);
   const ov = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth); if (ov > 2) bad.push(`${w} ${mode} overflow ${ov}`);
