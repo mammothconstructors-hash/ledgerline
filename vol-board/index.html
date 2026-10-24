@@ -321,6 +321,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .lv-jump button{font:inherit;font-size:13.5px;font-weight:700;padding:8px 14px;min-height:38px;border-radius:999px;border:1px solid var(--lv-rule);background:var(--lv-panel);color:var(--lv-ink);cursor:pointer}
 .lv-jump button:hover{background:var(--lv-under)}
 .lv-sec{scroll-margin-top:90px}
+.lv-sec{overflow-anchor:none}
 
 </style>
 </head><body>
@@ -471,7 +472,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 const SHEET_ID="";
 const SHEET_URL="";
 const GS="Google Sheets", TV="Tradingview";
-const PAGE_VERSION="2.12.1s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
+const PAGE_VERSION="2.12.2s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
 const GROUPS={C:{name:"Cyclicals",c:"var(--cyc)"},T:{name:"Tech & Innovation",c:"var(--tech)"},D:{name:"Defensives",c:"var(--def)"},
   I:{name:"Indices",c:"var(--idx)"},B:{name:"Bonds",c:"var(--bnd)"},M:{name:"Commodities",c:"var(--cmd)"}};
 const SCREENS={sectors:{title:"Sector Rotation",groups:["C","T","D"]},macro:{title:"Cross-Asset Regime",groups:["I","B","M"]},vix:{title:"VIX Term & Carry"},fsv:{title:"Vol Surface Δ"},lev:{title:"3x Leverage"}};
@@ -1270,6 +1271,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.12.2 · LedgerLine worker 3.18.1 · Oct 24 2026</dt><dd>3x Leverage: tapping a fund, a hold period, a drag label or a setup now redraws in place, so the page no longer jumps up or down (most noticeable on iPad). The backtest loading in also keeps your place.</dd>
    <dt>Page 2.12.1 · LedgerLine worker 3.18.0 · Oct 24 2026</dt><dd>Sign-ins show up for the owner within a minute. The board now checks in when it opens and every 60 seconds while it is on screen, with the screen being viewed, so the owner's Testers page shows who is online now, which site they signed in to (KGR Vol Board or LedgerLine) and when. Nothing about what you look at is recorded beyond the screen name.</dd>
    <dt>Page 2.12.0 · LedgerLine worker 3.17.0 · Oct 24 2026</dt><dd>3x Leverage: new <b>Edge finder</b>. It tests entry setups on each fund’s history: index down 2% or 3% in a day, three red days in a row, index 5/10/20% below its high, the fund 20/30/40/50% below its high, vol crush (Heavy drag fading) and calm trend. For each: signals, separate signals, average return over your hold, edge against buying on any day, % up, average and worst drop below your entry, and how often 1/3 fund + bills beat the index. A Live now box flags any setup that fired in the last 5 trading days. UPRO, UDOW and URTY now have the full 10 years of history (they started in mid-2020 before). Distributions are clearer: green bars gained, red bars lost, a bold zero line and the % on each side printed on top; the drag-regime charts now show the gap directly (fund minus 3× the index, and the mix minus the index). Stats and Charts no longer split this screen: everything is on one page with jump buttons under the cards.</dd>
    <dt>Page 2.11.3 · LedgerLine worker 3.16.2 · Oct 24 2026</dt><dd>3x Leverage: the page number now shows at the top right of the screen so you can tell at a glance which version is live. Each chart draws on its own, so one bad number can no longer blank the whole screen. The data service also keeps serving older copies of the page, so the backtest charts show even before a new upload.</dd>
@@ -1733,14 +1735,17 @@ async function btLoad(G,box){
   const s=BT.fund; if(BT.cache[s]||BT.busy[s]) return; BT.busy[s]=true; delete BT.err[s];
   try{ const r=await fetch(API_R+encodeURIComponent(s)); const j=await r.json(); if(!r.ok||j.error) throw new Error(j.error||('status '+r.status)); BT.cache[s]=j; }
   catch(e){ BT.err[s]=e.message||String(e); }
-  BT.busy[s]=false; if(BT.fund===s&&box.isConnected) box.innerHTML=safe(btPanel,G);
+  BT.busy[s]=false; if(BT.fund===s&&box.isConnected){ const y=window.scrollY; box.innerHTML=safe(btPanel,G); if(Math.abs(window.scrollY-y)>1) window.scrollTo(0,y); }
 }
 function btWire(G,box){
+  // redraw in place: keep the button you tapped under your finger so the page doesn't jump
+  const keep=(b,fn)=>{ const key=['fund','h','reg','su'].find(k=>b.dataset[k]!=null),val=b.dataset[key],top=b.getBoundingClientRect().top; fn(); box.innerHTML=safe(btPanel,G);
+    const nb=box.querySelector(`button[data-${key}="${val}"]`); if(nb){ const d=nb.getBoundingClientRect().top-top; if(Math.abs(d)>1) window.scrollBy({top:d,left:0,behavior:'instant'}); } };
   box.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||!box.contains(b)) return;
-    if(b.dataset.fund){ BT.fund=b.dataset.fund; BT.reg=null; box.innerHTML=safe(btPanel,G); btLoad(G,box); }
-    else if(b.dataset.h){ BT.h=+b.dataset.h; box.innerHTML=safe(btPanel,G); }
-    else if(b.dataset.reg!=null){ BT.reg=+b.dataset.reg; box.innerHTML=safe(btPanel,G); }
-    else if(b.dataset.su){ BT.su=b.dataset.su; box.innerHTML=safe(btPanel,G); } });
+    if(b.dataset.fund){ keep(b,()=>{BT.fund=b.dataset.fund; BT.reg=null;}); btLoad(G,box); }
+    else if(b.dataset.h){ keep(b,()=>{BT.h=+b.dataset.h;}); }
+    else if(b.dataset.reg!=null){ keep(b,()=>{BT.reg=+b.dataset.reg;}); }
+    else if(b.dataset.su){ keep(b,()=>{BT.su=b.dataset.su;}); } });
   btLoad(G,box);
 }
 function compassReads(groups){
