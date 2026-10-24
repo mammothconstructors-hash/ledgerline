@@ -290,7 +290,7 @@ async function levRegime(fund, env, ctx) {
   fund = String(fund).trim().toUpperCase();
   let pair = null; for (const [u, name, fs] of LEV_PAIRS) for (const [f, L] of fs) if (f === fund) pair = { u, name, L };
   if (!pair) throw new Error('Not a 3x fund on the board: ' + fund);
-  const key = new Request(`https://ledgerline-cache.internal/levregime/v1/${fund}/${new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
+  const key = new Request(`https://ledgerline-cache.internal/levregime/v2/${fund}/${new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10)}`), cache = typeof caches !== 'undefined' ? caches.default : null;
   if (cache) { const hit = await cache.match(key); if (hit) return hit.json(); }
   const [fd, ud] = await Promise.all([lvLong(fund, env, ctx), lvLong(pair.u, env, ctx)]);
   const iso = x => new Date(x * 1000).toISOString().slice(0, 10), U = {}; ud.t.forEach((x, i) => { U[iso(x)] = ud.c[i]; });
@@ -317,8 +317,12 @@ async function levRegime(fund, env, ctx) {
       cols['mdd' + h].push(rd(mdd * 100)); cols['udd' + h].push(rd(udd * 100)); cols['fdd' + h].push(rd(fdd * 100));
     }
   }
-  const last = cols.reg.length - 1;
-  const out = { fund, index: pair.u, indexName: pair.name, lev: L, from: cols.d[0] || null, to: cols.d[last] || null, days: cols.d.length, cut, todayReg: cols.reg[last], todayHv20: cols.hv[last],
+  const last = cols.reg.length - 1, avg = a => a.length ? rd(a.reduce((x, y) => x + y, 0) / a.length) : null, sum = {};
+  for (const h of [21, 63]) { sum[h] = [0, 1, 2].map(g => { const ix = []; for (let i = 0; i <= last; i++) if (cols.reg[i] === g && cols['f' + h][i] != null) ix.push(i); const c = k => ix.map(i => cols[k + h][i]);
+    const f = c('f'), sx = c('s'), u = c('u'), m = c('m'), mdd = c('mdd'), udd = c('udd'), mA = avg(m), uA = avg(u), mD = avg(mdd), uD = avg(udd);
+    return { n: ix.length, ind: Math.floor(ix.length / h), fAvg: avg(f), sAvg: avg(sx), gap: avg(f.map((v, i) => v - sx[i])), fWin: f.length ? rd(f.filter(v => v > 0).length / f.length * 100) : null, fWorst: f.length ? Math.min(...f) : null, fBest: f.length ? Math.max(...f) : null,
+      mAvg: mA, uAvg: uA, beat: m.length ? rd(m.filter((v, i) => v > u[i]).length / m.length * 100) : null, mDd: mD, uDd: uD, mEff: mD < 0 ? rd(mA / -mD) : null, uEff: uD < 0 ? rd(uA / -uD) : null, mWorst: m.length ? Math.min(...m) : null, uWorst: u.length ? Math.min(...u) : null }; }); }
+  const out = { fund, index: pair.u, indexName: pair.name, lev: L, from: cols.d[0] || null, to: cols.d[last] || null, days: cols.d.length, cut, todayReg: cols.reg[last], todayHv20: cols.hv[last], sum,
     bills: 'Mix = 1/' + L + ' in ' + fund + ' and the rest in 3-month T-bills (monthly average rate, held without rebalancing), the same starting market exposure as 100% ' + pair.u + '.',
     method: 'Each day is labelled by the drag (L^2 - L)/2 x HV20^2 of ' + pair.u + ' that day. Forward windows are 21 and 63 trading days and overlap.', checkedAt: Date.now(), worker: WORKER_VERSION, cols };
   if (cache) { const put = cache.put(key, new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=21600' } })); if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put; }
