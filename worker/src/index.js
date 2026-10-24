@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.19.0';
+const WORKER_VERSION = '3.20.0';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -1341,11 +1341,21 @@ async function claudeMsg(env, body, beta) {
   }
   throw last;
 }
-async function askAgent(ticker, question, context, env, ctx) {
+const VOL_TOOLS = [
+  { name: 'implied_vol', description: 'Cboe 30-day implied volatility (IV30) and related options figures for any US stock, ETF or index symbol, 15 minutes delayed.', input_schema: { type: 'object', properties: { symbol: { type: 'string', description: 'e.g. QQQ, TQQQ, AAPL, SPY' } }, required: ['symbol'] } },
+  { name: 'leverage_board', description: 'The board’s 3x leverage data right now: each 3x fund (TQQQ, UPRO, UDOW, TNA, URTY, SOXL, TECL) next to its index ETF with returns, IV30, realized vol, IV rank, realized leverage and beta, expected drag at implied and realized vol, last year’s decay split from costs, drawdowns.', input_schema: { type: 'object', properties: {} } },
+  ASK_TOOLS[0]
+];
+function volSystem(today) { return `You are the KGR Vol Board's options and volatility analyst. Today is ${today}. Answer anything about options, volatility and leveraged ETFs clearly and correctly, for an experienced trader: definitions, formulas, how to read the board's charts, what today's numbers mean, trade structures and their risks.
+You know the math cold and show it when it helps, with a worked example using today's numbers when available: Black-Scholes and the Greeks (delta, gamma, vega, theta, rho, vanna, charm), implied vs realized (historical) volatility, the implied move (price × IV × √(days/365)), variance and volatility risk premium, skew and smile, term structure, contango and backwardation, VIX futures roll yield and carry, the VVIX, sigma moves (return ÷ implied move), z-scores, IV rank and percentile, put/call ratios, and leveraged ETF math: daily reset, volatility drag ≈ (L² − L)/2 × σ² per year for leverage L and annual volatility σ, path dependence, beta slippage, fees and financing costs.
+Sources: [D] the board screen the user is looking at, given below (cite it as [D]); implied_vol (Cboe IV for any symbol, cite [D:SYMBOL]); leverage_board (the board's 3x data, cite [D]); stock_data (prices and returns for any ticker, cite [D:TICKER]); web_search and web_fetch for news and anything current (cited automatically).
+Rules: lead with the direct answer. Use real numbers and show formulas in plain text (no LaTeX). Never name any data vendor or feed other than Cboe; call everything else "board data". No hype, no investment advice disclaimers. Markdown: short paragraphs, **bold** sparingly, "- " bullets, small tables when comparing, about 300 words unless the question needs more.`; }
+async function askAgent(ticker, question, context, env, ctx, mode) {
+  const vol = mode === 'vol';
   const t = String(ticker || '').trim().toUpperCase(), qn = String(question || '').trim().slice(0, 600), pageData = String(context || '').slice(0, 45000);
   if (!qn) throw new Error('question is required');
   const today = new Date().toISOString().slice(0, 10);
-  const system = `You are LedgerLine's research analyst. Today is ${today}. Answer the user's question about stocks, funds and markets directly and completely, like a sharp buy-side analyst talking to an experienced investor.
+  const system = vol ? volSystem(today) : `You are LedgerLine's research analyst. Today is ${today}. Answer the user's question about stocks, funds and markets directly and completely, like a sharp buy-side analyst talking to an experienced investor.
 Sources you have, in order of preference:
 - [D] LedgerLine's own data for the stock open on the page (prices, returns, technicals, valuation, fair value, scores, verdict, earnings, metrics, statements), given below. Use it first for anything about price, valuation or numbers.
 - stock_data tool: the same kind of numbers for any other ticker, cited [D:TICKER].
@@ -1355,10 +1365,11 @@ Sources you have, in order of preference:
 - web_fetch: open a full web page (a search result, an investor-relations page, a press release) when the search snippet isn't enough.
 Work like a researcher: use as many lookups as the question needs, check numbers against a second source when it matters, and never give up with "the excerpts don't say" when another tool could find it. If a tool errors, try another route.
 Rules: lead with the direct answer in the first sentence. Use real numbers. Cite every factual claim with [D], [D:TICKER] or [S#]; web facts are cited automatically. If sources conflict, say so and prefer the newest. If something can't be found, say exactly what you checked. No hype, no filler, no investment advice disclaimers. Format in Markdown: short paragraphs, **bold** key figures sparingly, "- " bullets for lists, at most about 300 words unless the question needs a table.`;
-  const user = [ t ? `Stock open on the page: ${t}` : 'No stock is open on the page.', `Question: ${qn}`, pageData ? `[D] LedgerLine page data for ${t}, as shown on the site right now:\n${pageData}` : ''].filter(Boolean).join('\n\n');
+  const user = vol ? [`Question: ${qn}`, pageData ? `[D] The KGR Vol Board screen the user has open, as shown right now:\n${pageData}` : ''].filter(Boolean).join('\n\n')
+    : [ t ? `Stock open on the page: ${t}` : 'No stock is open on the page.', `Question: ${qn}`, pageData ? `[D] LedgerLine page data for ${t}, as shown on the site right now:\n${pageData}` : ''].filter(Boolean).join('\n\n');
   const messages = [{ role: 'user', content: user }], sources = [], web = [], data = new Set();
   let useFetch = true, webOn = true, finalBlocks = [], rounds = 0, done = false;
-  const toolSet = () => [...ASK_TOOLS, ...(webOn ? [WEB_TOOL] : []), ...(webOn && useFetch ? [FETCH_TOOL] : [])];
+  const toolSet = () => [...(vol ? VOL_TOOLS : ASK_TOOLS), ...(webOn ? [WEB_TOOL] : []), ...(webOn && useFetch ? [FETCH_TOOL] : [])];
   for (let turn = 0; turn < 14 && !done; turn++) {
     let r;
     try { r = await claudeMsg(env, { system, messages, tools: toolSet(), max_tokens: 3000 }, webOn && useFetch ? 'web-fetch-2025-09-10' : undefined); }
@@ -1377,7 +1388,9 @@ Rules: lead with the direct answer in the first sentence. Use real numbers. Cite
             const sec = await secSection({ ticker: b.input.ticker || t, form, section, maxChars: 30000, nth: b.input.nth });
             const id = 'S' + (sources.length + 1); sources.push({ id, ticker: sec.ticker, form: sec.form, section: sec.sectionName, filed: sec.filed, period: sec.periodOfReport, url: sec.url, text: sec.text.slice(0, 600) });
             text = `[${id}] ${sec.ticker} ${sec.form} filed ${sec.filed}, ${sec.sectionName}${sec.truncated ? ' (first 30,000 characters)' : ''}:\n${sec.text}`;
-          } else if (b.name === 'list_filings') { text = JSON.stringify(await listFilings(b.input.ticker || t, b.input.form)); }
+          } else if (b.name === 'implied_vol') { const d = await impliedVol(String(b.input.symbol || '').toUpperCase()); data.add(d.symbol || b.input.symbol); text = `[D:${d.symbol || b.input.symbol}] ` + JSON.stringify(d); }
+          else if (b.name === 'leverage_board') { const d = await levBoard(env, ctx); text = '[D] ' + JSON.stringify(d).slice(0, 40000); }
+          else if (b.name === 'list_filings') { text = JSON.stringify(await listFilings(b.input.ticker || t, b.input.form)); }
           else if (b.name === 'read_filing') {
             const d = await readFiling(b.input.url, b.input.offset); const id = 'S' + (sources.length + 1);
             sources.push({ id, ticker: t, form: 'Filing', section: (d.url.split('/').pop() || '').slice(0, 60), filed: '', url: d.url, text: d.text.slice(0, 600) });
@@ -1507,7 +1520,7 @@ async function api(req, url, env, ctx) {
       if (!env.ANTHROPIC_API_KEY) return out({ error: 'AI is not switched on yet', needsKey: true }, 503, 0);
       if (!(await aiQuota(env, req))) return out({ error: 'Daily question limit reached; try again tomorrow' }, 429, 0);
       const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
-      if (path === '/api/ask') return out(await askAgent(body.ticker || q.get('ticker'), body.question || q.get('q'), body.context, env, ctx), 200, 0);
+      if (path === '/api/ask') return out(await askAgent(body.ticker || q.get('ticker'), body.question || q.get('q'), body.context, env, ctx, body.mode), 200, 0);
       return out(await aiScreen(body.query || q.get('q'), body.fields, env), 200, 0);
     }
     if (path === '/api/insiders') return out(await insiders(q.get('ticker') || ''), 200, 21600);

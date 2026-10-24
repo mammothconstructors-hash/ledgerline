@@ -206,6 +206,27 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .themeseg button:hover{color:var(--ink)}
 .themeseg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--sh1)}
 @media (max-width:1100px){.row3,.row2{grid-template-columns:minmax(0,1fr)!important}.row3>*,.row2>*{min-width:0}}
+/* Ask AI (2.15.0): floating button and side panel */
+.kask-fab{position:fixed;right:18px;bottom:18px;z-index:60;display:inline-flex;align-items:center;gap:8px;font:700 15px/1 var(--sans);padding:13px 18px;border-radius:999px;border:1px solid color-mix(in srgb,var(--accent) 50%,transparent);background:var(--accent);color:var(--page);box-shadow:var(--sh2);cursor:pointer}
+.kask-fab:hover{filter:brightness(1.06)}
+.kask{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);z-index:70;background:var(--panel);border-left:1px solid var(--rule);box-shadow:-12px 0 32px rgba(0,0,0,.18);display:flex;flex-direction:column;transform:translateX(102%);transition:transform .22s var(--ease)}
+.kask.open{transform:none}
+.kask-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--rule)}
+.kask-h h3{margin:0;font:700 18px var(--sans);flex:1}.kask-h small{display:block;font:500 13px var(--sans);color:var(--ink3);margin-top:2px}
+.kask-x{border:0;background:var(--strip);color:var(--ink);border-radius:999px;width:36px;height:36px;font-size:18px;cursor:pointer}
+.kask-b{flex:1;overflow:auto;padding:14px 16px;display:grid;gap:14px;align-content:start}
+.kask-f{padding:12px 16px;border-top:1px solid var(--rule);display:grid;gap:8px}
+.kask-row{display:flex;gap:8px}.kask-row input{flex:1;min-width:0;font:15px var(--sans);padding:11px 14px;border-radius:999px;border:1px solid var(--rule);background:var(--page);color:var(--ink)}
+.kask-row button{font:700 15px var(--sans);padding:0 18px;border-radius:999px;border:0;background:var(--accent);color:var(--page);cursor:pointer;min-height:44px}.kask-row button:disabled{opacity:.6}
+.kask-chips{display:flex;flex-wrap:wrap;gap:6px}.kask-chips button{font:600 13px var(--sans);padding:7px 11px;border-radius:999px;border:1px solid var(--rule);background:var(--page);color:var(--ink);cursor:pointer}
+.kask-q{font:700 15px var(--sans);color:var(--ink)}.kask-a{font:15px/1.55 var(--sans);color:var(--ink)}.kask-a p{margin:0 0 9px}.kask-a ul{margin:0 0 9px;padding-left:20px}.kask-a li{margin:0 0 5px}.kask-a h4{font:700 15px var(--sans);margin:12px 0 5px}
+.kask-tr{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;padding:5px 0;border-bottom:1px solid var(--grid);font-size:14px}.kask-tr:first-child{font-weight:700}
+.kask-c{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;font:700 12px var(--sans);vertical-align:2px;text-decoration:none;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.kask-c.w{background:color-mix(in srgb,var(--def) 18%,transparent);color:var(--def)}
+.kask-src{font-size:13.5px;color:var(--ink3);display:grid;gap:4px;border-top:1px solid var(--grid);padding-top:8px}.kask-src a{color:var(--ink)}
+.kask-item{border-bottom:1px solid var(--rule);padding-bottom:12px}
+.kask-wait{color:var(--ink3);font-size:14px}.kask-err{background:color-mix(in srgb,var(--bad) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--bad) 40%,transparent);border-radius:10px;padding:10px 12px;font-size:14px}
+@media (max-width:560px){.kask-fab span{display:none}.kask-fab{padding:13px 15px}}
 .tabrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}.tabrow .themeseg{margin-left:0}
 @media (max-width:560px){.themeseg button span{display:none}.themeseg button{padding:8px 10px}}
 .tabs{border-bottom:0;gap:4px;background:var(--strip);padding:4px;border-radius:999px;width:max-content;max-width:100%;box-shadow:inset 0 1px 2px rgba(30,28,25,.06)}
@@ -482,7 +503,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 const SHEET_ID="";
 const SHEET_URL="";
 const GS="Google Sheets", TV="Tradingview";
-const PAGE_VERSION="2.14.0s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
+const PAGE_VERSION="2.15.0s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
 const GROUPS={C:{name:"Cyclicals",c:"var(--cyc)"},T:{name:"Tech & Innovation",c:"var(--tech)"},D:{name:"Defensives",c:"var(--def)"},
   I:{name:"Indices",c:"var(--idx)"},B:{name:"Bonds",c:"var(--bnd)"},M:{name:"Commodities",c:"var(--cmd)"}};
 const SCREENS={sectors:{title:"Sector Rotation",groups:["C","T","D"]},macro:{title:"Cross-Asset Regime",groups:["I","B","M"]},vix:{title:"VIX Term & Carry"},fsv:{title:"Vol Surface Δ"},lev:{title:"3x Leverage"}};
@@ -1213,6 +1234,7 @@ function startFsv(){if(!LIVE.mcp||fsStarted)return;fsStarted=true;
 
 /* ---------- how it works ---------- */
 const GLOSS=[
+["Ask AI","Board","The ✦ button at the bottom right. An options and volatility analyst that reads the screen you have open and the glossary, checks live Cboe implied volatility for any symbol and the 3x data, and searches the web when the question is about something current.","Board marks a number from the board; a blue number is a web source, listed under the answer."],
 ["Online now","Board","Someone has the board open on screen and it checked in within the last two and a half minutes. The board checks in every 60 seconds while it is showing.","Owner only: seen on the Testers page with the screen each person is on."],
 ["Sign-in","Board","Opening the board after 20 minutes or more away. Each one is logged with the site it was for, so the owner sees which board a tester came in on.","Testers sign in with their email and a one-time code; sessions last two days for testers, 30 days for the owner."],
 ["Grade","3x funds","How a setup compares with buying on any day over the same hold. A: 5+ points better with an equal or better win rate and 8 or more separate signals. B: 2+ points better. C: slightly better. —: no better. thin: fewer than 4 separate signals.","Act on A and B. C is a small position at most. Ignore — and treat thin as a story, not an edge."],
@@ -1283,6 +1305,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.15.0 · LedgerLine worker 3.20.0 · Oct 24 2026</dt><dd>New ✦ Ask AI button at the bottom right of every screen. Ask anything about options and volatility: definitions, formulas (vol drag, implied move, the Greeks), how to read any chart, or what today’s numbers mean. It reads the screen you have open and the board’s glossary, can check live Cboe implied volatility for any symbol and the 3x data, and searches the web for anything current. Answers show their sources.</dd>
    <dt>Page 2.14.0 · Oct 24 2026</dt><dd>New look, easier on the eyes, the same as LedgerLine: warm off-white pages in light mode and soft charcoal in dark (never pure white or pure black), about 13:1 contrast for main text and 6–7:1 for secondary text. Light | Dark switch next to the Stats, Charts and How it works tabs (icons only on a phone); it remembers your choice and until then follows your device. The whole board now has a dark mode, not just the 3x screen. Inter for reading text with figures that line up; Source Serif stays for titles. Text is larger: nothing under 13px. Accent colors toned down; VIX price bars black (off-white in dark). Fixed on phones: the three Sector Rotation σ-move charts now stack in one column instead of squeezing side by side past the screen edge. The board is now checked automatically before every update, on every screen and tab, phone and desktop, light and dark.</dd>
    <dt>Page 2.13.0 · Oct 24 2026</dt><dd>3x Leverage, Edge finder: clearer setup names (Red day, Big red day, Losing streak, Pullback, Correction, Bear market, Trough, Deep trough, Crash zone, Washout, Vol crush, Calm at the highs). Every setup gets a <b>Grade</b> against buying on any day: A strong edge, B edge, C slight edge, — none, thin when there are fewer than 4 separate signals. Live now is wider: the last 10 trading days, plus any trough setup whose zone still holds today, and it leads with the best graded setup in plain words. New <b>Add ladders</b> test scaling in: a third at the fund 20% below its high, a third more at 30% and 40%; and a third at the index 5% below its high, more at 10% and 15%. The drag label call now compares against buying on any day too, so it can say Edge on.</dd>
    <dt>Page 2.12.2 · LedgerLine worker 3.18.1 · Oct 24 2026</dt><dd>3x Leverage: tapping a fund, a hold period, a drag label or a setup now redraws in place, so the page no longer jumps up or down (most noticeable on iPad). The backtest loading in also keeps your place.</dd>
@@ -1953,5 +1976,52 @@ renderHow();setupScreen();refresh();boot();
  const sync=()=>{const c=cur();w.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.th===c)))};
  w.addEventListener("click",e=>{const b=e.target.closest("button[data-th]");if(!b)return;e.stopPropagation();root.setAttribute("data-theme",b.dataset.th);try{localStorage.setItem("kgr_theme",b.dataset.th)}catch(_){}sync();try{window.dispatchEvent(new Event("resize"))}catch(_){}});
  try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",sync)}catch(_){}sync()})();
+</script>
+
+<button class="kask-fab" id="kaskFab" type="button" aria-controls="kask" aria-expanded="false"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg><span>Ask AI</span></button>
+<aside class="kask" id="kask" role="dialog" aria-label="Ask AI" aria-hidden="true">
+  <div class="kask-h"><div style="flex:1"><h3>Ask AI</h3><small>Options, volatility and 3x questions. It sees this screen, can check live IV for any symbol, and searches the web.</small></div><button class="kask-x" id="kaskX" type="button" aria-label="Close">×</button></div>
+  <div class="kask-b" id="kaskB"></div>
+  <div class="kask-f"><div class="kask-chips" id="kaskChips"></div><div class="kask-row"><input id="kaskQ" type="search" placeholder="Ask anything about options or vol…" autocomplete="off"><button id="kaskGo" type="button">Ask</button></div></div>
+</aside>
+<script>
+/* Ask AI on the board (2.15.0): sends the open screen's text and the glossary; the analyst can also pull Cboe IV for any symbol,
+   the board's 3x data, prices for any ticker, and search the web. Answers in Markdown with numbered sources. */
+(function(){
+ const API="https://sec-proxy.mammothconstructors.workers.dev", $k=id=>document.getElementById(id), box=$k("kask"), body=$k("kaskB");
+ const SAMPLES=["What is vol drag and how is it calculated?","Is TQQQ's drag heavy right now?","Explain contango in the VIX curve today","What does a 2σ move mean on this board?","IV vs HV: which is higher for QQQ now?","How do I read the skew chart?"];
+ const H=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+ const items=[]; let busy=false, err=null;
+ const ctxText=()=>{ const w=document.querySelector(".wrap"); let t=""; try{ const c=w.cloneNode(true); c.querySelectorAll("script,style,svg,button,nav,.kask,.kask-fab,.tabrow,.themeseg").forEach(e=>e.remove()); t=(c.innerText||c.textContent||"").replace(/[ \t]+/g," ").replace(/\n\s*\n+/g,"\n").trim(); }catch(e){}
+   let g=""; try{ if(typeof GLOSS!=="undefined") g=GLOSS.map(x=>"- "+x[0]+": "+x[2]+(x[3]?" ("+x[3]+")":"")).join("\n"); }catch(e){}
+   const scr=(document.querySelector("button.scr[aria-current=true]")||{}).textContent||"";
+   return ("Screen: "+scr+"\n"+t).slice(0,30000)+(g?"\n\n## Board glossary\n"+g.slice(0,14000):""); };
+ const nums=a=>{ const n={}; (a.webSources||[]).forEach((w,i)=>n[w.id]=i+1); return n; };
+ const md=a=>{ const N=nums(a), web=a.webSources||[];
+   const inl=x=>x.replace(/\*\*([^*\n]+)\*\*/g,"<b>$1</b>").replace(/\[(W\d+)\]/g,(m,id)=>{ const w=web.find(z=>z.id===id); return w?`<a class="kask-c w" href="${H(w.url)}" target="_blank" rel="noopener" title="${H(w.title)}">${N[id]}</a>`:""; })
+     .replace(/\[D(?::([A-Z0-9.^\-]+))?\]/g,(m,tk)=>`<span class="kask-c" title="Board data${tk?" for "+tk:""}">${tk?H(tk):"Board"}</span>`).replace(/\[S\d+\]/g,"");
+   let html="", list=null, para=[]; const flush=()=>{ if(para.length){ html+="<p>"+inl(para.join(" "))+"</p>"; para=[]; } if(list){ html+="<ul>"+list.map(l=>"<li>"+inl(l)+"</li>").join("")+"</ul>"; list=null; } };
+   for(const raw of H(a.answer).split("\n")){ const l=raw.trim(); if(!l){ flush(); continue; }
+     if(/^\|.*\|$/.test(l)){ flush(); if(/^\|[\s:\-|]+\|$/.test(l)) continue; html+='<div class="kask-tr">'+l.slice(1,-1).split("|").map(c=>"<span>"+inl(c.trim())+"</span>").join("")+"</div>"; continue; }
+     const h=l.match(/^#{1,4}\s+(.*)$/); if(h){ flush(); html+="<h4>"+inl(h[1])+"</h4>"; continue; }
+     const b=l.match(/^(?:[-•*]|\d+[.)])\s+(.*)$/); if(b){ if(para.length){ html+="<p>"+inl(para.join(" "))+"</p>"; para=[]; } (list=list||[]).push(b[1]); continue; }
+     if(list) flush(); para.push(l); }
+   flush(); return html; };
+ const draw=()=>{ body.innerHTML=(err?`<div class="kask-err">${H(err)}</div>`:"")+(busy?`<div class="kask-wait">Working on it: reading the board, checking live IV and the web. Up to a minute when it needs a search.</div>`:"")
+   +(items.length?items.map(a=>`<div class="kask-item"><div class="kask-q">${H(a.question)}</div><div class="kask-a">${md(a)}</div>${(a.webSources||[]).length?`<div class="kask-src">${a.webSources.map((w,i)=>`<div><span class="kask-c w">${i+1}</span> <a href="${H(w.url)}" target="_blank" rel="noopener">${H(w.title)}</a></div>`).join("")}</div>`:""}</div>`).join("")
+     :(busy?"":`<div class="kask-wait">Ask about anything on the board, any options concept or formula, or any symbol's volatility.</div>`));
+   $k("kaskGo").disabled=busy; $k("kaskGo").textContent=busy?"Working…":"Ask"; $k("kaskChips").hidden=items.length>0; };
+ const ask=async q=>{ q=String(q||"").trim(); if(!q||busy) return; busy=true; err=null; draw(); const context=ctxText(); let a=null, last="";
+   for(let k=0;k<2&&!a;k++){ try{ const r=await fetch(API+"/api/ask",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({mode:"vol",question:q,context})}); const j=await r.json().catch(()=>({})); if(r.ok&&j.answer) a=j; else { last=j.error||("Error "+r.status); if(r.status===429||j.needsKey) break; } }catch(e){ last="Couldn't reach the data service."; } if(!a&&k===0) await new Promise(r=>setTimeout(r,1500)); }
+   busy=false; if(a){ items.unshift(a); $k("kaskQ").value=""; } else err=last==="AI is not switched on yet"?"Ask AI isn't switched on yet.":last; draw(); };
+ const open=v=>{ box.classList.toggle("open",v); box.setAttribute("aria-hidden",String(!v)); $k("kaskFab").setAttribute("aria-expanded",String(v)); if(v) setTimeout(()=>$k("kaskQ").focus(),220); };
+ $k("kaskChips").innerHTML=SAMPLES.map(x=>`<button type="button" data-q="${H(x)}">${H(x)}</button>`).join("");
+ $k("kaskChips").addEventListener("click",e=>{ const b=e.target.closest("button[data-q]"); if(b) ask(b.dataset.q); });
+ $k("kaskGo").addEventListener("click",()=>ask($k("kaskQ").value)); $k("kaskQ").addEventListener("keydown",e=>{ if(e.key==="Enter") ask($k("kaskQ").value); });
+ $k("kaskFab").addEventListener("click",()=>open(!box.classList.contains("open"))); $k("kaskX").addEventListener("click",()=>open(false));
+ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&box.classList.contains("open")) open(false); });
+ window.kaskTest={ask,ctxText,items};
+ draw();
+})();
 </script>
 </body></html>
