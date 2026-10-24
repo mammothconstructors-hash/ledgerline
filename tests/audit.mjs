@@ -19,7 +19,7 @@ const p=await mk(1280,900);
 const BAD=/NaN|undefined|\[object Object\]|Infinity|null%|\$null|−0\.0%|function \(|=>/;
 const issues=[]; let clicks=0;
 async function scan(pg,where){ const t=await pg.locator('#main').innerText().catch(()=>''); const m=t.match(new RegExp('.{0,40}('+BAD.source+').{0,40}','g')); if(m) issues.push(where+' :: '+[...new Set(m)].slice(0,3).join(' || ')); const ow=await pg.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth); if(ow>2) issues.push(where+' :: horizontal overflow '+ow+'px'); }
-const ATTRS=['fin','fg','fh','per','tper','tint','tmode','mode','outmode','bench','strx','ind','exs','cat','exsort'];
+const ATTRS=['fin','fg','fh','per','tper','tint','tmode','mode','outmode','bench','ddwin','strx','ind','exs','cat','exsort'];
 async function crawl(pg,where){ await scan(pg,where);
   for(const a of ATTRS){ const n=await pg.locator(`#main [data-${a}]`).count(); for(let i=0;i<Math.min(n,14);i++){ const el=pg.locator(`#main [data-${a}]`).nth(i); if(!(await el.isVisible().catch(()=>false))) continue; const v=await el.getAttribute('data-'+a); await el.click({timeout:2000}).catch(()=>{}); clicks++; await pg.waitForTimeout(120); await scan(pg,where+' ['+a+'='+v+']'); } } }
 for(const [w,h] of [[1280,900],[390,800]]){

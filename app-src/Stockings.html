@@ -2137,10 +2137,21 @@ function sectorRankHtml(){
     <p class="fine" style="margin-top:6px">Total return with dividends reinvested, from split-adjusted end-of-day closes; week = 7 calendar days, month = 30, quarter = 91, year = 365. Rebuilt every evening after the close. Rank 1 is the best performer.</p></div>`; }
 /* ============ Drawdowns and support (last 5 years of daily closes) ============ */
 const ddDay=ts=>new Date(ts*1000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
-function ddCalc(d){
-  if(!d||!d.c||d.c.length<250) return null;
-  const cut=d.t[d.t.length-1]-5*365.25*86400; let i0=d.t.findIndex(t=>t>=cut); if(i0<0) i0=0;
-  const t=d.t.slice(i0), c=d.c.slice(i0), lo=(d.l||d.c).slice(i0), op=(d.o||d.c).slice(i0), hh=(d.h||d.c).slice(i0), n=c.length; if(n<120) return null;
+// period picker: MTD, QTD and YTD measure from the period's own high; 1-10 years from the high inside that window
+const DD_WINS=[['mtd','MTD'],['qtd','QTD'],['ytd','YTD'],['1y','1Y'],['3y','3Y'],['5y','5Y'],['10y','10Y']];
+let ddWin=(()=>{ const w=LS.get('ddwin'); return DD_WINS.some(x=>x[0]===w)?w:'5y'; })();
+const ddYears=w=>({ '1y':1, '3y':3, '5y':5, '10y':10 })[w]||null;
+function ddStart(lastTs,w){ const d=new Date(lastTs*1000), y=d.getUTCFullYear(), m=d.getUTCMonth();
+  if(w==='mtd') return Date.UTC(y,m,1)/1000; if(w==='qtd') return Date.UTC(y,m-m%3,1)/1000; if(w==='ytd') return Date.UTC(y,0,1)/1000;
+  return lastTs-ddYears(w)*365.25*86400; }
+const ddLabel=w=>({mtd:'month to date',qtd:'quarter to date',ytd:'year to date','1y':'last year','3y':'last 3 years','5y':'last 5 years','10y':'last 10 years'})[w];
+// daily bars when they reach back far enough, else weekly (10 years)
+function ddSeries(daily,weekly,w){ const ok=x=>x&&x.c&&x.c.length>3; const last=ok(daily)?daily.t[daily.t.length-1]:ok(weekly)?weekly.t[weekly.t.length-1]:null; if(last==null) return null;
+  const st=ddStart(last,w); if(ok(daily)&&daily.t[0]<=st+10*86400) return {d:daily,wk:false}; if(ok(weekly)&&weekly.t[0]<=st+20*86400) return {d:weekly,wk:true}; return ok(daily)?{d:daily,wk:false,short:true}:ok(weekly)?{d:weekly,wk:true,short:true}:null; }
+function ddCalc(d,w=ddWin){
+  if(!d||!d.c||d.c.length<5) return null;
+  const cut=ddStart(d.t[d.t.length-1],w); let i0=d.t.findIndex(t=>t>=cut); if(i0<0) i0=0;
+  const t=d.t.slice(i0), c=d.c.slice(i0), lo=(d.l||d.c).slice(i0), op=(d.o||d.c).slice(i0), hh=(d.h||d.c).slice(i0), n=c.length; if(n<3) return null;
   const dd=new Array(n), eps=[]; let pk=c[0], pki=0, ep=null;
   for(let i=0;i<n;i++){
     if(c[i]>=pk){ if(ep){ ep.rec=i; eps.push(ep); ep=null; } pk=c[i]; pki=i; }
@@ -2153,7 +2164,7 @@ function ddCalc(d){
   const avgDepth=big.length?big.reduce((a,e)=>a+e.depth,0)/big.length:null;
   const avgUnder=dd.reduce((a,v)=>a+v,0)/n, today=dd[n-1], deeper=dd.filter(v=>v<today).length/n*100;
   // support: swing lows (lowest low 10 sessions each side) and drawdown troughs, grouped into zones within 2.5%
-  const piv=[]; for(let i=10;i<n-3;i++){ let ok=true; for(let k=Math.max(0,i-10);k<=Math.min(n-1,i+10);k++) if(lo[k]<lo[i]){ ok=false; break; } if(ok) piv.push({p:lo[i],i}); }
+  const pw=n>400?10:n>120?6:3, piv=[]; for(let i=pw;i<n-2;i++){ let ok=true; for(let k=Math.max(0,i-pw);k<=Math.min(n-1,i+pw);k++) if(lo[k]<lo[i]){ ok=false; break; } if(ok) piv.push({p:lo[i],i}); }
   big.forEach(e=>piv.push({p:lo[e.tr],i:e.tr}));
   piv.sort((a,b)=>a.p-b.p); const zones=[];
   for(const v of piv){ const z=zones[zones.length-1]; if(z&&v.p<=z.lo*1.025){ z.pts.push(v); z.hi=Math.max(z.hi,v.p); } else zones.push({lo:v.p,hi:v.p,pts:[v]}); }
@@ -2167,20 +2178,20 @@ function ddSvg(D){
   const W=900,H=190,pl=40,pr=10,pt=10,pb=22, lo=Math.min(-5,Math.floor(Math.min(...D.dd)/10)*10), X=i=>pl+i/(D.n-1)*(W-pl-pr), Y=v=>pt+(v/lo)*(H-pt-pb);
   let path=`M${X(0)},${Y(0)}`; const step=Math.max(1,Math.floor(D.n/700)); for(let i=0;i<D.n;i+=step) path+=`L${X(i).toFixed(1)},${Y(D.dd[i]).toFixed(1)}`; path+=`L${X(D.n-1)},${Y(D.dd[D.n-1])}L${X(D.n-1)},${Y(0)}Z`;
   const grid=[]; for(let v=0;v>=lo;v-=lo<-60?20:10) grid.push(`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${pl-6}" y="${Y(v)+4}" text-anchor="end" class="svgtxt">${v}%</text>`);
-  const yrs=[]; let ly=null; D.t.forEach((ts,i)=>{ const y=new Date(ts*1000).getUTCFullYear(); if(y!==ly&&i>5){ yrs.push(`<text x="${X(i)}" y="${H-6}" text-anchor="middle" class="svgtxt">${y}</text>`); } ly=y; });
+  const short=D.t[D.n-1]-D.t[0]<550*86400, yrs=[]; let ly=null; D.t.forEach((ts,i)=>{ const dt=new Date(ts*1000), y=short?dt.getUTCFullYear()*12+dt.getUTCMonth():dt.getUTCFullYear(); if(y!==ly&&i>0){ yrs.push(`<text x="${X(i)}" y="${H-6}" text-anchor="middle" class="svgtxt">${short?dt.toLocaleDateString('en-US',{month:'short',timeZone:'UTC'}):y}</text>`); } ly=y; });
   const avg=isNum(D.avgDepth)?`<line x1="${pl}" x2="${W-pr}" y1="${Y(D.avgDepth)}" y2="${Y(D.avgDepth)}" stroke="var(--claret)" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${W-pr}" y="${Y(D.avgDepth)-5}" text-anchor="end" class="svgtxt" style="fill:var(--claret)">average 10%+ drop ${D.avgDepth.toFixed(1)}%</text>`:'';
   const w=D.worst?`<circle cx="${X(D.worst.tr)}" cy="${Y(D.worst.depth)}" r="4" fill="var(--down)"/>`:'';
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Drawdown from the running high, last five years" style="width:100%;height:auto;display:block">${grid.join('')}${yrs.join('')}<path d="${path}" fill="color-mix(in srgb,var(--down) 22%,transparent)" stroke="var(--down)" stroke-width="1.2"/>${avg}${w}<circle cx="${X(D.n-1)}" cy="${Y(D.today)}" r="5" fill="var(--ink)" stroke="var(--bg)" stroke-width="2"/></svg>`;
 }
 function ddPriceSvg(D){   // weekly OHLC bars in black, with the average-drop and 5-year-worst levels from today's high
   const wk=[]; let cur=null;
-  for(let i=0;i<D.n;i++){ const w=Math.floor((D.t[i]/86400+3)/7); if(!cur||cur.w!==w){ cur={w,i,o:D.o[i],h:D.h[i],l:D.l[i],c:D.c[i]}; wk.push(cur); } else { cur.h=Math.max(cur.h,D.h[i]); cur.l=Math.min(cur.l,D.l[i]); cur.c=D.c[i]; } }
+  const perDay=D.n<=320; for(let i=0;i<D.n;i++){ const w=perDay?i:Math.floor((D.t[i]/86400+3)/7); if(!cur||cur.w!==w){ cur={w,i,o:D.o[i],h:D.h[i],l:D.l[i],c:D.c[i]}; wk.push(cur); } else { cur.h=Math.max(cur.h,D.h[i]); cur.l=Math.min(cur.l,D.l[i]); cur.c=D.c[i]; } }
   const lvA=isNum(D.avgDepth)?D.hiNow*(1+D.avgDepth/100):null, lvW=D.worst?D.hiNow*(1+D.worst.depth/100):null;
   const lo=Math.min(...wk.map(b=>b.l),lvW||Infinity)*0.97, hi=Math.max(...wk.map(b=>b.h))*1.02, W=900,H=260,pl=48,pr=96,pt=10,pb=22;
   const X=k=>pl+(k+0.5)/wk.length*(W-pl-pr), Y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb), bw=Math.max(1,(W-pl-pr)/wk.length*0.35);
   const bars=wk.map((b,k)=>{ const x=X(k).toFixed(1); return `M${x},${Y(b.h).toFixed(1)}V${Y(b.l).toFixed(1)}M${(X(k)-bw).toFixed(1)},${Y(b.o).toFixed(1)}H${x}M${x},${Y(b.c).toFixed(1)}H${(X(k)+bw).toFixed(1)}`; }).join('');
   const tk=niceTicks(lo,hi,5).map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${pl-6}" y="${Y(v)+4}" text-anchor="end" class="svgtxt">${v>=1000?Math.round(v).toLocaleString():v}</text>`).join('');
-  const yrs=[]; let ly=null; wk.forEach((b,k)=>{ const y=new Date(D.t[b.i]*1000).getUTCFullYear(); if(y!==ly&&k>2) yrs.push(`<text x="${X(k)}" y="${H-6}" text-anchor="middle" class="svgtxt">${y}</text>`); ly=y; });
+  const short=D.t[D.n-1]-D.t[0]<550*86400, yrs=[]; let ly=null; wk.forEach((b,k)=>{ const dt=new Date(D.t[b.i]*1000), y=short?dt.getUTCFullYear()*12+dt.getUTCMonth():dt.getUTCFullYear(); if(y!==ly&&k>0) yrs.push(`<text x="${X(k)}" y="${H-6}" text-anchor="middle" class="svgtxt">${short?dt.toLocaleDateString('en-US',{month:'short',timeZone:'UTC'}):y}</text>`); ly=y; });
   const lvl=(v,col,lab)=>v?`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="${col}" stroke-width="1.5" stroke-dasharray="6 4"/><text x="${W-pr+4}" y="${Y(v)-2}" class="svgtxt" style="fill:${col}">${lab}</text><text x="${W-pr+4}" y="${Y(v)+10}" class="svgtxt" style="fill:${col}">${money(v)}</text>`:'';
   const hiL=`<line x1="${pl}" x2="${W-pr}" y1="${Y(D.hiNow)}" y2="${Y(D.hiNow)}" stroke="var(--muted)" stroke-dasharray="2 3"/><text x="${W-pr+4}" y="${Y(D.hiNow)+4}" class="svgtxt">High ${money(D.hiNow)}</text>`;
   const now=`<circle cx="${X(wk.length-1)}" cy="${Y(D.px)}" r="5" fill="var(--teal)" stroke="var(--bg)" stroke-width="2"/>`;
@@ -2214,16 +2225,18 @@ function ddRead(D){
   return 'A shallow pullback so far.';
 }
 let DDB={};
+function ddPick(){ return `<div class="seg" role="group" aria-label="Drawdown period">${DD_WINS.map(([k,l])=>`<button type="button" data-ddwin="${k}" class="${ddWin===k?'on':''}">${l}</button>`).join('')}</div>`; }
 function ddHtml(){
-  const D=ddCalc(S&&S.d); if(!D) return '';
+  const sr=ddSeries(S&&S.d,S&&S.px,ddWin), D=sr&&ddCalc(sr.d); if(!D) return '';
   const w=D.worst, rec=w&&w.rec!=null?`recovered ${ddDay(D.t[w.rec])} (${Math.round((D.t[w.rec]-D.t[w.tr])/86400)} days)`:'<b>not yet recovered</b>';
-  const stats=statCells([['5-yr worst drop',w?pct(w.depth,1):'—'],['Average 10%+ drop',isNum(D.avgDepth)?pct(D.avgDepth,1):'none'],['Average distance below high',pct(D.avgUnder,1)],['Below its high now',pct(D.today,1)+' <span class="muted">high '+ddDay(D.t[D.hiAt])+'</span>'],['10%+ drops in 5 years',String(D.big.length)],['Days deeper than today',pct(D.deeper,0)]]);
+  const stats=statCells([[(ddYears(ddWin)?ddYears(ddWin)+'-yr':ddWin.toUpperCase())+' worst drop',w?pct(w.depth,1):'—'],['Average 10%+ drop',isNum(D.avgDepth)?pct(D.avgDepth,1):'none'],['Average distance below high',pct(D.avgUnder,1)],['Below its high now',pct(D.today,1)+' <span class="muted">high '+ddDay(D.t[D.hiAt])+'</span>'],['10%+ drops in the period',String(D.big.length)],['Days deeper than today',pct(D.deeper,0)]]);
   const rows=D.big.slice(0,8).map(e=>`<tr><td style="text-align:left">${ddDay(D.t[e.pk])}</td><td>${ddDay(D.t[e.tr])}</td><td class="num neg"><b>${pct(e.depth,1)}</b></td><td class="num">${Math.round((D.t[e.tr]-D.t[e.pk])/86400)}</td><td>${e.rec!=null?ddDay(D.t[e.rec])+` <span class="muted">(${Math.round((D.t[e.rec]-D.t[e.tr])/86400)} d)</span>`:'<b>still below</b>'}</td></tr>`).join('');
   const sup=D.sup.map(z=>`<tr><td style="text-align:left"><b>${money(z.mid)}</b> <span class="muted">${money(z.lo)}–${money(z.hi)}</span></td><td class="num">${pct((z.mid/D.px-1)*100,1)}</td><td class="num">${z.touch}</td><td>${ddDay(D.t[z.last])}</td></tr>`).join('');
-  return `<div class="sec" id="ddSec"><h3>Drawdowns and support <small>daily closes since ${ddDay(D.from)}</small></h3>
+  return `<div class="sec" id="ddSec"><h3>Drawdowns and support <small>${ddLabel(ddWin)}, ${sr.wk?'weekly':'daily'} closes since ${ddDay(D.from)}${sr.short?' (all the history there is)':''}</small></h3>
+    <div class="chartbar">${ddPick()}</div>
     <p class="stand" style="font-size:16px;margin:0 0 10px">Closed ${pct(Math.abs(D.today),1)} below its ${ddDay(D.t[D.hiAt])} high of ${money(D.hiNow)}. ${ddRead(D)}</p>
     ${ddMeter(D)}${stats}
-    <h3 style="margin-top:14px">Price with the drop levels <small>weekly bars</small></h3><div>${ddPriceSvg(D)}</div>
+    <h3 style="margin-top:14px">Price with the drop levels <small>${D.n<=320&&!sr.wk?'daily':'weekly'} bars</small></h3><div>${ddPriceSvg(D)}</div>
     <p class="fine">Dashed lines: the price at the average 10%+ drop and at the 5-year worst, measured from today’s high. Teal dot: today.</p>
     <h3 style="margin-top:14px">Below the high, every day</h3><div>${ddSvg(D)}</div>
     <p class="fine">Shaded: how far below its running high each day closed. Dashed: the average depth of its 10%+ drops. Red dot: the 5-year worst, ${w?ddDay(D.t[w.pk])+' to '+ddDay(D.t[w.tr]):''}, ${rec}. Black dot: today.</p>
@@ -2235,14 +2248,14 @@ function ddHtml(){
     <div id="ddBench">${ddBenchHtml()}</div></div>`;
 }
 function ddBenchHtml(){
-  const sets=[['SPY',S&&S.spyD||(bm('SPY').d)],['QQQ',S&&S.qqqD||(bm('QQQ').d)],['TQQQ',DDB.TQQQ]];
-  const rows=sets.map(([k,d])=>{ const D=ddCalc(d); if(!D) return `<tr><td style="text-align:left">${k}</td><td colspan="5" class="muted">${k==='TQQQ'&&DDB.TQQQ===undefined?'loading…':'no daily history'}</td></tr>`;
+  const sets=[['SPY',S&&S.spyD||(bm('SPY').d),S&&S.spy||bm('SPY').w],['QQQ',S&&S.qqqD||(bm('QQQ').d),S&&S.qqq||bm('QQQ').w],['TQQQ',DDB.TQQQ,DDB.TQQQw]];
+  const rows=sets.map(([k,d,wk])=>{ const sr=ddSeries(d,wk,ddWin), D=sr&&ddCalc(sr.d); if(!D) return `<tr><td style="text-align:left">${k}</td><td colspan="5" class="muted">${k==='TQQQ'&&DDB.TQQQ===undefined?'loading…':'no daily history'}</td></tr>`;
     return `<tr><td style="text-align:left"><b>${k}</b></td><td class="num neg">${pct(D.worst.depth,1)}</td><td class="num">${isNum(D.avgDepth)?pct(D.avgDepth,1):'—'}</td><td class="num"><b>${pct(D.today,1)}</b></td><td>${ddDay(D.t[D.hiAt])}</td><td class="muted">${ddRead(D)}</td></tr>`; }).join('');
-  return `<h3 style="margin-top:16px">Against SPY, QQQ and TQQQ</h3><div class="tblwrap"><table><thead><tr><th style="text-align:left">Fund</th><th>5-yr worst</th><th>Avg 10%+ drop</th><th>Below high now</th><th style="text-align:left">High set</th><th style="text-align:left">Read</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<h3 style="margin-top:16px">Against SPY, QQQ and TQQQ</h3><div class="tblwrap"><table><thead><tr><th style="text-align:left">Fund</th><th>${(ddYears(ddWin)?ddYears(ddWin)+'-yr':ddWin.toUpperCase())} worst</th><th>Avg 10%+ drop</th><th>Below high now</th><th style="text-align:left">High set</th><th style="text-align:left">Read</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 async function fillDD(){
   if(!document.getElementById('ddBench')||DDB.TQQQ!==undefined) return;
-  try{ const m=SITE?await getJSON('/api/market?symbol=TQQQ'):null; const d=m&&(m.daily&&m.daily.c?m.daily:m.daily&&m.daily.bars); DDB.TQQQ=d&&d.c?d:null; }catch(e){ DDB.TQQQ=null; }
+  try{ const m=SITE?await getJSON('/api/market?symbol=TQQQ'):null; const d=m&&(m.daily&&m.daily.c?m.daily:m.daily&&m.daily.bars); DDB.TQQQ=d&&d.c?d:null; DDB.TQQQw=m&&m.weekly&&m.weekly.c?m.weekly:null; }catch(e){ DDB.TQQQ=null; DDB.TQQQw=null; }
   const el=document.getElementById('ddBench'); if(el) el.innerHTML=ddBenchHtml();
 }
 function techHtml(){
@@ -2530,7 +2543,7 @@ function checkHtml(){
 const APP_VERSION='8.7', WORKER_NEEDED='3.5', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
   ['App 7.1','Oct 22, 2026',['Valuation uses core EPS when non-operating gains are more than a quarter of pretax profit (Amazon’s 2025–26 investment mark-ups had pushed its trailing EPS to $12.43 against about $7 from the business, and its fair value to $1,033); the Valuation tab says when this applies','Risk on / off now uses the 50-day vs 200-day EMA (10 vs 40 weeks); 200 EMA added to the Overview chart','Fixed: the return line above the Overview chart now matches the period boxes (both measured from the close before the period starts)']],
-  ['App 8.7','Oct 23, 2026',['☆ Save on ETF pages: funds go to My list with the price on the day','Drawdowns: price chart in black weekly bars with the average-drop and 5-year-worst levels drawn across it, and a bar chart of every 5%+ drop against the average','Drawdowns: Where a normal drop would land: price at a 10% pullback, the average 10%+ drop, 20% and the 5-year worst from today’s high, each matched to the nearest support zone','ETFs: new 3x leveraged group first: TQQQ, UPRO, UDOW, URTY, TNA and SOXL','SPY’s page compares with QQQ instead of itself; a benchmark fund drops its own column from the performance table','Drawdowns and support on every Technicals view (stocks and ETFs): 5-year worst peak-to-trough drop with dates and recovery, average 10%+ drop, average distance below the high, where today sits on a meter and an underwater chart, every 10%+ drop listed, support zones below today, and SPY, QQQ and TQQQ side by side']],
+  ['App 8.7','Oct 23, 2026',['☆ Save on ETF pages: funds go to My list with the price on the day','Drawdowns: period picker MTD, QTD, YTD, 1Y, 3Y, 5Y (default) and 10Y; short periods measure from the period’s own high, 10Y uses weekly prices, and SPY, QQQ and TQQQ follow the same period','Drawdowns: price chart in black weekly bars with the average-drop and 5-year-worst levels drawn across it, and a bar chart of every 5%+ drop against the average','Drawdowns: Where a normal drop would land: price at a 10% pullback, the average 10%+ drop, 20% and the 5-year worst from today’s high, each matched to the nearest support zone','ETFs: new 3x leveraged group first: TQQQ, UPRO, UDOW, URTY, TNA and SOXL','SPY’s page compares with QQQ instead of itself; a benchmark fund drops its own column from the performance table','Drawdowns and support on every Technicals view (stocks and ETFs): 5-year worst peak-to-trough drop with dates and recovery, average 10%+ drop, average distance below the high, where today sits on a meter and an underwater chart, every 10%+ drop listed, support zones below today, and SPY, QQQ and TQQQ side by side']],
   ['App 8.6','Oct 23, 2026',['ETF holdings are current: read daily from State Street (SPDR), iShares and Invesco and monthly from Vanguard, with the SEC N-PORT filing only as a fallback; each page shows the as-of date and where the list came from','SPY, QQQ, DIA and IWM now use the daily file too, not the quarterly list built into the page']],
   ['App 8.5','Oct 23, 2026',['ETFs in the top bar: every fund LedgerLine knows, grouped (market indexes, whole market and world, dividends, sectors, themes), plus a box for any ETF ticker','Every ETF page now shows what it holds: top 25 holdings, top-10 share, net assets and sector mix, read from the fund’s latest SEC N-PORT filing (before, only SPY, QQQ, DIA and IWM had holdings); cash and securities-lending collateral are shown on their own line, not as a holding','Worker 3.12: sector ranks cost one price lookup per stock a night instead of five, and the Marketstack usage counter now counts every stock in a request, the way Marketstack bills']],
   ['App 8.4','Oct 23, 2026',['Owner: 👥 Testers in the top bar (only for the owner’s sign-in) to add, name and remove testers on LedgerLine and the Vol Board, no Cloudflare screens needed']],
@@ -3957,6 +3970,7 @@ document.addEventListener('click',e=>{
   if(d.fg){ futG=d.fg; LS.set('futg',futG); render(); return; }
   if(d.fh){ futH=+d.fh; LS.set('futh',futH); render(); return; }
   if(d.bench){ benchPick=d.bench; LS.set('bench',benchPick); render(); return; }
+  if(d.ddwin){ ddWin=d.ddwin; LS.set('ddwin',ddWin); const y=window.scrollY; render(); window.scrollTo({top:y}); return; }
   if(d.per){ chartPeriod=d.per; LS.set('period',chartPeriod); render(); return; }
   if(b.id==='reAi'){ runAnalysis(loadSeq,true); return; }
   if(b.id==='saveBtn'){ save(); return; }
