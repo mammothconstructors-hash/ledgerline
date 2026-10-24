@@ -1,0 +1,29 @@
+# Asks the live Ask AI a few real questions (LedgerLine and Vol Board modes) and reports how each answer was built.
+# Manual only: each run costs a few cents of AI usage.
+name: Ask AI live check
+on:
+  workflow_dispatch:
+    inputs:
+      question:
+        description: Optional extra LedgerLine question about AMD
+        required: false
+jobs:
+  ask:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Ask the live service
+        env: { EXTRA: "${{ github.event.inputs.question }}" }
+        run: |
+          API=https://sec-proxy.mammothconstructors.workers.dev/api/ask
+          ask() {   # mode ticker question
+            body=$(jq -n --arg m "$1" --arg t "$2" --arg q "$3" '{mode:$m,ticker:$t,question:$q,context:""}')
+            t0=$(date +%s); code=$(curl -s -m 170 -o r.json -w '%{http_code}' -H 'content-type: application/json' -d "$body" $API); t1=$(date +%s)
+            summary=$(jq -r '"web=\(.web) filings=\((.sources//[])|length) websources=\((.webSources//[])|length) looked=\((.looked//[])|join(","))"' r.json 2>/dev/null)
+            echo "::notice title=$1 $2 ($((t1-t0))s, HTTP $code)::$3 -> $summary"
+            jq -r '.answer // .error' r.json | head -c 1500 | tr '\n' ' ' | sed 's/^/::notice title=answer::/'; echo
+          }
+          ask "" AMD "Are there any lawsuits against AMD, and what is their status?"
+          ask "" AMD "Is AMD cheap or expensive right now versus NVDA?"
+          ask vol "" "What is vol drag on TQQQ right now and how is it calculated?"
+          [ -n "$EXTRA" ] && ask "" AMD "$EXTRA" || true
