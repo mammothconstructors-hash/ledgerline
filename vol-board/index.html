@@ -211,6 +211,9 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 .askbtn span{font:inherit;letter-spacing:normal;text-transform:none;color:inherit}
 .askbtn:hover{background:color-mix(in srgb,var(--accent) 18%,var(--panel))}
 .askbtn[aria-expanded="true"]{background:var(--accent);color:var(--page);border-color:var(--accent)}
+.screens .askbtn{margin-left:auto;flex:0 0 auto}
+@media (max-width:1300px){.screens{gap:2px}.screens .scr{padding:6px 11px}}
+@media (min-width:600px) and (max-width:1100px){.screens{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}.screens::-webkit-scrollbar{display:none}.screens>*{flex:0 0 auto}.screens .askbtn{position:sticky;right:0;box-shadow:-18px 0 12px -4px var(--page),18px 0 0 0 var(--page)}}
 .kask{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);z-index:70;background:var(--panel);border-left:1px solid var(--rule);box-shadow:-12px 0 32px rgba(0,0,0,.18);display:flex;flex-direction:column;transform:translateX(102%);transition:transform .22s var(--ease)}
 .kask.open{transform:none}
 .kask-h{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--rule)}
@@ -505,7 +508,7 @@ h1{font:700 32px/1.1 var(--sans);letter-spacing:-.02em}
 const SHEET_ID="";
 const SHEET_URL="";
 const GS="Google Sheets", TV="Tradingview";
-const PAGE_VERSION="2.16.0s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
+const PAGE_VERSION="2.16.1s", PAGE_NEEDS="1.5.0"; // page 1.0 sectors sample · 1.1 live feeds · 2.0 macro, VIX analyser, metrics table
 const GROUPS={C:{name:"Cyclicals",c:"var(--cyc)"},T:{name:"Tech & Innovation",c:"var(--tech)"},D:{name:"Defensives",c:"var(--def)"},
   I:{name:"Indices",c:"var(--idx)"},B:{name:"Bonds",c:"var(--bnd)"},M:{name:"Commodities",c:"var(--cmd)"}};
 const SCREENS={sectors:{title:"Sector Rotation",groups:["C","T","D"]},macro:{title:"Cross-Asset Regime",groups:["I","B","M"]},vix:{title:"VIX Term & Carry"},fsv:{title:"Vol Surface Δ"},lev:{title:"3x Leverage"}};
@@ -1307,6 +1310,7 @@ function renderHow(){
   const S=[
   ["What's new",[
   ["log","What's new and fixed","By version",`<dl>
+   <dt>Page 2.16.1 · Oct 24 2026</dt><dd>Top bar fits on iPad: the screen names and ✦ Ask AI stay on one line (swipe the names sideways on a smaller iPad), with Ask AI pinned at the right end.</dd>
    <dt>Page 2.16.0 · LedgerLine worker 3.20.1 · Oct 24 2026</dt><dd>Ask AI can run scans across the whole board: every sector, index, bond and commodity ETF with IV, IV percentile and z-score, realized vol, carry, skew, term structure, returns, σ moves and put/call, whichever screen is open. Try “Which sectors have the highest IV vs their own history?” or “Where are options cheapest right now?”. Sample questions are grouped: How to, Scans and Concepts.</dd>
    <dt>Page 2.15.1 · Oct 24 2026</dt><dd>✦ Ask AI moved from the bottom-right corner into the top bar, next to the screen names.</dd>
    <dt>Page 2.15.0 · LedgerLine worker 3.20.0 · Oct 24 2026</dt><dd>New ✦ Ask AI button at the bottom right of every screen. Ask anything about options and volatility: definitions, formulas (vol drag, implied move, the Greeks), how to read any chart, or what today’s numbers mean. It reads the screen you have open and the board’s glossary, can check live Cboe implied volatility for any symbol and the 3x data, and searches the web for anything current. Answers show their sources.</dd>
