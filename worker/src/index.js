@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.18.0';
+const WORKER_VERSION = '3.18.1';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -346,6 +346,29 @@ async function levRegime(fund, env, ctx) {
     bills: 'Mix = 1/' + L + ' in ' + fund + ' and the rest in 3-month T-bills (monthly average rate, held without rebalancing), the same starting market exposure as 100% ' + pair.u + '.',
     method: 'Each day is labelled by the drag (L^2 - L)/2 x HV20^2 of ' + pair.u + ' that day. Forward windows are 21, 63, 126, 252, 504 and 756 trading days and overlap; 126 and longer start every 5th day.', checkedAt: Date.now(), worker: WORKER_VERSION, cols };
   if (cache) { const put = cache.put(key, new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=21600' } })); if (ctx && ctx.waitUntil) ctx.waitUntil(put); else await put; }
+  return out;
+}
+// 3.17.2: Edge finder summary computed here too (same rules as the Vol Board page), for checks and alerts
+const EDGE_SU = [
+  ['all', 'Any day', () => true, 0], ['u2', 'index down 2%+ day', (C, r) => C.ud1[r] <= -2, 0], ['u3', 'index down 3%+ day', (C, r) => C.ud1[r] <= -3, 0],
+  ['dn3', 'index 3 red days', (C, r) => r >= 2 && C.ud1[r] < 0 && C.ud1[r - 1] < 0 && C.ud1[r - 2] < 0, 0],
+  ['i5', 'index 5% below high', (C, r) => C.udh[r] <= -5, 1], ['i10', 'index 10% below high', (C, r) => C.udh[r] <= -10, 1], ['i20', 'index 20% below high', (C, r) => C.udh[r] <= -20, 1],
+  ['f20', 'fund 20% below high', (C, r) => C.fdh[r] <= -20, 1], ['f30', 'fund 30% below high', (C, r) => C.fdh[r] <= -30, 1], ['f40', 'fund 40% below high', (C, r) => C.fdh[r] <= -40, 1], ['f50', 'fund 50% below high', (C, r) => C.fdh[r] <= -50, 1],
+  ['crush', 'vol crush (Heavy fading)', (C, r) => r > 0 && C.reg[r - 1] === 2 && C.reg[r] < 2, 0], ['calm', 'calm trend near high', (C, r) => C.reg[r] === 0 && C.udh[r] >= -2, 0]];
+async function levEdge(fund, env, ctx) {
+  const R = await levRegime(fund, env, ctx), C = R.cols, n = C.d.length, out = { fund: R.fund, index: R.index, from: R.from, to: R.to, worker: WORKER_VERSION, hz: {} };
+  const avg = a => a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length * 100) / 100 : null;
+  for (const h of [21, 63, 126, 252]) {
+    const w = R.w[h], m = new Map(), st = R.stride[h] || 1; w.i.forEach((r, j) => m.set(r, j));
+    out.hz[h] = EDGE_SU.map(([k, t, fn, cross]) => {
+      const ev = []; let last = -1e9;
+      for (let r = 1; r < n; r++) { const on = cross ? fn(C, r) && !fn(C, r - 1) : fn(C, r); if (!on || (k !== 'all' && r - last < 10)) continue; ev.push(r); last = r; }
+      const rows = []; ev.forEach(r => { let j; for (let q = 0; q < st; q++) { j = m.get(r + q); if (j != null) break; } if (j != null) rows.push([r, w.f[j], w.u[j], w.m[j], w.lo[j]]); });
+      let sep = 0, l2 = -1e9; rows.forEach(z => { if (z[0] - l2 >= h) { sep++; l2 = z[0]; } });
+      const f = rows.map(z => z[1]);
+      return { k, t, n: rows.length, sep, avg: avg(f), win: f.length ? Math.round(f.filter(v => v > 0).length / f.length * 100) : null, worst: f.length ? Math.min(...f) : null, lo: avg(rows.map(z => z[4])), loW: rows.length ? Math.min(...rows.map(z => z[4])) : null, idx: avg(rows.map(z => z[2])), beat: rows.length ? Math.round(rows.filter(z => z[3] > z[2]).length / rows.length * 100) : null, lastFired: ev.length && k !== 'all' ? C.d[ev[ev.length - 1]] : null };
+    });
+  }
   return out;
 }
 async function ivRank(env, sym, iv) {   // store today's IV30, then where it sits in the stored history
@@ -1357,6 +1380,7 @@ async function api(req, url, env, ctx) {
       const r = await msFetch(u, { headers: { Accept: 'application/json' } }, 'eod'), j = await r.json(); const d = j.data || [], jumps = [];
       for (let i = 1; i < d.length; i++) { const k = d[i].close / d[i - 1].close; if (k > 1.5 || k < 0.67) jumps.push([String(d[i].date).slice(0, 10), Math.round(k * 1000) / 1000, d[i].split_factor]); }
       return out({ total: j.pagination && j.pagination.total, n: d.length, first: d[0] ? [String(d[0].date).slice(0, 10), d[0].close] : null, last: d.length ? [String(d[d.length - 1].date).slice(0, 10), d[d.length - 1].close] : null, jumps, err: j.error || null }, 200, 0); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
+    if (path === '/api/levedge') { try { return out(await levEdge(q.get('fund') || '', env, ctx), 200, 3600); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
     if (path === '/api/levlong') { try { const d = await lvLong(String(q.get('symbol') || '').toUpperCase(), env, ctx), iso = x => new Date(x * 1000).toISOString().slice(0, 10), j = []; for (let i = 1; i < d.c.length; i++) { const r = d.c[i] / d.c[i - 1]; if (r > 1.35 || r < 0.65) j.push([iso(d.t[i]), Math.round(r * 1000) / 1000]); } return out({ n: d.c.length, spliced: d.spliced || 0, spliceErr: d.spliceErr || null, first: d.t.length ? iso(d.t[0]) : null, last: d.t.length ? iso(d.t[d.t.length - 1]) : null, jumps: j }, 200, 600); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
     if (path === '/api/levregime') { try { return out(await levRegime(q.get('fund') || '', env, ctx), 200, 3600); } catch (e) { return out({ error: String(e.message || e) }, 200, 0); } }
     if (path === '/api/iv') return out(await impliedVol(q.get('symbol') || q.get('ticker') || ''), 200, 600);
