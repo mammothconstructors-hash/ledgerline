@@ -18,7 +18,7 @@ import { issuerHoldings } from './issuer.js';
 // free plan's 10 ms per request.
 // Deploy: Cloudflare dashboard → Workers & Pages → sec-proxy → Edit code → replace all → Deploy.
 
-const WORKER_VERSION = '3.22.0';
+const WORKER_VERSION = '3.22.1';
 // the usage passphrase is matched loosely: case, spaces and quotes don't matter (phones capitalize the first letter)
 const keyNorm = k => String(k || '').replace(/[\s'"`“”‘’]+/g, '').toLowerCase();
 async function keyOk(given, env) {   // matches the USAGE_KEY secret, or the owner key kept in the database
@@ -1529,6 +1529,7 @@ async function api(req, url, env, ctx) {
     if (path === '/api/changes') { const ck = new Request('https://ledgerline-cache.internal/changes/v1/' + encodeURIComponent((q.get('ticker') || '').toUpperCase()) + '/' + new Date().toISOString().slice(0, 10)); const cache = typeof caches !== 'undefined' ? caches.default : null; const hit = cache && await cache.match(ck); if (hit) return out(await hit.json(), 200, 3600); const res = await filingChanges(q.get('ticker')); if (cache) ctx.waitUntil(cache.put(ck, new Response(JSON.stringify(res), { headers: { 'Cache-Control': 'public, max-age=86400' } }))); return out(res, 200, 3600); }
     if (path === '/api/section') return out(await secSection({ ticker: q.get('ticker'), section: q.get('section'), form: q.get('form'), maxChars: q.get('maxChars') }), 200, 3600);
     if (path === '/api/market') { rankNudge(env, ctx); return out(await market(q.get('symbol') || '', env, ctx), 200, 900); }
+    if (path === '/api/quote') { const m = await market(q.get('symbol') || '', env, ctx); return out({ symbol: m.symbol, price: m.price, change: m.change, changePct: m.changePct, quoteTime: m.quoteTime || null, realtime: !!m.quoteRealtime, asOf: m.asOf }, 200, 60); }   // price only, for the page's live ticker
     if (path === '/api/ranks') { rankNudge(env, ctx); return out(await sectorRank(q.get('ticker') || '', env), 200, 600); }
     if (path === '/api/levboard') return out(await levBoard(env, ctx), 200, 900);
     if (path === '/api/levraw') { try { const sym = String(q.get('symbol') || '').toUpperCase(), from = q.get('from') || '2016-01-01', to = q.get('to') || '2021-01-01';
