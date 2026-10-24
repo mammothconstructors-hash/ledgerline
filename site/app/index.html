@@ -304,6 +304,9 @@ dl.help{display:grid;margin:0}
 .etfcard:hover{border-color:var(--teal)}
 .etfcard b{font-size:16px}.etfn{font-size:13.5px;font-weight:600;overflow-wrap:anywhere}.etfd{font-size:12.5px}
 .etfsearch{display:flex;gap:8px;max-width:420px}.etfsearch input{flex:1;min-width:0;padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink);font-size:14px}
+.ddm{margin:6px 0 14px}.ddbar{position:relative;height:12px;border-radius:6px;background:var(--paper2)}.ddfill{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:color-mix(in srgb,var(--down) 45%,transparent)}
+.ddbar i{position:absolute;top:-4px;width:3px;height:20px;transform:translateX(-1px);border-radius:1px}.ddavg{background:var(--claret)}.ddnow{background:var(--ink)}
+.ddlab{position:relative;display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:4px;min-height:16px}.ddlab span[style]{position:absolute;transform:translateX(-50%);white-space:nowrap;color:var(--claret)}
 .mix{display:grid;gap:6px;margin-top:8px}.mixrow{display:grid;grid-template-columns:minmax(120px,190px) 1fr 56px;gap:10px;align-items:center;font-size:14px}.mixv{text-align:right}
 .firsthint{display:flex;gap:14px;align-items:center;justify-content:space-between;padding:12px 14px;margin:0 0 14px;border:1px solid var(--line);border-left:4px solid var(--teal,#0D7680);background:var(--paper2);font-size:14.5px;line-height:1.5}.firsthint .btn{flex:none}@media (max-width:600px){.firsthint{flex-direction:column;align-items:flex-start}}
 .ffacts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.ffacts>div{padding:12px 16px 12px 0;display:flex;flex-direction:column;gap:3px}.ffacts>div+div{padding-left:16px;border-left:1px solid var(--line)}.ffacts .k{font:600 11px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}.ffacts b{font-family:var(--serif);font-size:20px;font-weight:600}.ffacts .sub{font:13px var(--sans);color:var(--muted)}.ffacts a{color:var(--teal)}@media (max-width:640px){.ffacts{grid-template-columns:1fr}.ffacts>div+div{padding-left:0;border-left:0;border-top:1px solid var(--line)}}
@@ -1307,6 +1310,15 @@ async function save(){
   catch(e){ if(btn){ btn.disabled=false; btn.textContent='Save to My list'; } toast(e&&e.code==='quota_exceeded'?'My list is full. Remove some first.':'Save didn’t go through. Try again.'); }
 }
 
+async function saveFund(){
+  await capsReady;
+  if(!db&&!SITE){ toast('Saving needs Claude. Open this page in Claude.'); return; }
+  const sd=S.sd||{}, px=isNum(sd.close)?sd.close:(S.d&&S.d.c?S.d.c[S.d.c.length-1]:null), now=Date.now();
+  const doc={sym:S.sym, ticker:S.ticker, name:S.name||(FUNDS[S.ticker]||[])[0]||S.ticker, sector:'ETF', fund:true, savedAt:now, price:px, scores:{}, verdict:null, phase:null, notes:'', source:'ETF', history:[{t:now, price:px}]};
+  try{ if(SITE){ const L=siteList(); L[S.sym]=doc; LS.set('list',L); listDocs=null; } else await db.doc('analyses/'+S.sym).set(JSON.parse(JSON.stringify(doc))); toast('Saved to My list'); render(); }
+  catch(e){ toast('Save didn’t go through. Try again.'); }
+}
+
 /* ============ SHEET MODEL: valuation model, moat tests, capital return, attributes, technicals, peers ============ */
 const GICS_SEC=["Communication Services", "Consumer Discretionary", "Consumer Staples", "Energy", "Financials", "Health Care", "Industrials", "Information Technology", "Materials", "Real Estate", "Utilities"];
 const GICS_SUB=["Advertising", "Aerospace & Defense", "Agricultural & Farm Machinery", "Agricultural Products & Services", "Air Freight & Logistics", "Apparel Retail", "Apparel, Accessories & Luxury Goods", "Application Software", "Asset Management & Custody Banks", "Automobile Manufacturers", "Automotive Parts & Equipment", "Automotive Retail", "Biotechnology", "Broadcasting", "Broadline Retail", "Building Products", "Cable & Satellite", "Cargo Ground Transportation", "Casinos & Gaming", "Commodity Chemicals", "Communications Equipment", "Computer & Electronics Retail", "Construction & Engineering", "Construction Machinery & Heavy Transportation Equipment", "Construction Materials", "Consumer Electronics", "Consumer Finance", "Consumer Staples Merchandise Retail", "Copper", "Data Center REITs", "Data Processing & Outsourced Services", "Distillers & Vintners", "Distributors", "Diversified Banks", "Diversified Support Services", "Electric Utilities", "Electrical Components & Equipment", "Electronic Components", "Electronic Equipment & Instruments", "Electronic Manufacturing Services", "Environmental & Facilities Services", "Fertilizers & Agricultural Chemicals", "Financial Exchanges & Data", "Food Distributors", "Food Retail", "Footwear", "Gas Utilities", "Gold", "Health Care Distributors", "Health Care Equipment", "Health Care Facilities", "Health Care REITs", "Health Care Services", "Health Care Supplies", "Health Care Technology", "Heavy Electrical Equipment", "Home Improvement Retail", "Homebuilding", "Homefurnishing Retail", "Hotel & Resort REITs", "Hotels, Resorts & Cruise Lines", "Household Products", "Human Resource & Employment Services", "IT Consulting & Other Services", "Independent Power Producers & Energy Traders", "Industrial Conglomerates", "Industrial Gases", "Industrial Machinery & Supplies & Components", "Industrial REITs", "Insurance Brokers", "Integrated Oil & Gas", "Integrated Telecommunication Services", "Interactive Home Entertainment", "Interactive Media & Services", "Internet Services & Infrastructure", "Investment Banking & Brokerage", "Leisure Products", "Life & Health Insurance", "Life Sciences Tools & Services", "Managed Health Care", "Metal, Glass & Plastic Containers", "Movies & Entertainment", "Multi-Family Residential REITs", "Multi-Sector Holdings", "Multi-Utilities", "Multi-line Insurance", "Office REITs", "Oil & Gas Equipment & Services", "Oil & Gas Exploration & Production", "Oil & Gas Refining & Marketing", "Oil & Gas Storage & Transportation", "Other Specialized REITs", "Other Specialty Retail", "Packaged Foods & Meats", "Paper & Plastic Packaging Products & Materials", "Passenger Airlines", "Passenger Ground Transportation", "Personal Care Products", "Pharmaceuticals", "Property & Casualty Insurance", "Publishing", "Rail Transportation", "Real Estate Services", "Regional Banks", "Reinsurance", "Research & Consulting Services", "Restaurants", "Retail REITs", "Self-Storage REITs", "Semiconductor Materials & Equipment", "Semiconductors", "Single-Family Residential REITs", "Soft Drinks & Non-alcoholic Beverages", "Specialized Consumer Services", "Specialty Chemicals", "Steel", "Systems Software", "Technology Distributors", "Technology Hardware, Storage & Peripherals", "Telecom Tower REITs", "Timber REITs", "Tobacco", "Trading Companies & Distributors", "Transaction & Payment Processing Services", "Water Utilities", "Wireless Telecommunication Services"];
@@ -1624,10 +1636,13 @@ function techCalc(src, daily){
 /* benchmarks: SPY, QQQ, DIA, IWM */
 const BENCH=[['SPY','S&P 500','The 500 largest US companies, weighted by market cap'],['QQQ','Nasdaq 100','The 100 largest non-financial Nasdaq companies; tech-heavy'],['DIA','Dow 30','30 blue-chip US companies, weighted by share price'],['IWM','Russell 2000','2,000 US small companies']];
 const BCOL={SPY:'#7A5BD6',QQQ:'#C2410C',DIA:'#0E7C66',IWM:'#B7791F'};
-let bench=(()=>{ const b=LS.get('bench'); return BENCH.some(x=>x[0]===b)?b:'SPY'; })();
+let benchPick=(()=>{ const b=LS.get('bench'); return BENCH.some(x=>x[0]===b)?b:'SPY'; })(), bench=benchPick;
+// a benchmark fund never compares with itself: SPY's page compares with QQQ, the others with SPY
+function syncBench(){ const me=S&&S.ticker; bench = me===benchPick ? (benchPick==='SPY'?'QQQ':'SPY') : benchPick; }
+const benchOthers=()=>BENCH.filter(([k])=>k!==(S&&S.ticker));
 function bm(k,src){ const o=src||S; if(!o) return {}; if(o.bmx&&o.bmx[k]) return o.bmx[k]; if(k==='SPY') return {w:o.spy,d:o.spyD,chg:o.spyChg}; if(k==='QQQ') return {w:o.qqq,d:o.qqqD,chg:o.qqqChg}; return {}; }
 function benchName(k){ return (BENCH.find(b=>b[0]===k)||[k,k])[1]; }
-function benchSeg(){ return `<div class="seg bseg" role="group" aria-label="Benchmark"><span class="seglbl">Compare with</span>${BENCH.map(([k,l])=>`<button type="button" data-bench="${k}" class="${bench===k?'on':''}" title="${l}">${k}</button>`).join('')}</div>`; }
+function benchSeg(){ return `<div class="seg bseg" role="group" aria-label="Benchmark"><span class="seglbl">Compare with</span>${benchOthers().map(([k,l])=>`<button type="button" data-bench="${k}" class="${bench===k?'on':''}" title="${l}">${k}</button>`).join('')}</div>`; }
 // the four market ETFs: price, day and period returns
 function marketsHtml(src){
   const rows=BENCH.map(([k,l,d])=>{ const B=bm(k,src), w=B.w, dd=B.d&&B.d.c&&B.d.c.length>60?B.d:w; if(!w||!w.c) return null;
@@ -2258,6 +2273,80 @@ function sectorRankHtml(){
   return `<div class="sec">${head}<p class="fine" style="margin:-4px 0 10px">Sector <b>${esc(R.sector)}</b> · industry <b>${esc(R.sub)}</b> (GICS sub-industry) · through the ${dfmt(Date.parse(R.session+'T00:00:00Z')/1000)} close</p>
     <div class="tblwrap"><table class="rank"><thead><tr><th>Period</th><th>${esc(S.ticker)}</th><th>Rank in sector</th><th>Percentile</th><th>Sector median</th><th>vs median</th><th>Rank in industry</th><th>Rank in S&amp;P 500</th><th style="text-align:left">Sector leaders</th></tr></thead><tbody>${rows}</tbody></table></div>
     <p class="fine" style="margin-top:6px">Total return with dividends reinvested, from split-adjusted end-of-day closes; week = 7 calendar days, month = 30, quarter = 91, year = 365. Rebuilt every evening after the close. Rank 1 is the best performer.</p></div>`; }
+/* ============ Drawdowns and support (last 5 years of daily closes) ============ */
+const ddDay=ts=>new Date(ts*1000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
+function ddCalc(d){
+  if(!d||!d.c||d.c.length<250) return null;
+  const cut=d.t[d.t.length-1]-5*365.25*86400; let i0=d.t.findIndex(t=>t>=cut); if(i0<0) i0=0;
+  const t=d.t.slice(i0), c=d.c.slice(i0), lo=(d.l||d.c).slice(i0), n=c.length; if(n<120) return null;
+  const dd=new Array(n), eps=[]; let pk=c[0], pki=0, ep=null;
+  for(let i=0;i<n;i++){
+    if(c[i]>=pk){ if(ep){ ep.rec=i; eps.push(ep); ep=null; } pk=c[i]; pki=i; }
+    dd[i]=(c[i]/pk-1)*100;
+    if(dd[i]<0){ if(!ep) ep={pk:pki, tr:i, depth:dd[i]}; else if(dd[i]<ep.depth){ ep.tr=i; ep.depth=dd[i]; } }
+  }
+  if(ep) eps.push(ep);   // still under water today
+  const big=eps.filter(e=>e.depth<=-10).sort((a,b)=>a.depth-b.depth);
+  const worst=eps.reduce((a,e)=>!a||e.depth<a.depth?e:a,null);
+  const avgDepth=big.length?big.reduce((a,e)=>a+e.depth,0)/big.length:null;
+  const avgUnder=dd.reduce((a,v)=>a+v,0)/n, today=dd[n-1], deeper=dd.filter(v=>v<today).length/n*100;
+  // support: swing lows (lowest low 10 sessions each side) and drawdown troughs, grouped into zones within 2.5%
+  const piv=[]; for(let i=10;i<n-3;i++){ let ok=true; for(let k=Math.max(0,i-10);k<=Math.min(n-1,i+10);k++) if(lo[k]<lo[i]){ ok=false; break; } if(ok) piv.push({p:lo[i],i}); }
+  big.forEach(e=>piv.push({p:lo[e.tr],i:e.tr}));
+  piv.sort((a,b)=>a.p-b.p); const zones=[];
+  for(const v of piv){ const z=zones[zones.length-1]; if(z&&v.p<=z.lo*1.025){ z.pts.push(v); z.hi=Math.max(z.hi,v.p); } else zones.push({lo:v.p,hi:v.p,pts:[v]}); }
+  const px=c[n-1], sup=zones.map(z=>({lo:z.lo,hi:z.hi,mid:z.pts.reduce((a,v)=>a+v.p,0)/z.pts.length,touch:z.pts.length,last:Math.max(...z.pts.map(v=>v.i))}))
+    .filter(z=>z.hi<px).sort((a,b)=>b.mid-a.mid).slice(0,5);
+  return {t,c,dd,n,eps,big,worst,avgDepth,avgUnder,today,deeper,sup,px,from:t[0]};
+}
+function ddSvg(D){
+  const W=900,H=190,pl=40,pr=10,pt=10,pb=22, lo=Math.min(-5,Math.floor(Math.min(...D.dd)/10)*10), X=i=>pl+i/(D.n-1)*(W-pl-pr), Y=v=>pt+(v/lo)*(H-pt-pb);
+  let path=`M${X(0)},${Y(0)}`; const step=Math.max(1,Math.floor(D.n/700)); for(let i=0;i<D.n;i+=step) path+=`L${X(i).toFixed(1)},${Y(D.dd[i]).toFixed(1)}`; path+=`L${X(D.n-1)},${Y(D.dd[D.n-1])}L${X(D.n-1)},${Y(0)}Z`;
+  const grid=[]; for(let v=0;v>=lo;v-=lo<-60?20:10) grid.push(`<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${pl-6}" y="${Y(v)+4}" text-anchor="end" class="svgtxt">${v}%</text>`);
+  const yrs=[]; let ly=null; D.t.forEach((ts,i)=>{ const y=new Date(ts*1000).getUTCFullYear(); if(y!==ly&&i>5){ yrs.push(`<text x="${X(i)}" y="${H-6}" text-anchor="middle" class="svgtxt">${y}</text>`); } ly=y; });
+  const avg=isNum(D.avgDepth)?`<line x1="${pl}" x2="${W-pr}" y1="${Y(D.avgDepth)}" y2="${Y(D.avgDepth)}" stroke="var(--claret)" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${W-pr}" y="${Y(D.avgDepth)-5}" text-anchor="end" class="svgtxt" style="fill:var(--claret)">average 10%+ drop ${D.avgDepth.toFixed(1)}%</text>`:'';
+  const w=D.worst?`<circle cx="${X(D.worst.tr)}" cy="${Y(D.worst.depth)}" r="4" fill="var(--down)"/>`:'';
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Drawdown from the running high, last five years" style="width:100%;height:auto;display:block">${grid.join('')}${yrs.join('')}<path d="${path}" fill="color-mix(in srgb,var(--down) 22%,transparent)" stroke="var(--down)" stroke-width="1.2"/>${avg}${w}<circle cx="${X(D.n-1)}" cy="${Y(D.today)}" r="5" fill="var(--ink)" stroke="var(--bg)" stroke-width="2"/></svg>`;
+}
+function ddMeter(D){   // where today sits: 0 at the high, full scale at the 5-year worst
+  const m=Math.min(D.worst?D.worst.depth:-1,-1), at=v=>Math.max(0,Math.min(100,v/m*100));
+  return `<div class="ddm"><div class="ddbar"><span class="ddfill" style="width:${at(D.today)}%"></span>${isNum(D.avgDepth)?`<i class="ddavg" style="left:${at(D.avgDepth)}%" title="Average 10%+ drop"></i>`:''}<i class="ddnow" style="left:${at(D.today)}%" title="Today"></i></div>
+    <div class="ddlab"><span>At the high</span>${isNum(D.avgDepth)?`<span style="left:${at(D.avgDepth)}%">Avg ${D.avgDepth.toFixed(0)}%</span>`:''}<span>5-yr worst ${m.toFixed(0)}%</span></div></div>`;
+}
+function ddRead(D){
+  if(D.today>-2) return 'At or near its high.';
+  if(isNum(D.avgDepth)&&D.today<=D.avgDepth) return `Deeper than its average 10%+ drop: historically a zone where pullbacks have ended.`;
+  if(isNum(D.avgDepth)&&D.today<=D.avgDepth/2) return `Past halfway to its average 10%+ drop.`;
+  return 'A shallow pullback so far.';
+}
+let DDB={};
+function ddHtml(){
+  const D=ddCalc(S&&S.d); if(!D) return '';
+  const w=D.worst, rec=w&&w.rec!=null?`recovered ${ddDay(D.t[w.rec])} (${Math.round((D.t[w.rec]-D.t[w.tr])/86400)} days)`:'<b>not yet recovered</b>';
+  const stats=statCells([['5-yr worst drop',w?pct(w.depth,1):'—'],['Average 10%+ drop',isNum(D.avgDepth)?pct(D.avgDepth,1):'none'],['Average distance below high',pct(D.avgUnder,1)],['Today, below the high',pct(D.today,1)],['10%+ drops in 5 years',String(D.big.length)],['Days deeper than today',pct(D.deeper,0)]]);
+  const rows=D.big.slice(0,8).map(e=>`<tr><td style="text-align:left">${ddDay(D.t[e.pk])}</td><td>${ddDay(D.t[e.tr])}</td><td class="num neg"><b>${pct(e.depth,1)}</b></td><td class="num">${Math.round((D.t[e.tr]-D.t[e.pk])/86400)}</td><td>${e.rec!=null?ddDay(D.t[e.rec])+` <span class="muted">(${Math.round((D.t[e.rec]-D.t[e.tr])/86400)} d)</span>`:'<b>still below</b>'}</td></tr>`).join('');
+  const sup=D.sup.map(z=>`<tr><td style="text-align:left"><b>${money(z.mid)}</b> <span class="muted">${money(z.lo)}–${money(z.hi)}</span></td><td class="num">${pct((z.mid/D.px-1)*100,1)}</td><td class="num">${z.touch}</td><td>${ddDay(D.t[z.last])}</td></tr>`).join('');
+  return `<div class="sec" id="ddSec"><h3>Drawdowns and support <small>daily closes since ${ddDay(D.from)}</small></h3>
+    <p class="stand" style="font-size:16px;margin:0 0 10px">${pct(D.today,1)} below its high today. ${ddRead(D)}</p>
+    ${ddMeter(D)}${stats}
+    <div style="margin-top:12px">${ddSvg(D)}</div>
+    <p class="fine">Shaded: how far below its running high each day closed. Dashed: the average depth of its 10%+ drops. Red dot: the 5-year worst, ${w?ddDay(D.t[w.pk])+' to '+ddDay(D.t[w.tr]):''}, ${rec}. Black dot: today.</p>
+    ${rows?`<h3 style="margin-top:16px">Every 10%+ drop</h3><div class="tblwrap"><table><thead><tr><th style="text-align:left">Peak</th><th>Trough</th><th>Drop</th><th>Days down</th><th>Back to the high</th></tr></thead><tbody>${rows}</tbody></table></div>`:''}
+    <h3 style="margin-top:16px">Support zones below today</h3>${sup?`<div class="tblwrap"><table><thead><tr><th style="text-align:left">Zone</th><th>From today</th><th>Times it held</th><th>Last held</th></tr></thead><tbody>${sup}</tbody></table></div>
+    <p class="fine">Prices where daily lows turned back up (lowest low of 21 sessions) and where each 10%+ drop bottomed, grouped within 2.5%. More holds means a firmer floor.</p>`:'<p class="fine">No earlier lows below today’s price in five years.</p>'}
+    <div id="ddBench">${ddBenchHtml()}</div></div>`;
+}
+function ddBenchHtml(){
+  const sets=[['SPY',S&&S.spyD||(bm('SPY').d)],['QQQ',S&&S.qqqD||(bm('QQQ').d)],['TQQQ',DDB.TQQQ]];
+  const rows=sets.map(([k,d])=>{ const D=ddCalc(d); if(!D) return `<tr><td style="text-align:left">${k}</td><td colspan="4" class="muted">${k==='TQQQ'&&DDB.TQQQ===undefined?'loading…':'no daily history'}</td></tr>`;
+    return `<tr><td style="text-align:left"><b>${k}</b></td><td class="num neg">${pct(D.worst.depth,1)}</td><td class="num">${isNum(D.avgDepth)?pct(D.avgDepth,1):'—'}</td><td class="num"><b>${pct(D.today,1)}</b></td><td class="muted">${ddRead(D)}</td></tr>`; }).join('');
+  return `<h3 style="margin-top:16px">Against SPY, QQQ and TQQQ</h3><div class="tblwrap"><table><thead><tr><th style="text-align:left">Fund</th><th>5-yr worst</th><th>Avg 10%+ drop</th><th>Today</th><th style="text-align:left">Read</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+async function fillDD(){
+  if(!document.getElementById('ddBench')||DDB.TQQQ!==undefined) return;
+  try{ const m=SITE?await getJSON('/api/market?symbol=TQQQ'):null; const d=m&&(m.daily&&m.daily.c?m.daily:m.daily&&m.daily.bars); DDB.TQQQ=d&&d.c?d:null; }catch(e){ DDB.TQQQ=null; }
+  const el=document.getElementById('ddBench'); if(el) el.innerHTML=ddBenchHtml();
+}
 function techHtml(){
   const T=techData(); if(!T) return `<div class="notice"><h4>Not enough price history</h4><p>Technicals need at least a year of prices.</p></div>`;
   const ab=(p,ma)=>isNum(ma)?`${money(ma)} · <b>${p>=ma?'above':'below'}</b> (${pct((p/ma-1)*100,1,true)})`:'—';
@@ -2305,10 +2394,11 @@ function techHtml(){
           ['Next month when stretched like today',st.fwdSim?`${pct(st.fwdSim.avg,1,true)} average · up ${st.fwdSim.up.toFixed(0)}% of the time (${st.fwdSim.n} ${T.daily&&!/^w/.test(strx)?'days':'weeks'})`:'—'],['Next month, all days',st.fwdAll?`${pct(st.fwdAll.avg,1,true)} average · up ${st.fwdAll.up.toFixed(0)}%`:'—']],'kv')}</div></div>`:'<p class="fine">Not enough history.</p>'}</div>
     <div class="sec"><h3>Performance vs the market <small>${esc(S.ticker)} 1-yr ${pct(p1.me,1,true)} · ${bench} ${pct(p1[bench],1,true)}</small></h3>
       <div class="chartbar">${benchSeg()}</div>
-      ${tbl(['Period',esc(S.ticker),...BENCH.map(b=>b[0]),'vs '+bench,''],perf.map(r=>[r.l,sgn(r.me),...BENCH.map(([k])=>sgn(r[k])),sgn(r.vs),r.ann?'<span class="muted">a year</span>':'']))}
+      ${tbl(['Period',esc(S.ticker),...benchOthers().map(b=>b[0]),'vs '+bench,''],perf.map(r=>[r.l,sgn(r.me),...benchOthers().map(([k])=>sgn(r[k])),sgn(r.vs),r.ann?'<span class="muted">a year</span>':'']))}
       <p class="fine" style="margin-top:6px">Price return only; dividends left out. Three years and longer are annualized. SPY = S&amp;P 500, QQQ = Nasdaq 100, DIA = Dow 30, IWM = Russell 2000 small caps.</p>
       <h3 style="margin-top:18px">$10,000 over ten years</h3><div class="cwrap short"><canvas id="growChart" aria-label="Growth of ten thousand dollars"></canvas><div class="tip" hidden></div></div>
       <div class="legend" style="margin-top:6px"><span style="--c:var(--bars)">${esc(S.ticker)}</span>${BENCH.filter(([k])=>bm(k).w).map(([k])=>`<span style="--c:${BCOL[k]}">${k}</span>`).join('')}</div></div>
+    ${ddHtml()}
     ${sectorRankHtml()}`;
 }
 function techStartIdx(t,per){ const end=t[t.length-1]; let start; if(per==='ytd') start=Date.UTC(new Date(end*1000).getUTCFullYear(),0,1)/1000; else start=end-({'1m':1/12,'3m':.25,'6m':.5,'1y':1,'3y':3,'5y':5,'7y':7,'10y':10}[per]||1)*365.25*86400; let k=0; for(let i=0;i<t.length;i++) if(t[i]<=start) k=i; return k; }
@@ -2539,9 +2629,10 @@ function checkHtml(){
 }
 
 /* ---- Versions and what's new ---- */
-const APP_VERSION='8.6', WORKER_NEEDED='3.13.0', BUG_EMAIL='kgrodrigue@yahoo.com';
+const APP_VERSION='8.7', WORKER_NEEDED='3.13.0', BUG_EMAIL='kgrodrigue@yahoo.com';
 const CHANGES=[
   ['App 7.1','Oct 22, 2026',['Valuation uses core EPS when non-operating gains are more than a quarter of pretax profit (Amazon’s 2025–26 investment mark-ups had pushed its trailing EPS to $12.43 against about $7 from the business, and its fair value to $1,033); the Valuation tab says when this applies','Risk on / off now uses the 50-day vs 200-day EMA (10 vs 40 weeks); 200 EMA added to the Overview chart','Fixed: the return line above the Overview chart now matches the period boxes (both measured from the close before the period starts)']],
+  ['App 8.7','Oct 23, 2026',['☆ Save on ETF pages: funds go to My list with the price on the day','SPY’s page compares with QQQ instead of itself; a benchmark fund drops its own column from the performance table','Drawdowns and support on every Technicals view (stocks and ETFs): 5-year worst peak-to-trough drop with dates and recovery, average 10%+ drop, average distance below the high, where today sits on a meter and an underwater chart, every 10%+ drop listed, support zones below today, and SPY, QQQ and TQQQ side by side']],
   ['App 8.6','Oct 23, 2026',['ETF holdings are current: read daily from State Street (SPDR), iShares and Invesco and monthly from Vanguard, with the SEC N-PORT filing only as a fallback; each page shows the as-of date and where the list came from','SPY, QQQ, DIA and IWM now use the daily file too, not the quarterly list built into the page']],
   ['App 8.5','Oct 23, 2026',['ETFs in the top bar: every fund LedgerLine knows, grouped (market indexes, whole market and world, dividends, sectors, themes), plus a box for any ETF ticker','Every ETF page now shows what it holds: top 25 holdings, top-10 share, net assets and sector mix, read from the fund’s latest SEC N-PORT filing (before, only SPY, QQQ, DIA and IWM had holdings); cash and securities-lending collateral are shown on their own line, not as a holding','Worker 3.12: sector ranks cost one price lookup per stock a night instead of five, and the Marketstack usage counter now counts every stock in a request, the way Marketstack bills']],
   ['App 8.4','Oct 23, 2026',['Owner: 👥 Testers in the top bar (only for the owner’s sign-in) to add, name and remove testers on LedgerLine and the Vol Board, no Cloudflare screens needed']],
@@ -3021,7 +3112,7 @@ setInterval(()=>{ if(view==='testers'&&TST.data&&(TST.data.queue||[]).some(q=>!q
 if(onSite()) fetch('/cdn-cgi/access/get-identity',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(j=>{ const em=j&&String(j.email||'').toLowerCase(); if(!em||!OWNER_EMAILS.includes(em)) return; const tl=document.querySelector('.toplinks'); if(tl&&!document.getElementById('tstBtn')){ const b=document.createElement('button'); b.id='tstBtn'; b.type='button'; b.textContent='👥 Testers'; b.addEventListener('click',()=>{ TST.data=null; view='testers'; render(); window.scrollTo({top:0}); }); tl.insertBefore(b,tl.firstChild); } }).catch(()=>{});
 
 function render(){
-  renderCo(); renderRail(); { const b=document.getElementById('bugSlot'); if(b) b.innerHTML=bugLink('Report a problem'); }
+  syncBench(); renderCo(); renderRail(); { const b=document.getElementById('bugSlot'); if(b) b.innerHTML=bugLink('Report a problem'); }
   const m=$('#main');
   m.innerHTML = view==='empty'?emptyHtml() : view==='loading'?loadingHtml() : view==='error'?errorHtml() : view==='list'?listHtml() : view==='method'?helpHtml()+methodHtml() : view==='news'?newsHtml() : view==='guide'?guideHtml() : view==='fund'?fundHtml() : view==='etfs'?etfsHtml() : view==='explore'?explorerHtml() : view==='glossary'?glossaryHtml() : view==='samples'?samplesHtml() : view==='alerts'?alertsViewHtml() : view==='testers'?testersViewHtml() : stepHtml();
   afterRender(); decorateTips();
@@ -3030,7 +3121,7 @@ function renderCo(){
   const el=$('#coBar');
   if(!S||view==='empty'||view==='etfs'||view==='explore'||view==='list'||view==='method'||view==='news'||view==='guide'||view==='alerts'||view==='testers'||(view==='error'&&!S.sd)){ el.innerHTML=''; return; }
   const sd=S.sd||{}, ch=sd.change, up=isNum(ch)&&ch>=0;
-  el.innerHTML=`<div class="co"><div style="min-width:0"><div class="kicker">${esc(sd.sector||S.exch||'')}${sd.industry?' · '+esc(sd.industry):''}</div><h1>${esc(S.name||S.sym)}</h1><div class="tk">${esc(S.sym)}${view==='company'?erChip():''}${view==='company'&&S.M?` <button type="button" id="saveTop" class="savetop ${S.saved?'on':''}" title="${S.saved?'Saved to My list. Tap to save again with today’s price and scores':'Save this stock, its scores and today’s price to My list'}">${S.saved?'★ Saved':'☆ Save'}</button><button type="button" class="savetop" data-alertnew="1" title="Get an alert for this stock">🔔 Alert${ALERTS.filter(a=>a.t===S.ticker&&!a.fired).length?' · '+ALERTS.filter(a=>a.t===S.ticker&&!a.fired).length:''}</button>`:''}</div>
+  el.innerHTML=`<div class="co"><div style="min-width:0"><div class="kicker">${esc(sd.sector||S.exch||'')}${sd.industry?' · '+esc(sd.industry):''}</div><h1>${esc(S.name||S.sym)}</h1><div class="tk">${esc(S.sym)}${view==='company'?erChip():''}${view==='fund'?` <button type="button" id="saveTop" class="savetop ${isSavedT(S.ticker)?'on':''}" title="Save this fund and today’s price to My list">${isSavedT(S.ticker)?'★ Saved':'☆ Save'}</button>`:''}${view==='company'&&S.M?` <button type="button" id="saveTop" class="savetop ${S.saved?'on':''}" title="${S.saved?'Saved to My list. Tap to save again with today’s price and scores':'Save this stock, its scores and today’s price to My list'}">${S.saved?'★ Saved':'☆ Save'}</button><button type="button" class="savetop" data-alertnew="1" title="Get an alert for this stock">🔔 Alert${ALERTS.filter(a=>a.t===S.ticker&&!a.fired).length?' · '+ALERTS.filter(a=>a.t===S.ticker&&!a.fired).length:''}</button>`:''}</div>
     ${view==='company'?`<div class="src">${SITE?`Fundamentals: <b>SEC EDGAR, XBRL-tagged 10-K and 10-Q filings</b> · Prices: <b>${S.quoteTime?(+new Date().toLocaleString('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false})>=16?`last trade ${(()=>{ const d=new Date(Math.min(S.quoteTime+900,Math.floor(Date.now()/1000))*1000), hm=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:false,timeZone:'America/New_York'}).split(':').map(Number); return hm[0]*60+hm[1]>=960?'4:00 PM':d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'}); })()} ET</b> (official close posts this evening)<b>`:`15-min delayed as of ${new Date(S.quoteTime*1000).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})} ET`):`closing price${S.asOf?' on '+new Date(S.asOf*1000).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}):''}`}</b>${S.quoteTime?'':' (end of day: updates after each market close)'} · Every score computed from the numbers`:`Fundamentals: <b>${S.src==='SEC'?'SEC EDGAR, XBRL-tagged 10-K and 10-Q filings':'TradingView'}</b> · Prices: <b>TradingView</b> · Judgment calls: <b>${S.ai.state==='done'?'Claude':S.ai.state==='busy'?'Claude (reading…)':'unavailable'}</b>`}</div>`:''}</div>
     ${isNum(sd.close)||isNum(sd.market_cap_basic)?`<div class="pxblock">${isNum(sd.market_cap_basic)?`<div class="mcap"><span class="mk">Market cap</span><b>${big(sd.market_cap_basic)}</b></div>`:''}`:''}${isNum(sd.close)?`<div class="px"><span class="mk">Price</span><b>${money(sd.close)}</b><span class="chg ${up?'up':'dn'} num">${isNum(sd.change_abs)?(up?'+':'−')+Math.abs(sd.change_abs).toFixed(2):''} (${pct(ch,2,true)})</span></div>`:''}${isNum(sd.close)||isNum(sd.market_cap_basic)?'</div>':''}</div>`;
 }
@@ -3716,7 +3807,7 @@ function listHtml(){
   return `<div class="sheet"><div class="hero" style="grid-template-columns:1fr"><div><div class="kicker">My list</div><h2>${sorted.length} stock${sorted.length>1?'s':''} scored</h2><p class="stand">Sorted by verdict, then quality. Open one to see today’s numbers.</p></div></div>
   <div class="tblwrap"><table><thead><tr><th>Stock</th><th>Verdict</th><th>Quality</th><th>Business</th><th>Moat</th><th>Growth</th><th>Mgmt</th><th>Risk</th><th>Value</th><th>Phase</th><th>Price saved</th><th>Saved</th><th></th></tr></thead><tbody>
   ${sorted.map(a=>{ const s=a.scores||{}, v=a.verdict; return `<tr class="lrow" data-open="${esc(a.sym)}"><td><b>${esc(a.ticker||a.sym)}</b> <span class="muted" style="font-size:12px">${esc((a.name||'').slice(0,28))}</span></td>
-    <td>${v?`<span class="vpill" style="background:var(--l${v}s);color:var(--l${v})">${VERDICT[v]}</span>`:'—'}</td><td>${d(s.comp)}</td><td>${d(s.business)}</td><td>${d(s.moat)}</td><td>${d(s.growth)}</td><td>${d(s.mgmt)}</td><td>${d(s.risk)}</td><td>${d(s.valuation)}</td><td>${a.phase?'P'+a.phase:'—'}</td><td>${money(a.price)}</td><td>${a.savedAt?new Date(a.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—'}</td>
+    <td>${v?`<span class="vpill" style="background:var(--l${v}s);color:var(--l${v})">${VERDICT[v]}</span>`:a.fund?'<span class="muted">ETF</span>':'—'}</td><td>${d(s.comp)}</td><td>${d(s.business)}</td><td>${d(s.moat)}</td><td>${d(s.growth)}</td><td>${d(s.mgmt)}</td><td>${d(s.risk)}</td><td>${d(s.valuation)}</td><td>${a.phase?'P'+a.phase:'—'}</td><td>${money(a.price)}</td><td>${a.savedAt?new Date(a.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—'}</td>
     <td><button type="button" class="btn" style="height:24px" data-del="${esc(a.sym)}">Remove</button></td></tr>`; }).join('')}
   </tbody></table></div><div id="delConfirm"></div></div>`;
 }
@@ -3854,12 +3945,12 @@ function valuationCharts(){
 }
 function afterRender(){
   for(const k in charts) delete charts[k];
-  if(view==='fund'){ overviewChart(); techCharts(); fillHold(); return; }
+  if(view==='fund'){ overviewChart(); techCharts(); fillHold(); fillDD(); return; }
   if(view==='etfs'){ const fm=document.getElementById('etfForm'); if(fm) fm.addEventListener('submit',e=>{ e.preventDefault(); const q=($('#etfQ').value||'').trim(); if(q){ step='overview'; loadCompany(q); } }); return; }
   if(view!=='company') return;
   if(step==='overview') overviewChart();
   if(step==='valuation') valuationCharts();
-  if(step==='technicals') techCharts();
+  if(step==='technicals'){ techCharts(); fillDD(); }
   if(step==='future'){ futureChart(); outlookChart(); }
   if(step==='overview'&&S.src==='SEC'&&!(S.docs&&S.docs.business)) loadDoc('business');
   if(step==='financials'&&DOCS[finTab]&&!(S.docs&&S.docs[finTab])) loadDoc(finTab);
@@ -3962,7 +4053,7 @@ document.addEventListener('click',e=>{
   if(d.mct){ mcType=d.mct; LS.set('mctype',mcType); render(); return; }
   if(d.pxs){ pxStyle=d.pxs; LS.set('pxstyle',pxStyle); render(); return; }
   if(d.clearrecent){ LS.set('recent',[]); render(); return; }
-  if(b.id==='saveTop'){ save(); return; }
+  if(b.id==='saveTop'){ if(view==='fund') saveFund(); else save(); return; }
   if(d.explore){ view='explore'; render(); window.scrollTo({top:0}); return; }
   if(d.exs){ exScreen=d.exs; LS.set('exs',exScreen); if(view!=='explore'){ view='explore'; render(); window.scrollTo({top:0}); } else render(); return; }
   if(d.exsort){ if(exSort===d.exsort) exDir=-exDir; else { exSort=d.exsort; exDir=['t','n','sec','ndE'].includes(d.exsort)?1:-1; } LS.set('exsort',exSort); LS.set('exdir',exDir); render(); return; }
@@ -3970,7 +4061,7 @@ document.addEventListener('click',e=>{
   if(d.outmode){ outMode=d.outmode; LS.set('outmode',outMode); render(); return; }
   if(d.fg){ futG=d.fg; LS.set('futg',futG); render(); return; }
   if(d.fh){ futH=+d.fh; LS.set('futh',futH); render(); return; }
-  if(d.bench){ bench=d.bench; LS.set('bench',bench); render(); return; }
+  if(d.bench){ benchPick=d.bench; LS.set('bench',benchPick); render(); return; }
   if(d.per){ chartPeriod=d.per; LS.set('period',chartPeriod); render(); return; }
   if(b.id==='reAi'){ runAnalysis(loadSeq,true); return; }
   if(b.id==='saveBtn'){ save(); return; }
