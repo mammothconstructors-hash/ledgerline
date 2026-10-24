@@ -1,0 +1,24 @@
+name: Vol Board copy
+# Pulls the live KGR Vol Board page (Cloudflare Pages project "vol-board") so its source can live in vol-board/.
+on: { workflow_dispatch: {} }
+env:
+  CLOUDFLARE_ACCOUNT_ID: 51799e9e2cfaf727a3bc287626828255
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: List deployments and fetch the newest page
+        env: { RAW_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}" }
+        run: |
+          T=$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]'); echo "::add-mask::$T"
+          A=https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/vol-board
+          curl -s -H "Authorization: Bearer $T" "$A/deployments?per_page=5" > deps.json
+          jq -r '.success, (.result[]? | "\(.id) \(.environment) \(.url) \(.created_on)")' deps.json
+          mkdir -p out; i=0
+          for u in $(jq -r '.result[]?.url' deps.json) https://vol-board.pages.dev; do
+            i=$((i+1)); code=$(curl -s -L -o out/page$i.html -w '%{http_code}' "$u/"); echo "$u -> $code $(wc -c < out/page$i.html) bytes $(grep -o '<title>[^<]*' out/page$i.html | head -1)"
+          done
+          cp deps.json out/
+      - uses: actions/upload-artifact@v4
+        with: { name: vol-board-page, path: out, retention-days: 3 }
